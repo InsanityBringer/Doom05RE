@@ -59,6 +59,8 @@ int ignorekeyboard;
 int paused;
 int specialkey;
 
+int autorun = 1; //[ISB]
+
 //mouse nonsense
 int novert; //[ISB]
 
@@ -142,7 +144,7 @@ void IO_PlayerInput()
 			local_34 = 0x28;
 			if (ignorekeyboard == 0) 
 			{
-				if (keydown[key_speed] != 0)
+				if (keydown[key_speed] == autorun) //[ISB] I had to, sorry.
 				{
 					local_34 = 0x50;
 				}
@@ -189,10 +191,12 @@ void IO_PlayerInput()
 				{
 					pfVar1->buttons = pfVar1->buttons | 2;
 				}
-				if ((sd->mousebuttons & 2) != 0) {
+				if ((sd->mousebuttons & 2) != 0) 
+				{
 					pfVar1->buttons = pfVar1->buttons | 1;
 				}
-				if ((sd->mousebuttons & 4) != 0) {
+				if ((sd->mousebuttons & 4) != 0) 
+				{
 					local_30 = local_30 + local_34;
 				}
 				if ((sd->mousex < 0x5555) && (0xaaaa < sd->oldmousex))
@@ -205,7 +209,8 @@ void IO_PlayerInput()
 					{
 						local_34 = sd->mousex - sd->oldmousex;
 					}
-					else {
+					else
+					{
 						local_34 = -((0x1000 - sd->mousex) + sd->oldmousex);
 					}
 				}
@@ -362,6 +367,9 @@ void SDL_Startup()
 		IO_Error("Error creating game window: %s\n", SDL_GetError());
 		return;
 	}
+
+	if (D_CheckParm("autorun"))
+		autorun = 0;
 }
 
 void SDL_Shutdown()
