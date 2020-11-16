@@ -1,11 +1,11 @@
-## Doom 0.5heh
+# Doom 0.5heh
 
-# What is it:
+## What is it:
 Quick and dirty reverse engineering project of the Doom Alpha v0.5.
 Made for the sake of trying to document the nature of the Doom rendering code
 before the introduction of BSP trees.
 
-# Release notes:
+## Release notes:
 This project has only been tested to compile with Visual Studio in the x86
 configuration. I want to make it run on more platforms eventually. The project
 requires SDL 2 (developed with 2.0.12) to build. Linux support will require
@@ -35,7 +35,7 @@ Hires mode will invariably crash the game, but the high color mode is partially
 emulated. There's no system in place to draw pics in high-color mode, so the UI
 and menu will look very weird, but it'll at least function.
 
-# License:
+## License:
 From similar RE projects, such as Chocolate Strife and Doom 64 EX, as well as
 the fact that I referenced the released Doom and Heretic source on occasion,
 I have chosen to place this under the GPL v2 for now. Details in copying.txt
