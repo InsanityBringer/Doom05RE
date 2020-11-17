@@ -516,7 +516,6 @@ void M_DrawInput(void)
 
 void M_ControlCallback(int ch)
 {
-	int iVar1;
 	static int mapnum = 1;
 
 	if (ch == KEY_F10) 
@@ -635,13 +634,12 @@ void M_ControlCallback(int ch)
 		}
 		G_StartNewGame(mapnum, 3, 0);
 	}
-	iVar1 = mapnum;
 	if (ch == KEY_EQUALS) 
 	{
 		mapnum++;
-		if (iVar1 != 0xc && KEY_0 < mapnum) 
+		if (mapnum >= 13) 
 		{
-			mapnum = 0xd;
+			mapnum = 13;
 		}
 		G_StartNewGame(mapnum, 3, 0);
 	}
