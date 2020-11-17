@@ -1364,7 +1364,7 @@ void T_LightFlash(lightflash_t* flash)
         }
         else 
         {
-            flash->sector->lightlevel = *(short*)&flash->maxlight;
+            flash->sector->lightlevel = flash->maxlight;
             flash->count = (flash->maxtime & D_Rnd()) + 1;
         }
     }
@@ -1382,11 +1382,11 @@ void P_SpawnLightFlash(sector_t* sector)
     P_AddThinker((thinker_t*)strobe);
     strobe->thinker.function = &T_LightFlash;
     strobe->sector = sector;
-    strobe->maxlight = (int)sector->lightlevel;
+    strobe->maxlight = sector->lightlevel;
     iVar2 = P_FindMinSurroundingLight(sector, (int)sector->lightlevel);
     strobe->minlight = iVar2;
-    strobe->maxtime = 7;
-    strobe->mintime = 64;
+    strobe->maxtime = 64;
+    strobe->mintime = 7;
     strobe->count = (strobe->maxtime & D_Rnd()) + 1;
     return;
 }
