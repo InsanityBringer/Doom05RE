@@ -38,12 +38,12 @@ Uint32 basetime;
 
 //keyboard nonsense
 //key bindings
-int key_right = SDL_SCANCODE_RIGHT;
-int key_left = SDL_SCANCODE_LEFT;
-int key_up = SDL_SCANCODE_UP;
-int key_down = SDL_SCANCODE_DOWN;
-int key_raise; //unused
-int key_lower; //unused
+int key_right = KEY_RIGHT;
+int key_left = KEY_LEFT;
+int key_up = KEY_UP;
+int key_down = KEY_DOWN;
+int key_raise = KEY_EQUALS; //unused
+int key_lower = KEY_MINUS; //unused
 int key_fire = SDL_SCANCODE_LCTRL;
 int key_strafe = SDL_SCANCODE_LALT;
 int key_speed = SDL_SCANCODE_LSHIFT;

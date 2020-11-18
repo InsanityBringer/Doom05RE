@@ -125,7 +125,7 @@ int P_FindNextHighestFloor(sector_t* sec, int secnum, int currentheight)
     i = 0;
     do 
     {
-        if (sector->linecount <= i) 
+        if (sec->linecount <= i) 
         {
             return currentheight;
         }
