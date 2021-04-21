@@ -33,7 +33,7 @@ char demoname[20];
 
 void G_InitPlayer(int playernum)
 {
-	player_t* local_1c;
+	player_t* player;
 
 	if (playernum >= MAXPLAYERS) 
 	{
@@ -45,6 +45,8 @@ void G_InitPlayer(int playernum)
 	memset(&playerobjs[playernum], 0, sizeof(player_t));
 	playerobjs[playernum].readyweapon = wp_rifle;
 	playerobjs[playernum].pendingweapon = wp_nochange;
+	memset(&playerobjs[playernum].weaponowned, 0, sizeof(playerobjs[playernum].weaponowned)); //no idea why these are done when the entire thing is memset to 0 earlier..
+	memset(&playerobjs[playernum].ammo, 0, sizeof(playerobjs[playernum].ammo));
 	playerobjs[playernum].weaponowned[wp_knife] = 1;
 	playerobjs[playernum].weaponowned[wp_rifle] = 1;
 	playerobjs[playernum].ammo[am_clip] = 14;
@@ -53,31 +55,30 @@ void G_InitPlayer(int playernum)
 	playerobjs[playernum].nextextra = 10000;
 	playerobjs[playernum].health = MAXBODY;
 	playerobjs[playernum].armor = 7;
+	memset(&playerobjs[playernum].items, 0, sizeof(playerobjs[playernum].items)); 
 	return;
 }
 
 void G_WarpToMap(char* mapname)
 {
-	char* local_20;
-	int iVar1;
+	int i;
 
-	local_20 = mapname;
 	Z_ClearZone(playzone);
 	P_InitThinkers();
 	P_InitActors();
 	M_ClearMenus();
 	memset(playerthingfound, 0, sizeof(int) * MAXPLAYERS);
-	R_LoadMap(local_20);
-	iVar1 = 0;
-	while (iVar1 < MAXPLAYERS)
+	R_LoadMap(mapname);
+	
+	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if (playerthingfound[iVar1] == 0) 
+		if (playerthingfound[i] == 0) 
 		{
-			IO_Error("G_WarpToMap: player %i not spawned on map %s\n", iVar1, local_20);
+			IO_Error("G_WarpToMap: player %i not spawned on map %s\n", i, mapname);
 		}
-		iVar1++;
 	}
-	strncpy(sd->mapname, local_20, 8);
+
+	strncpy(sd->mapname, mapname, 8);
 	return;
 }
 
@@ -97,7 +98,6 @@ void G_PlayDemo(char* name)
 void G_SetupNewGame(void);
 void G_RecordDemo(char* map, char* demoname)
 {
-	int iVar1;
 	G_StartNewGame(1, 4, 0);
 
 	//[ISB] In order to make the game not freeze when recording demos, this is needed to set some vital state.
@@ -121,8 +121,7 @@ void G_RecordDemo(char* map, char* demoname)
 	demoend = demobuffer + 0x10000;
 	demo = 1;
 	P_PlayLoop();
-	iVar1 = D_WriteFile(demoname, demobuffer, (int)(demo_p - demobuffer));
-	if (iVar1 == 0)
+	if (D_WriteFile(demoname, demobuffer, (int)(demo_p - demobuffer)) == 0)
 	{
 		IO_Error("Error saving demo\n");
 	}
@@ -164,20 +163,20 @@ void G_SetupNewGame(void)
 void G_SetupNetGame(void)
 {
 	//it is also but a dream. 
-	int local_8;
+	int i;
 
 	skilllevel = 4;
 	viewplayer = sd->consoleplayer;
 	viewplayerangle = 0;
-	local_8 = 0;
-	while (local_8 < 4)
+	
+	for (i = 0; i < 4; i++)
 	{
-		if (sd->playeringame[local_8]) 
+		if (sd->playeringame[i]) 
 		{
-			G_InitPlayer(local_8);
+			G_InitPlayer(i);
 		}
-		local_8 = local_8 + 1;
 	}
+
 	G_WarpToMap(sd->mapname);
 	demoaction = 9;
 	gameaction = 0;
@@ -198,18 +197,18 @@ void G_SetupControls(void)
 
 void G_SetupDemo(void)
 {
-	int iVar1;
+	int lump;
 
 	startskill = 4;
 	startepisode = 1;
 	startplayer = 0;
 	G_SetupNewGame();
-	iVar1 = W_GetNumForName(demoname);
-	demobuffer = (uint8_t*)lumpinfo[iVar1].position;
+	lump = W_GetNumForName(demoname);
+	demobuffer = (uint8_t*)lumpinfo[lump].position;
 	demo_p = demobuffer;
 	G_WarpToMap((char*)demobuffer);
 	demo_p = (void*)((char*)demo_p + 8);
-	demoend = demobuffer + lumpinfo[iVar1].size;
+	demoend = demobuffer + lumpinfo[lump].size;
 	demo = 2;
 	P_PlayLoop();
 	demo = 0;
@@ -219,8 +218,6 @@ void G_SetupDemo(void)
 
 void G_GameLoop(void)
 {
-	int iVar1;
-
 	demoaction = 9;
 	switch (gamestart) 
 	{

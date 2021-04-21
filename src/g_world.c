@@ -49,30 +49,24 @@ mappt_t mappts[16] =
 
 void G_WorldMap()
 {
-    int iVar1;
-    pic_t* pic;
-    uint8_t* palette;
-
-    pic = (pic_t*)W_GetName("WORLD1");
-    V_DrawPic(0, 0, pic);
+    char* mapname;
+    V_DrawPic(0, 0, (pic_t*)W_GetName("WORLD1"));
     IO_UpdateScreen();
-    palette = W_GetName("PLAYPAL");
-    D_FadeIn(palette);
+    D_FadeIn(W_GetName("PLAYPAL"));
     IO_Ack();
     if (gameaction == ga_completed) 
     {
         do 
         {
-            iVar1 = gamestate;
-            gamestate++;
-            if (iVar1 == 0xf) 
+            if (gamestate++ == 15) 
             {
                 gameaction = ga_victory;
                 return;
             }
-        } while (mappts[gamestate].mapname == NULL);
+            mapname = mappts[gamestate].mapname;
+        } while (mapname == NULL);
     }
-    G_WarpToMap(mappts[gamestate].mapname);
+    G_WarpToMap(mapname);
     gameaction = ga_runmap;
     return;
 }
