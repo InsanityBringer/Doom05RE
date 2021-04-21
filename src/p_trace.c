@@ -31,64 +31,58 @@ crossing_t* crossing_p;
 
 int P_PointOnLineSide(int x, int y, line_t* line)
 {
-    int uVar1;
-    int iVar3;
+    int calcy;
     int local_c;
 
-    uVar1 = line->slopetype;
-    if (uVar1 == ls_horziontal) 
+    switch (line->slopetype)
     {
-        if (y == line->bbox[2]) 
+    case ls_horziontal:
+
+        if (y == line->bbox[2])
         {
-            local_c = -1;
-        }
-        else 
-        {
-            local_c = (points[line->p1].x < points[line->p2].x != y < line->bbox[2]);
-        }
-    }
-    else if (uVar1 == ls_vertical) 
-    {
-        if (x == line->bbox[3])
-        {
-            local_c = -1;
+            return -1;
         }
         else
         {
-            local_c = (points[line->p1].y < points[line->p2].y != line->bbox[3] < x);
+            return (points[line->p1].x < points[line->p2].x != y < line->bbox[2]);
         }
-    }
-    else 
-    {
-        if (uVar1 == ls_slope) 
+
+    case ls_vertical:
+        if (x == line->bbox[3])
         {
-            iVar3 = line->yintercept + FixedMul(line->slope, x);
-            if (iVar3 == y) 
-            {
-                local_c = -1;
-            }
-            else 
-            {
-                local_c = (points[line->p1].x < points[line->p2].x != y < iVar3);
-            }
+            return -1;
         }
-        else 
+        else
         {
-            local_c = 0;
+            return (points[line->p1].y < points[line->p2].y != line->bbox[3] < x);
         }
+
+    case ls_slope:
+        calcy = line->yintercept + FixedMul(line->slope, x);
+        if (calcy == y)
+        {
+            return -1;
+        }
+        else
+        {
+            return (points[line->p1].x < points[line->p2].x != y < calcy);
+        }
+        break;
+
+    default:
+        return 0;
     }
-    return local_c;
 }
 
 void P_TransformVertex(point_t* source, vertex_t* dest)
 {
-    int iVar3;
-    int iVar4;
+    fixed_t gxt;
+    fixed_t gyt;
 
-    iVar3 = source->x - viewx;
-    iVar4 = source->y - viewy;
-    dest->tx = -FixedMul(iVar4, viewcos) + FixedMul(iVar3, viewsin);
-    dest->tz = (FixedMul(iVar3, viewcos) + FixedMul(iVar4, viewsin));
+    gxt = source->x - viewx;
+    gyt = source->y - viewy;
+    dest->tx = -FixedMul(gyt, viewcos) + FixedMul(gxt, viewsin);
+    dest->tz = (FixedMul(gxt, viewcos) + FixedMul(gyt, viewsin));
     return;
 }
 
@@ -122,11 +116,9 @@ void P_CrossSectorThings(sector_t* sector)
 
 void P_CrossSectorLines(sector_t* sector, int checkall)
 {
-    int local_2c;
-    sector_t* local_28;
-    int local_24;
-    line_t* local_20;
-    int local_1c;
+    fixed_t midz;
+    line_t* line;
+    int side;
     int i;
 
     vertex_t mv1, mv2;
@@ -135,47 +127,43 @@ void P_CrossSectorLines(sector_t* sector, int checkall)
     if (sector->validcheck != validcheck) 
     {
         sector->validcheck = validcheck;
-        local_28 = sector;
-        local_24 = checkall;
         if (checkall != 0) 
         {
             P_CrossSectorThings(sector, (thing_t*)i);
         }
-        i = 0;
-        while (i < local_28->linecount) 
+        
+        for (i = 0; i < sector->linecount; i++)
         {
-            local_20 = &lines[local_28->lines[i]];
-            if (((local_24 != 0) || (local_20->flags & ML_TWOSIDED)) && (local_20->validcheck != validcheck)) 
+            line = &lines[sector->lines[i]];
+            if (((checkall != 0) || (line->flags & ML_TWOSIDED)) && (line->validcheck != validcheck))
             {
-                local_20->validcheck = validcheck;
-                P_TransformVertex(&points[local_20->p1], &mv1);
-                P_TransformVertex(&points[local_20->p2], &mv2);
+                line->validcheck = validcheck;
+                P_TransformVertex(&points[line->p1], &mv1);
+                P_TransformVertex(&points[line->p2], &mv2);
                 if (((int)mv1.tx < 1) && (0 < mv2.tx)) 
                 {
-                    local_2c = FixedDiv(-mv1.tx, mv2.tx - mv1.tx);
-                    local_1c = 0;
+                    midz = FixedDiv(-mv1.tx, mv2.tx - mv1.tx);
+                    side = 0;
                 }
                 else 
                 {
-                    if (((int)mv1.tx < 1) || ((0 < mv2.tx || (!(local_20->flags & ML_TWOSIDED)))))
-                        goto LAB_000235c5; //TODO: Untangle me
+                    if (((int)mv1.tx < 1) || ((0 < mv2.tx || (!(line->flags & ML_TWOSIDED)))))
+                        continue;
 
-                    local_2c = FixedDiv(mv1.tx, mv1.tx - mv2.tx);
-                    local_1c = 1;
+                    midz = FixedDiv(mv1.tx, mv1.tx - mv2.tx);
+                    side = 1;
                 }
-                local_2c = mv1.tz + FixedMul(mv2.tz - mv1.tz, local_2c);
+                midz = mv1.tz + FixedMul(mv2.tz - mv1.tz, midz);
 
-                if (-1 < local_2c) 
+                if (-1 < midz) 
                 {
-                    crossing_p->z = local_2c;
+                    crossing_p->z = midz;
                     crossing_p->thing = (thing_t*)NULL;
-                    crossing_p->line = local_20;
-                    crossing_p->side = local_1c;
+                    crossing_p->line = line;
+                    crossing_p->side = side;
                     crossing_p++;
                 }
             }
-        LAB_000235c5:
-            i++;
         }
     }
     return;
@@ -183,30 +171,18 @@ void P_CrossSectorLines(sector_t* sector, int checkall)
 
 int P_CrossSectorBounds(int sector, fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2)
 {
-    int deltax;
-    int deltay;
-    int notdeltay;
-    int local_20;
-    int extraout_EDX_00;
-    int* puVar1;
-    int* puVar2;
-    int* puVar3;
-    int* puVar4;
-    uint8_t bVar5;
-    int distance;
-    int iVar6;
+    fixed_t deltax, deltay;
+    int num;
+    fixed_t distance;
     crossing_t* crossingstart;
-    crossing_t* pcVar7;
+    crossing_t* test;
     crossing_t temp;
 
     point_t p1;
     vertex_t mv1;
 
-    int j;
-    int notdeltax;
-
-    bVar5 = 0;
-
+    int i, j;
+    
     if ((x1 == x2) && (y1 == y2))
     {
         return sector;
@@ -215,10 +191,8 @@ int P_CrossSectorBounds(int sector, fixed_t x1, fixed_t y1, fixed_t x2, fixed_t 
     deltay = y2 - y1;
     viewy = y1;
     viewx = x1;
-    notdeltax = abs(deltax);
-    notdeltay = abs(deltay);
-    viewsin = FixedDiv(deltay, notdeltax + notdeltay);
-    viewcos = FixedDiv(deltax, notdeltax + notdeltay);
+    viewsin = FixedDiv(deltay, abs(deltax) + abs(deltay));
+    viewcos = FixedDiv(deltax, abs(deltax) + abs(deltay));
 
     p1.x = x2;
     p1.y = y2;
@@ -228,14 +202,15 @@ int P_CrossSectorBounds(int sector, fixed_t x1, fixed_t y1, fixed_t x2, fixed_t 
     validcheck++;
     crossing_p = &crossings[0];
     crossingstart = crossings;
-    do {
+    do 
+    {
         P_CrossSectorLines(&sectors[sector], 0);
-        local_20 = crossing_p - crossingstart;
-        notdeltay = 0;
-        while (notdeltay < local_20 + -1)
+        num = crossing_p - crossingstart;
+        
+        for (i = 0; i < num - 1; i++)
         {
-            j = 0;
-            while (j < (local_20 + -1) - notdeltay) 
+            
+            for (j = 0; j < (num - 1) - i; j++)
             {
                 if (crossingstart[j + 1].z < crossingstart[j].z)
                 {
@@ -243,27 +218,27 @@ int P_CrossSectorBounds(int sector, fixed_t x1, fixed_t y1, fixed_t x2, fixed_t 
                     crossingstart[j] = crossingstart[j + 1];
                     crossingstart[j + 1] = temp;
                 }
-                j++;
+                
             }
-            notdeltay++;
         }
         do
         {
-            pcVar7 = crossingstart;
-            if (crossing_p <= pcVar7) 
+            test = crossingstart;
+            if (crossing_p <= test) 
             {
                 return sector;
             }
-            if (distance < pcVar7->z)
+            if (distance < test->z)
             {
                 return sector;
             }
-            sector = (sector_t*)(int)sides[pcVar7->line->side[pcVar7->side ^ 1]].sector;
-            crossingstart = pcVar7 + 1;
+            sector = (sector_t*)(int)sides[test->line->side[test->side ^ 1]].sector;
+            crossingstart = test + 1;
         } while (sectors[(int)sector].validcheck == validcheck);
-        if (pcVar7->line->special != 0) 
+
+        if (test->line->special != 0) 
         {
-            P_PlayerCrossSpecialLine(pcVar7->line);
+            P_PlayerCrossSpecialLine(test->line);
         }
     } while (1);
 }
@@ -276,12 +251,10 @@ void P_PlayerShootWall(player_t* player, line_t* line)
 
 int P_PlayerShootThing(player_t* player, thing_t* ithing)
 {
-    thing_t* local_20;
     int damage;
 
     if (!(ithing->flags & 4)) 
     {
-        local_20 = player;
         if (player->readyweapon < 8)
         {
             switch (player->readyweapon)
@@ -318,15 +291,12 @@ int P_PlayerShootThing(player_t* player, thing_t* ithing)
 
 void P_PlayerShoot(void)
 {
-    int iVar1;
     crossing_t temp;
     crossing_t* crossingstart;
     int sector;
     int num;
-    int j;
-    int i;
+    int i, j;
 
-    //bVar8 = 0;
     viewx = player->r->x;
     viewy = player->r->y;
     viewcos = cosines[player->r->angle];
@@ -341,13 +311,11 @@ void P_PlayerShoot(void)
         //local_3c.side = (int)crossing_p; //TODO: decompiler mess, try to verify if needed
         P_CrossSectorLines(&sectors[sector], 1);
         num = crossing_p - crossingstart;
-        i = 0;
-
+        
         //sort crossings
-        while (i < num - 1) 
+        for (i = 0; i < num - 1; i++)
         {
-            j = 0;
-            while (j < (num - 1) - i)
+            for (j = 0; j < (num - 1) - i; j++)
             {
                 if (crossingstart[j + 1].z < crossingstart[j].z) 
                 {
@@ -355,9 +323,7 @@ void P_PlayerShoot(void)
                     crossingstart[j] = crossingstart[j + 1];
                     crossingstart[j + 1] = temp;
                 }
-                j = j + 1;
             }
-            i = i + 1;
         }
         do 
         {
@@ -368,8 +334,7 @@ void P_PlayerShoot(void)
                     IO_Error("P_PlayerShoot: ran out of crossings\n");
                 }
                 if (crossingstart->thing == (thing_t*)NULL) break;
-                iVar1 = P_PlayerShootThing(player, crossingstart->thing);
-                if (iVar1 != 0) 
+                if (P_PlayerShootThing(player, crossingstart->thing) != 0)
                 {
                     return;
                 }
@@ -383,4 +348,55 @@ void P_PlayerShoot(void)
             crossingstart++;
         } while (sectors[sector].validcheck == validcheck);
     } while (1);
+}
+
+int numaudareas;
+
+void P_RecursiveAudConnect(sector_t* sector)
+{
+    sector_t* newsector;
+    int i;
+
+    sector->audarea = numaudareas;
+    sector->validcheck = validcheck;
+    //Note: This doesn't actually work, since the sector adjacency information is never computed. 
+    for (i = 0; i < sector->numadjacentsectors; i++)
+    {
+        newsector = sector->adjacentsectors[i];
+        if (((newsector->validcheck != validcheck) &&
+            (newsector->floorheight <= sector->ceilingheight)) &&
+            (sector->floorheight <= newsector->ceilingheight))
+        {
+            P_RecursiveAudConnect(newsector);
+        }
+    }
+    return;
+}
+
+void P_FixAudareas(void)
+{
+    sector_t* sector;
+    int i;
+    numaudareas = 0;
+
+    validcheck++;
+
+    sector = sectors;
+    for (i = 0; i < numsectors; i++)
+    {
+        if (sector->validcheck != validcheck) 
+        {
+            if (sector->floorheight == sector->ceilingheight) 
+            {
+                sector->audarea = -1;
+            }
+            else 
+            {
+                P_RecursiveAudConnect(sector);
+                numaudareas = numaudareas + 1;
+            }
+        }
+        sector++;
+    }
+    return;
 }

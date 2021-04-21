@@ -24,8 +24,6 @@ int processedframe;
 
 memzone_t* playzone;
 
-void* demo_p;
-
 int automapup;
 int redshift;
 int goldshift;
@@ -55,37 +53,37 @@ uint8_t* demo_p;
 
 void P_SetShiftPalette(void)
 {
-	int iVar1;
+	int palnum;
 
 	if (redshift == 0)
 	{
 		if (goldshift == 0) 
 		{
-			iVar1 = 0;
+			palnum = 0;
 		}
 		else
 		{
-			iVar1 = goldshift >> 2;
-			if (NUMGOLDPALS < iVar1)
+			palnum = goldshift >> 2;
+			if (NUMGOLDPALS < palnum)
 			{
-				iVar1 = NUMGOLDPALS;
+				palnum = NUMGOLDPALS;
 			}
-			iVar1 = iVar1 + STARTGOLDPALS;
+			palnum = palnum + STARTGOLDPALS;
 		}
 	}
 	else 
 	{
-		iVar1 = redshift >> 2;
-		if (NUMREDPALS < iVar1) 
+		palnum = redshift >> 2;
+		if (NUMREDPALS < palnum) 
 		{
-			iVar1 = NUMREDPALS;
+			palnum = NUMREDPALS;
 		}
-		iVar1 = iVar1 + STARTREDPALS;
+		palnum = palnum + STARTREDPALS;
 	}
-	if ((iVar1 != currentpalette) && (screenfaded == 0)) 
+	if ((palnum != currentpalette) && (screenfaded == 0)) 
 	{
-		currentpalette = iVar1;
-		IO_SetPalette(&playpalette[iVar1 * 0x300]);
+		currentpalette = palnum;
+		IO_SetPalette(&playpalette[palnum * 0x300]);
 	}
 	return;
 }
@@ -124,14 +122,14 @@ void P_RemoveThinker(thinker_t* thinker)
 
 void P_RunThinkers(void)
 {
-	thinker_t* temp_79f3315cca1;
+	thinker_t* next;
 
 	currentthinker = thinkercap.next;
-	temp_79f3315cca1 = currentthinker;
-	while (currentthinker = temp_79f3315cca1, currentthinker != &thinkercap) 
+	next = currentthinker;
+	while (currentthinker = next, currentthinker != &thinkercap) 
 	{
-		temp_79f3315cca1 = currentthinker->next;
-		if (temp_79f3315cca1->prev != currentthinker) 
+		next = currentthinker->next;
+		if (next->prev != currentthinker) 
 		{
 			IO_Error("P_RunThinkers: bad link in list\n");
 		}
@@ -156,12 +154,6 @@ void P_CheckDebugKeys(void)
 	}
 	if (keydown[KEY_Q] != 0) 
 	{
-		/*if (keydown[KEY_DEBUG])
-		{
-			D_SpinScreenOut();
-			IO_Quit();
-		}*/
-
 		R_SetDetail(0);
 		keydown[KEY_Q] = 0;
 	}
@@ -175,10 +167,6 @@ void P_CheckDebugKeys(void)
 		R_SetDetail(2);
 		keydown[KEY_E] = 0;
 	}
-	/*if (keydown[KEY_R]) //[ISB]
-	{
-		R_SetDetail(3);
-	}*/
 	if (keydown[KEY_LBRACKET] != 0) 
 	{
 		R_SizeDown();
@@ -200,8 +188,7 @@ void P_CheckDebugKeys(void)
 
 void P_ProcessFrames(void)
 {
-	void* pvVar1;
-	int uVar2;
+	int f;
 
 	playernum = 0;
 	while (playernum < 4) 
@@ -224,12 +211,12 @@ void P_ProcessFrames(void)
 			playernum++;
 		}
 		processedframe++;
-		uVar2 = processedframe & 0x1f;
-		M_CheckInput(&sd->playercmd[sd->consoleplayer * 0x20 + uVar2]);
+		f = processedframe & 0x1f;
+		M_CheckInput(&sd->playercmd[sd->consoleplayer * 0x20 + f]);
 		
 		if (automapup != 0) 
 		{
-			P_RunAutoMap(sd->playercmd[sd->consoleplayer * 0x20 + uVar2].keyscan);
+			P_RunAutoMap(sd->playercmd[sd->consoleplayer * 0x20 + f].keyscan);
 		}
 		playernum = 0;
 		while (playernum < 4) 
@@ -249,8 +236,7 @@ void P_ProcessFrames(void)
 				}
 				else 
 				{
-					P_PlayerGameThink(&sd->playercmd[playernum * 0x20 + uVar2]);
-					pvVar1 = demo_p;
+					P_PlayerGameThink(&sd->playercmd[playernum * 0x20 + f]);
 					if (demo == 1) 
 					{
 						if (demo_p == demoend)
@@ -258,8 +244,10 @@ void P_ProcessFrames(void)
 							gameaction = ga_completed;
 							return;
 						}
-						demo_p = (void*)((int)demo_p + 4);
-						*(framecmd_t*)pvVar1 = sd->playercmd[playernum * 0x20 + uVar2];
+						*(framecmd_t*)demo_p = sd->playercmd[playernum * 0x20 + f];
+						demo_p += 4;
+						//demo_p = (void*)((int)demo_p + 4);
+						//*(framecmd_t*)pvVar1 = sd->playercmd[playernum * 0x20 + f];
 					}
 				}
 			}
@@ -282,24 +270,19 @@ void P_ProcessFrames(void)
 
 void P_PlayLoop(void)
 {
-	int* piVar1;
-	uint8_t* palette;
-	thing_t* local_20;
-	int iVar2;
+	thing_t* viewer;
+	int i;
 
 	screenfaded = 1;
 	P_SetPlayPalette();
 	automapup = 0;
 	R_SetViewSize(config.viewsize, config.hdetail, 1);
 	P_DrawPlayScreen();
-	iVar2 = sd->consoleplayer;
-	sd->playercmdframe[iVar2] = -1;
-	processedframe = sd->playercmdframe[iVar2];
-	iVar2 = 0;
-	while (iVar2 < 4) 
+	sd->playercmdframe[sd->consoleplayer] = -1;
+	processedframe = sd->playercmdframe[sd->consoleplayer];
+	for(i = 0; i < 4; i++) 
 	{
-		sd->playercmdframe[iVar2] = -1;
-		iVar2 = iVar2 + 1;
+		sd->playercmdframe[i] = -1;
 	}
 	gameaction = ga_playing;
 	do
@@ -311,8 +294,8 @@ void P_PlayLoop(void)
 		P_AnimatePlanePics();
 		if (automapup == 0) 
 		{
-			local_20 = playerobjs[viewplayer].r;
-			R_RenderView(local_20->sector, local_20->x, local_20->y, playerobjs[viewplayer].viewz, local_20->angle + viewplayerangle & 0x1fff);
+			viewer = playerobjs[viewplayer].r;
+			R_RenderView(viewer->sector, viewer->x, viewer->y, playerobjs[viewplayer].viewz, viewer->angle + viewplayerangle & 0x1fff);
 			P_DrawPlayerShapes(viewplayer);
 		}
 		M_DrawSelf();
@@ -320,8 +303,7 @@ void P_PlayLoop(void)
 		if (screenfaded != 0) 
 		{
 			screenfaded = 0;
-			palette = W_GetName("PLAYPAL");
-			D_FadeIn(palette);
+			D_FadeIn(W_GetName("PLAYPAL"));
 			D_Synchronize();
 		}
 	} while ((gameaction == ga_playing) && (demoaction == da_gameloop));

@@ -69,18 +69,18 @@ void P_DamageEnemy(actor_t* actor, int damage)
 }
 
 //the ultimate disappointment
-void A_Look(actor_t *self)
+void A_Look(actor_t *actor)
 {
 }
 
-void A_Chase(actor_t* self)
+void A_Chase(actor_t* actor)
 {
 }
 
-void A_Attack(actor_t* self)
+void A_Attack(actor_t* actor)
 {
 }
 
-void A_Scream(actor_t* self)
+void A_Scream(actor_t* actor)
 {
 }

@@ -60,72 +60,71 @@ actor_t* actorcap;
 
 uint8_t* P_BlockOrg(int x, int y)
 {
-	return (((x - maporiginx) + -0x100000 >> 0x14) +
-		mapwidth * ((y - maporiginy) + -0x100000 >> 0x14) +
-		blockmap);
+	int tx = (x - maporiginx) + -0x100000 >> 0x14;
+	int ty = (y - maporiginy) + -0x100000 >> 0x14;
+
+	return &blockmap[tx + mapwidth * ty];
 }
 
 int P_PlaceGetMarks(thing_t* rthing)
 {
-	uint8_t* pbVar1;
-	thing_t* local_24;
-	int local_20;
+	uint8_t* map;
 
-	local_24 = rthing;
-	pbVar1 = P_BlockOrg(rthing->x, rthing->y);
-	if (((((*pbVar1 & 4) == 0) && ((pbVar1[1] & 4) == 0)) && ((pbVar1[mapwidth] & 4) == 0))
-		&& ((pbVar1[mapwidth + 1] & 4) == 0)) 
+	map = P_BlockOrg(rthing->x, rthing->y);
+
+	if (((((map[0] & 4) == 0) && ((map[1] & 4) == 0)) && ((map[mapwidth] & 4) == 0)) && ((map[mapwidth + 1] & 4) == 0)) 
 	{
-		*pbVar1 |= 4;
-		pbVar1[1] |= 4;
-		pbVar1[mapwidth] |= 4;
-		pbVar1[mapwidth + 1] |= 4;
-		local_24->flags |= 1;
-		local_20 = 1;
+		map[0] |= 4;
+		map[1] |= 4;
+		map[mapwidth] |= 4;
+		map[mapwidth + 1] |= 4;
+		rthing->flags |= 1;
+		return 1;
 	}
 	else 
 	{
-		local_20 = 0;
+		return 0;
 	}
-	return local_20;
 }
 
 void P_PlaceBlockMarks(thing_t* rthing)
 {
-	uint8_t* pbVar1;
-	thing_t* local_20;
+	uint8_t* map;
 
-	local_20 = rthing;
-	pbVar1 = P_BlockOrg(rthing->x, rthing->y);
-	*pbVar1  |= 2;
-	pbVar1[1] |= 2;
-	pbVar1[mapwidth] |= 2;
-	pbVar1[mapwidth + 1] |= 2;
-	local_20->flags |= 8;
+	map = P_BlockOrg(rthing->x, rthing->y);
+
+	map[0] |= 2;
+	map[1] |= 2;
+	map[mapwidth] |= 2;
+	map[mapwidth + 1] |= 2;
+
+	rthing->flags |= 8;
 	return;
 }
 
 void P_RemoveGetMarks(thing_t* rthing)
 {
-	uint8_t* pbVar1;
+	uint8_t* map;
 
-	pbVar1 = P_BlockOrg(rthing->x, rthing->y);
-	*pbVar1 &= 0xfb;
-	pbVar1[1] &= 0xfb;
-	pbVar1[mapwidth] &= 0xfb;
-	pbVar1[mapwidth + 1] &= 0xfb;
+	map = P_BlockOrg(rthing->x, rthing->y);
+
+	map[0] &= 0xfb;
+	map[1] &= 0xfb;
+	map[mapwidth] &= 0xfb;
+	map[mapwidth + 1] &= 0xfb;
 	return;
 }
 
 void P_RemoveBlockMarks(thing_t* rthing)
 {
-	uint8_t* pbVar1;
+	uint8_t* map;
 
-	pbVar1 = P_BlockOrg(rthing->x, rthing->y);
-	*pbVar1 &= 0xfd;
-	pbVar1[1] &= 0xfd;
-	pbVar1[mapwidth] &= 0xfd;
-	pbVar1[mapwidth + 1] &= 0xfd;
+	map = P_BlockOrg(rthing->x, rthing->y);
+
+	map[0] &= 0xfd;
+	map[1] &= 0xfd;
+	map[mapwidth] &= 0xfd;
+	map[mapwidth + 1] &= 0xfd;
 	return;
 }
 
@@ -180,9 +179,7 @@ void P_SetState(actor_t* actor, statenum_t state)
 		actor->r->frame = states[state].frame;
 		if (states[state].action != (void*)NULL)
 		{
-			//[ISB] hrm, so this doesn't work at all because a param isn't passed. Heh.
-			//TODO: Could be RE error, so double check.
-			(*(void(*)())states[state].action)();
+			(*(void(*)(actor_t*))states[state].action)(actor);
 		}
 	}
 	return;
@@ -203,43 +200,38 @@ void T_StateCycleMove(actor_t* actor)
 
 thing_t* P_GetNewThing(mapthing_t* mthing)
 {
-	thing_t* ptVar1;
+	thing_t* refthing;
 
-	ptVar1 = R_GetNewThing(mthing->sector);
-	ptVar1->x = (int)mthing->origin.x << FRACBITS;
-	ptVar1->y = (int)mthing->origin.y << FRACBITS;
-	ptVar1->z = sectors[mthing->sector].floorheight;
-	if (359 < mthing->ang) 
+	refthing = R_GetNewThing(mthing->sector);
+	refthing->x = (int)mthing->origin.x << FRACBITS;
+	refthing->y = (int)mthing->origin.y << FRACBITS;
+	refthing->z = sectors[mthing->sector].floorheight;
+
+	if (mthing->ang > 359) 
 	{
 		IO_Error("P_GetNewThing: bad angle for thing at (%i,%i)\n", mthing->origin.x, mthing->origin.y);
 	}
-	ptVar1->angle = ((int)mthing->ang << 0xd) / 360;
-	ptVar1->flags = 0;
-	return ptVar1;
+	refthing->angle = ((int)mthing->ang << 0xd) / 360;
+	refthing->flags = 0;
+
+	return refthing;
 }
 
 actor_t* P_InitActor(mapthing_t* mthing, statenum_t state, int bblockflags)
 {
-	thing_t* ptVar1;
-	uint8_t* pbVar2;
-	int iVar3;
-	mapthing_t* local_20;
-
 	actorcap = (actor_t*)Z_Malloc(playzone, sizeof(actor_t));
-	ptVar1 = P_GetNewThing(mthing);
-	actorcap->r = ptVar1;
+	actorcap->r = P_GetNewThing(mthing);
 	actorcap->r->specialdata = actorcap;
-	(actorcap->thinker).function = &T_StateCycleMove;
-	pbVar2 = P_BlockOrg(actorcap->r->x, actorcap->r->y);
-	actorcap->maporigin = pbVar2;
+	actorcap->thinker.function = &T_StateCycleMove;
+	actorcap->maporigin = P_BlockOrg(actorcap->r->x, actorcap->r->y);
 	P_AddActor(actorcap);
 	P_SetState(actorcap, state);
+
 	if ((bblockflags & 2) == 0) 
 	{
 		if ((bblockflags & 4) != 0) 
 		{
-			iVar3 = P_PlaceGetMarks(actorcap->r);
-			if (iVar3 == 0)
+			if (P_PlaceGetMarks(actorcap->r) == 0)
 			{
 				IO_Error("P_InitActor: Overlapping getable objects at %i, %i\n", actorcap->r->x >> FRACBITS, actorcap->r->y >> FRACBITS);
 			}
@@ -249,92 +241,88 @@ actor_t* P_InitActor(mapthing_t* mthing, statenum_t state, int bblockflags)
 	{
 		P_PlaceBlockMarks(actorcap->r);
 	}
+
 	return actorcap;
 }
 
 void P_SpawnPlayer(mapthing_t* mthing)
 {
-	short sVar1;
-	thing_t* ptVar2;
-	int iVar3;
-	player_t* local_20;
+	thing_t* rthing;
+	player_t* player;
 
-	ptVar2 = P_GetNewThing(mthing);
+	rthing = P_GetNewThing(mthing);
 	playerthingfound[mthing->type-1] = 1;
-	local_20 = &playerobjs[mthing->type - 1];
+	player = &playerobjs[mthing->type - 1];
 
-	local_20->r = ptVar2;
-	ptVar2->sprite = SPR_PLAY;
-	ptVar2->frame = 0;
-	ptVar2->specialdata = local_20;
-	ptVar2->flags = 0xc;
+	player->r = rthing;
+	rthing->sprite = SPR_PLAY;
+	rthing->frame = 0;
+	rthing->specialdata = player;
+	rthing->flags = 0xc; 
 
-	//TODO: I'm honestly not sure what this is referencing. All player setup is done elsewhere
-	//(&goldshift)[(int)sVar1 * 0x20] = 0xf;
+	playerobjs[mthing->type - 1].pendingweapon = wp_nochange;
 
-	P_SetupPSprites((int)mthing->type - 1);
+	P_SetupPSprites(mthing->type - 1);
 
-	P_PlaceBlockMarks(local_20->r);
+	P_PlaceBlockMarks(player->r);
 	return;
 }
 
 void P_InitThing(mapthing_t* mthing)
 {
-	unsigned short uVar1;
-	spawninfo_t* local_1c;
+	spawninfo_t* sp;
 
-	uVar1 = mthing->type;
-	if (uVar1 != 0)
+	if (mthing->type != 0)
 	{
-		if (uVar1 < 5)
+		if (mthing->type < 5)
 		{
 			P_SpawnPlayer(mthing);
 			return;
 		}
-		if (uVar1 == 3001) 
+		if (mthing->type == 3001)
 		{
 			P_InitActor(mthing, S_TROO_STND, 2);
 			actorcap->health = 20;
 			return;
 		}
-		else if (uVar1 == 3002) 
+		else if (mthing->type == 3002)
 		{
 			P_InitActor(mthing, S_SARG_STND, 2);
 			actorcap->health = 40;
 			return;
 		}
-		else if (uVar1 == 3003) 
+		else if (mthing->type == 3003)
 		{
 			P_InitActor(mthing, S_BOSS_STND, 2);
 			actorcap->health = 250;
 			return;
 		}
-		else if (uVar1 == 3004)
+		else if (mthing->type == 3004)
 		{
 			P_InitActor(mthing, S_POSS_STND, 2);
 			actorcap->health = 10;
 			return;
 		}
-		else if (uVar1 == 3005) 
+		else if (mthing->type == 3005)
 		{
 			P_InitActor(mthing, S_HEAD_STND, 2);
 			actorcap->health = 100;
 			return;
 		}
 	}
-	local_1c = &spawninfo[0];
+	sp = &spawninfo[0];
 	for(;;)
 	{
-		if (local_1c->number == -1) 
+		if (sp->number == -1) 
 		{
 			//[ISB]
 			//fprintf(stderr, "P_InitThing: unknown spawn number %d\n", mthing->type);
 			return;
 		}
-		if ((int)mthing->type == local_1c->number) break;
-		local_1c = local_1c + 1;
+		if ((int)mthing->type == sp->number) break;
+		sp++;
 	}
-	P_InitActor(mthing, local_1c->state, local_1c->bmapflags);
+	P_InitActor(mthing, sp->state, sp->bmapflags);
 	return;
 }
 

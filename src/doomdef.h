@@ -151,6 +151,7 @@ typedef enum
 } item_t;
 
 #define MAXBODY 15
+#define MAXARMOR 15
 
 typedef struct
 {
@@ -570,7 +571,7 @@ typedef struct sector_s
 	int linecount;
 	int* lines;
 	int numadjacentsectors;
-	struct sector_s* adjacentsectors;
+	struct sector_s** adjacentsectors;
 	int validcheck;
 	thing_t* things;
 	void* specialdata;
@@ -726,7 +727,7 @@ void R_LoadMap(char* name);
 
 //init
 void R_Startup();
-void R_TransformVertex(vertex_t* source, vertex_t* destination);
+void R_TransformVertex(point_t* source, vertex_t* destination);
 void R_ChangeWindow(int width, int height, fixed_t vertscale);
 int R_LightFromVScale(fixed_t scale);
 int R_LightFromZ(fixed_t z);

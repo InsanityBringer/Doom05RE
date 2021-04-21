@@ -76,15 +76,15 @@ void R_Startup()
 	R_InitVideoDevice();
 }
 
-void R_TransformVertex(vertex_t* source, vertex_t* destination)
+void R_TransformVertex(point_t* source, vertex_t* destination)
 {
 	//longlong lVar1;
 	//longlong lVar2;
 	int iVar3;
 	int iVar4;
 
-	iVar3 = source->tx - viewx;
-	iVar4 = source->tz - viewy;
+	iVar3 = source->x - viewx;
+	iVar4 = source->y - viewy;
 
 	destination->tx = -FixedMul(iVar4, viewcos) + FixedMul(iVar3, viewsin);
 	destination->tz = (FixedMul(iVar3, viewcos) + FixedMul(iVar4, viewsin));

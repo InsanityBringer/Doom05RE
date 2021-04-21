@@ -30,140 +30,118 @@ pic_t* blankbar;
 
 void P_DrawWeapon(void)
 {
-    int iVar1;
-    pic_t* pic;
-    weapontype_t local_20;
+    int num;
+    weapontype_t wep;
 
-    local_20 = playerobjs[viewplayer].readyweapon;
-    iVar1 = W_GetNumForName("I_WBAYON");
-    pic = (pic_t*)W_GetLump(iVar1 + local_20);
-    V_DrawPic(4, 172, pic);
+    wep = playerobjs[viewplayer].readyweapon;
+    num = W_GetNumForName("I_WBAYON");
+    V_DrawPic(4, 172, (pic_t*)W_GetLump(num + wep));
     return;
 }
 
 void P_DrawAmmo(void)
 {
-    int local_20;
-    pic_t* pic;
-    int num = 0;
+    int num;
+    int ammo = 0;
 
     if (player->readyweapon < 8) 
     {
         switch (player->readyweapon) 
         {
         default:
-            num = 0;
+            ammo = 0;
             break;
         case wp_rifle:
         case wp_auto:
-            num = player->ammo[am_clip];
+            ammo = player->ammo[am_clip];
             break;
         case wp_shotgun:
-            num = player->ammo[am_shell];
+            ammo = player->ammo[am_shell];
             break;
         case wp_missile:
-            num = player->ammo[am_misl];
+            ammo = player->ammo[am_misl];
             break;
         case wp_claw:
-            num = player->ammo[am_soul];
+            ammo = player->ammo[am_soul];
             break;
         case wp_bfg:
-            num = player->ammo[am_cell];
+            ammo = player->ammo[am_cell];
             break;
         }
     }
-    local_20 = num / 100;
-    pic = (pic_t*)W_GetLump(snumber0 + local_20);
-    V_DrawPic(56, 185, pic);
-    num = num + local_20 * -100;
-    local_20 = num / 10;
-    pic = (pic_t*)W_GetLump(snumber0 + local_20);
-    V_DrawPic(68, 185, pic);
-    pic = (pic_t*)W_GetLump(snumber0 + num + local_20 * -10);
-    V_DrawPic(80, 185, pic);
+    num = ammo / 100;
+    V_DrawPic(56, 185, (pic_t*)W_GetLump(snumber0 + num));
+    ammo = ammo + num * -100; //probably not 100% accurate decompilation, but the asm doesn't use modulo or the like, so it's accurate to that.
+    num = ammo / 10;
+    V_DrawPic(68, 185, (pic_t*)W_GetLump(snumber0 + num));
+    V_DrawPic(80, 185, (pic_t*)W_GetLump(snumber0 + ammo + num * -10));
     return;
 }
 
 void P_DrawHealth(void)
 {
-    int iVar1;
-
-    iVar1 = 0;
-    while (iVar1 < player->health) 
+    int i;
+    
+    for (i = 0; i < player->health; i++)
     {
-        V_DrawPic(iVar1 * 4 + 140, 171, healthbar);
-        iVar1++;
+        V_DrawPic(i * 4 + 140, 171, healthbar);
     }
-    while (iVar1 < 0xf) 
+    for (; i < MAXBODY; i++) 
     {
-        V_DrawPic(iVar1 * 4 + 140, 171, blankbar);
-        iVar1++;
+        V_DrawPic(i * 4 + 140, 171, blankbar);
     }
     return;
 }
 
 void P_DrawArmor(void)
 {
-    int iVar1;
-
-    iVar1 = 0;
-    while (iVar1 < player->armor) 
+    int i;
+    
+    for (i = 0; i < player->armor; i++)
     {
-        V_DrawPic(iVar1 * 4 + 140, 181, armorbar);
-        iVar1 = iVar1 + 1;
+        V_DrawPic(i * 4 + 140, 181, armorbar);
     }
-    while (iVar1 < 0xf) 
+    for (; i < MAXARMOR; i++) 
     {
-        V_DrawPic(iVar1 * 4 + 140, 181, blankbar);
-        iVar1 = iVar1 + 1;
+        V_DrawPic(i * 4 + 140, 181, blankbar);
     }
     return;
 }
 
 void P_DrawTime(void)
 {
-    int iVar1;
+    int i;
 
-    iVar1 = 0;
-    while (iVar1 < player->itemtime)
+    for (i = 0; i < player->itemtime; i++)
     {
-        V_DrawPic(iVar1 * 4 + 140, 191, timebar);
-        iVar1 = iVar1 + 1;
+        V_DrawPic(i * 4 + 140, 191, timebar);
     }
-    while (iVar1 < 0xf) 
+    for (; i < 15; i++)
     {
-        V_DrawPic(iVar1 * 4 + 140, 191, blankbar);
-        iVar1 = iVar1 + 1;
+        V_DrawPic(i * 4 + 140, 191, blankbar);
     }
     return;
 }
 
 void P_DrawCards(void)
 {
-    pic_t* pic;
-    int iVar1;
+    int i;
 
-    iVar1 = 0;
-    while (iVar1 < 3)
+    for (i = 0; i < 3; i++)
     {
-        if (player->items[iVar1] != 0) 
+        if (player->items[i] != 0) 
         {
-            pic = (pic_t*)W_GetLump(cardnumber + 1 + iVar1);
-            V_DrawPic(204, iVar1 * 8 + 172, pic);
+            V_DrawPic(204, i * 8 + 172, (pic_t*)W_GetLump(cardnumber + 1 + i));
         }
-        iVar1 = iVar1 + 1;
     }
     return;
 }
 
 void P_DrawPlayScreen(void)
 {
-    pic_t* pic;
+    V_DrawPic(0, 168, (pic_t*)W_GetName("INFOLEFT"));
+    V_DrawPic(136, 168, (pic_t*)W_GetName("INFOR1"));
 
-    pic = (pic_t*)W_GetName("INFOLEFT");
-    V_DrawPic(0, 168, pic);
-    pic = (pic_t*)W_GetName("INFOR1");
-    V_DrawPic(136, 168, pic);
     player = &playerobjs[sd->consoleplayer];
     P_DrawWeapon();
     P_DrawAmmo();
@@ -241,7 +219,7 @@ void P_GiveAmmo(ammotype_t ammo, int num)
 void P_GiveBody(int num)
 {
     player->health += num;
-    if (MAXBODY < player->health)
+    if (player->health > MAXBODY)
     {
         player->health = MAXBODY;
     }
@@ -283,21 +261,22 @@ void P_GiveCard(item_t item)
 
 void P_GetThingAt(uint8_t* spot)
 {
-    actor_t* local_28;
+    actor_t* check;
+    uint8_t* spot2 = spot - 1;
+    uint8_t* spot3 = spot - mapwidth;
+    uint8_t* spot4 = spot - mapwidth - 1;
 
-    local_28 = actor.next;
-    while ((((local_28 != &actor && (local_28->maporigin != spot)) &&
-        (local_28->maporigin != spot - 1)) &&
-        ((local_28->maporigin != spot - mapwidth &&
-            (local_28->maporigin != (spot - mapwidth) - 1)))))
+    check = actor.next;
+    while (check != &actor && check->maporigin != spot && check->maporigin != spot2 && check->maporigin != spot3 && check->maporigin != spot4)
     {
-        local_28 = local_28->next;
+        check = check->next;
     }
-    if (local_28 == &actor) 
+    if (check == &actor) 
     {
         IO_Error("P_GetThingAt: actor not located\n");
     }
-    switch (local_28->r->sprite)
+
+    switch (check->r->sprite)
     {
     case SPR_SHOT:
         if ((player->weaponowned[wp_shotgun] != 0) && (player->ammo[am_shell] == MAXSHELL)) 
@@ -452,8 +431,8 @@ void P_GetThingAt(uint8_t* spot)
         IO_Error("P_GetThing: Unknown gettable thing\n");
         break;
     }
-    P_RemoveGetMarks(local_28->r);
-    P_RemoveActor(local_28);
+    P_RemoveGetMarks(check->r);
+    P_RemoveActor(check);
     if (playernum == sd->consoleplayer) 
     {
         goldshift += 6;
@@ -463,11 +442,11 @@ void P_GetThingAt(uint8_t* spot)
 
 void P_PlayerDied(int playernum)
 {
-    player_t* ppVar1;
+    player_t* player;
 
-    ppVar1 = &playerobjs[playernum];
-    P_RemoveBlockMarks(playerobjs[playernum].r);
-    ppVar1->health = 0;
+    player = &playerobjs[playernum];
+    P_RemoveBlockMarks(player->r);
+    player->health = 0;
     return;
 }
 
@@ -503,77 +482,78 @@ void P_AMapPlot(int x, int y, int color)
 void P_DrawPlayerMarker(player_t* player)
 {
     int x;
-    int local_20;
+    int y;
 
     x = player->r->x - amaporgx >> 0x14;
-    local_20 = amaporgy - player->r->y >> 0x14;
-    P_AMapPlot(x, local_20, 0xb4);
+    y = amaporgy - player->r->y >> 0x14;
+    P_AMapPlot(x, y, 0xb4);
     switch ((int)(player->r->angle + 0x200U & 0x1fff) >> 10)
     {
     case 0:
-        P_AMapPlot(x + 1, local_20, 0xb0);
-        P_AMapPlot(x + -1, local_20, 0xb8);
+        P_AMapPlot(x + 1, y, 0xb0);
+        P_AMapPlot(x + -1, y, 0xb8);
         break;
     case 1:
-        P_AMapPlot(x + 1, local_20 + -1, 0xb0);
-        P_AMapPlot(x + -1, local_20 + 1, 0xb8);
+        P_AMapPlot(x + 1, y + -1, 0xb0);
+        P_AMapPlot(x + -1, y + 1, 0xb8);
         break;
     case 2:
-        P_AMapPlot(x, local_20 + -1, 0xb0);
-        P_AMapPlot(x, local_20 + 1, 0xb8);
+        P_AMapPlot(x, y + -1, 0xb0);
+        P_AMapPlot(x, y + 1, 0xb8);
         break;
     case 3:
-        P_AMapPlot(x + -1, local_20 + -1, 0xb0);
-        P_AMapPlot(x + 1, local_20 + 1, 0xb8);
+        P_AMapPlot(x + -1, y + -1, 0xb0);
+        P_AMapPlot(x + 1, y + 1, 0xb8);
         break;
     case 4:
-        P_AMapPlot(x + -1, local_20, 0xb0);
-        P_AMapPlot(x + 1, local_20, 0xb8);
+        P_AMapPlot(x + -1, y, 0xb0);
+        P_AMapPlot(x + 1, y, 0xb8);
         break;
     case 5:
-        P_AMapPlot(x + -1, local_20 + 1, 0xb0);
-        P_AMapPlot(x + 1, local_20 + -1, 0xb8);
+        P_AMapPlot(x + -1, y + 1, 0xb0);
+        P_AMapPlot(x + 1, y + -1, 0xb8);
         break;
     case 6:
-        P_AMapPlot(x, local_20 + 1, 0xb0);
-        P_AMapPlot(x, local_20 + -1, 0xb8);
+        P_AMapPlot(x, y + 1, 0xb0);
+        P_AMapPlot(x, y + -1, 0xb8);
         break;
     case 7:
-        P_AMapPlot(x + 1, local_20 + 1, 0xb0);
-        P_AMapPlot(x + -1, local_20 + -1, 0xb8);
+        P_AMapPlot(x + 1, y + 1, 0xb0);
+        P_AMapPlot(x + -1, y + -1, 0xb8);
     }
     return;
 }
 
 void P_DrawAMap(int x1, int y1, int x2, int y2, int mapx, int mapy)
 {
-    int local_24;
-    int local_20;
-    int local_1c;
-    int local_18;
-    uint8_t bVar1;
+    int my;
+    int mx;
+    int y;
+    int x;
+    uint8_t mxl;
 
-    local_24 = mapy - maporiginy >> 0x14;
+    my = mapy - maporiginy >> 0x14;
     mapx = mapx - maporiginx;
-    local_1c = y1;
-    while (local_20 = mapx >> 0x14, local_18 = x1, local_1c <= y2) 
+    
+    for (y = y1; y <= y2; y++)
     {
-        while (local_18 <= x2) 
+        mx = mapx >> 0x14;
+        
+        for (x = x1; x <= x2; x++)
         {
-            if ((local_24 < mapheight) && (local_20 < mapwidth) && local_24 >= 0 && local_20 >= 0) 
+            if ((my < mapheight) && (mx < mapwidth) && my >= 0 && mx >= 0) 
             {
-                bVar1 = amapcolor[blockmap[local_20 + local_24 * mapwidth]];
+                mxl = amapcolor[blockmap[mx + my * mapwidth]];
             }
             else
             {
-                bVar1 = 0xcd;
+                mxl = 0xcd;
             }
-            *(collumnpointer[local_18] + planewidthlookup[local_1c]) = bVar1;
-            local_18 = local_18 + 1;
-            local_20 = local_20 + 1;
+            *(collumnpointer[x] + planewidthlookup[y]) = mxl;
+            mx = mx + 1;
         }
-        local_1c = local_1c + 1;
-        local_24 = local_24 - 1;
+        
+        my = my - 1;
     }
     V_MarkUpdateBlock(x1, y1, x2, y2);
     return;
@@ -582,17 +562,15 @@ void P_DrawAMap(int x1, int y1, int x2, int y2, int mapx, int mapy)
 
 void P_EnterAutoMap()
 {
-    int iVar1;
-    player_t* player_00;
+    player_t* player;
 
     if (automapup == 0) 
     {
-        iVar1 = sd->consoleplayer;
-        player_00 = &playerobjs[iVar1];
-        amaporgx = (playerobjs[iVar1].r)->x + -0xa000000;
-        amaporgy = (playerobjs[iVar1].r)->y + 0x5400000;
+        player = &playerobjs[sd->consoleplayer];
+        amaporgx = (playerobjs[sd->consoleplayer].r)->x + -0xa000000;
+        amaporgy = (playerobjs[sd->consoleplayer].r)->y + 0x5400000;
         P_DrawAMap(0, 0, 319, 167, amaporgx, amaporgy);
-        P_DrawPlayerMarker(player_00);
+        P_DrawPlayerMarker(player);
         automapup = 1;
         ignorekeyboard++;
         P_DrawPlayScreen();

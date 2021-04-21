@@ -40,48 +40,45 @@ fixed_t clipstepup = 24 << FRACBITS;
 line_t* clipline;
 int clipbox[4];
 
-void P_SetPSprite(int position, statenum_t stnum)
+void P_SetPsprite(int position, statenum_t stnum)
 {
-    int local_20;
-    state_t* local_1c;
-    pspdef_t* ppVar1;
+    state_t* state;
+    pspdef_t* psp;
 
-    ppVar1 = &psprites[playernum * NUMPSPRITES + position];
-    local_20 = stnum;
+    psp = &psprites[playernum * NUMPSPRITES + position];
     do 
     {
-        if (local_20 == 0) 
+        if (stnum == 0) 
         {
-            ppVar1->state = (state_t*)NULL;
+            psp->state = (state_t*)NULL;
             return;
         }
-        local_1c = &states[local_20];
-        ppVar1->state = local_1c;
-        ppVar1->tics = states[local_20].tics;
-        if (states[local_20].misc1 != 0)
+        state = &states[stnum];
+        psp->state = state;
+        psp->tics = states[stnum].tics;
+        if (states[stnum].misc1 != 0)
         {
-            ppVar1->sx = states[local_20].misc1 << FRACBITS;
-            ppVar1->sy = states[local_20].misc2 << FRACBITS;
+            psp->sx = states[stnum].misc1 << FRACBITS;
+            psp->sy = states[stnum].misc2 << FRACBITS;
         }
-        if (states[local_20].action != NULL)
+        if (states[stnum].action != NULL)
         {
-            ((void(*)())states[local_20].action)(ppVar1);
+            ((void(*)())states[stnum].action)(psp);
         }
-        local_20 = local_1c->nextstate;
-    } while (ppVar1->tics == 0);
+        stnum = state->nextstate;
+    } while (psp->tics == 0);
     return;
 }
 
 void P_SetupPSprites(int pnum)
 {
-    int iVar1;
+    int i;
 
-    iVar1 = 0;
-    while (iVar1 < NUMPSPRITES) 
+    for (i = 0; i < NUMPSPRITES; i++) 
     {
-        psprites[pnum * NUMPSPRITES + iVar1].state = NULL;
-        iVar1 = iVar1 + 1;
+        psprites[pnum * NUMPSPRITES + i].state = NULL;
     }
+
     player = &playerobjs[pnum];
     playernum = pnum;
     playerobjs[pnum].pendingweapon = playerobjs[pnum].readyweapon;
@@ -91,6 +88,7 @@ void P_SetupPSprites(int pnum)
 
 void P_CalcSwing(void)
 {
+    //This is basically the same as the unused P_CalcSwing function in the release source. 
     swingx = FixedMul(player->bob, sines[processedframe * 117 & 0x1fff]);
     swingy = -FixedMul(swingx, sines[processedframe * 117 + 4096 & 0x1fff]);
 
@@ -99,43 +97,38 @@ void P_CalcSwing(void)
 
 void P_DrawPlayerShapes(int pnum)
 {
-    pspdef_t* local_EAX_179;
-    pspdef_t* local_20;
-    int local_24;
+    pspdef_t* psp;
+    int i;
 
     player = &playerobjs[pnum];
     playernum = pnum;
-    local_24 = pnum;
+    i = pnum;
     P_CalcSwing();
-    local_20 = &psprites[local_24 * NUMPSPRITES];
-    local_24 = 0;
-    while (local_24 < 3) 
+    psp = &psprites[i * NUMPSPRITES];
+    for (i = 0; i < 3; i++) 
     {
-        if (local_20->state != NULL)
+        if (psp->state != NULL)
         {
-            R_DrawPlayerShape(local_20->state->sprite, local_20->state->frame, local_20->sx + swingx >> FRACBITS, local_20->sy + swingy >> FRACBITS);
+            R_DrawPlayerShape(psp->state->sprite, psp->state->frame, psp->sx + swingx >> FRACBITS, psp->sy + swingy >> FRACBITS);
         }
-        local_24 = local_24 + 1;
-        local_20 = local_20 + 1;
+        psp++;
     }
-    local_24 = 0;
-    while (local_24 < NUMPSPRITES)
+    for (i = 0; i < NUMPSPRITES; i++)
     {
-        if (local_20->state != NULL) 
+        if (psp->state != NULL) 
         {
-            R_DrawPlayerShape(local_20->state->sprite, local_20->state->frame, local_20->sx >> FRACBITS, local_20->sy >> FRACBITS);
+            R_DrawPlayerShape(psp->state->sprite, psp->state->frame, psp->sx >> FRACBITS, psp->sy >> FRACBITS);
         }
-        local_24 = local_24 + 1;
-        local_20 = local_20 + 1;
+        psp++;
     }
     return;
 }
 
 void P_MovePlayerShapes(void)
 {
-    state_t* local_EAX_121;
-    pspdef_t* local_20;
-    int position;
+    state_t* state;
+    pspdef_t* psp;
+    int i;
 
     playernum = 0;
     while (playernum < 4)
@@ -143,18 +136,17 @@ void P_MovePlayerShapes(void)
         if (sd->playeringame[playernum] != 0) 
         {
             player = &playerobjs[playernum];
-            local_20 = &psprites[playernum * NUMPSPRITES];
-            position = 0;
-            while (position < NUMPSPRITES) 
+            psp = &psprites[playernum * NUMPSPRITES];
+            
+            for (i = 0; i < NUMPSPRITES; i++)
             {
-                if (((local_20->state != NULL) &&
-                    (((position != 2 || (player->health != 0)) && (local_20->tics != -1)))) &&
-                    (local_20->tics = local_20->tics + -1, local_20->tics == 0))
+                if (((psp->state != NULL) &&
+                    (((i != 2 || (player->health != 0)) && (psp->tics != -1)))) &&
+                    (psp->tics = psp->tics + -1, psp->tics == 0))
                 {
-                    P_SetPSprite(position, local_20->state->nextstate);
+                    P_SetPsprite(i, psp->state->nextstate);
                 }
-                position++;
-                local_20++;
+                psp++;
             }
         }
         playernum++;
@@ -192,7 +184,7 @@ void P_BringUpWeapon(void)
         IO_Error("A_ChangeWeapon: bad weapon number\n");
     }
     player->pendingweapon = wp_nochange;
-    P_SetPSprite(2, newpsp);
+    P_SetPsprite(2, newpsp);
     psprites[playernum * NUMPSPRITES + 2].sy = 0x900000;
     return;
 }
@@ -258,13 +250,13 @@ void P_FireWeapon(void)
     {
         IO_Error("A_FireWeapon: bad weapon number\n");
     }
-    P_SetPSprite(2, newpsp);
+    P_SetPsprite(2, newpsp);
     return;
 }
 
 void A_WeaponReady(pspdef_t* psp)
 {
-    statenum_t local_8;
+    statenum_t newpsp;
 
     if ((player->pendingweapon == wp_nochange) && (player->health != 0)) 
     {
@@ -280,26 +272,26 @@ void A_WeaponReady(pspdef_t* psp)
             switch (player->readyweapon) 
             {
             case wp_knife:
-                local_8 = S_BAYONETDOWN;
+                newpsp = S_BAYONETDOWN;
                 break;
             case wp_rifle:
-                local_8 = S_RIFLEDOWN;
+                newpsp = S_RIFLEDOWN;
                 break;
             case wp_shotgun:
-                local_8 = S_SGUNDOWN;
+                newpsp = S_SGUNDOWN;
                 break;
             case wp_auto:
-                local_8 = S_AUTODOWN;
+                newpsp = S_AUTODOWN;
                 break;
             default:
-                local_8 = S_SGUNDOWN;
+                newpsp = S_SGUNDOWN;
             }
         }
         else 
         {
             IO_Error("A_ChangeWeapon: bad weapon number\n");
         }
-        P_SetPSprite(2, local_8);
+        P_SetPsprite(2, newpsp);
     }
     return;
 }
@@ -322,7 +314,7 @@ void A_Lower(pspdef_t* psp)
     {
         if (player->health == 0)
         {
-            P_SetPSprite(2, S_NULL);
+            P_SetPsprite(2, S_NULL);
         }
         else
         {
@@ -340,7 +332,7 @@ void A_Lower(pspdef_t* psp)
 
 void A_Raise(pspdef_t* psp)
 {
-    statenum_t local_8;
+    statenum_t newpsp;
 
     psp->sy = psp->sy + -0x60000;
     if (psp->sy < 0x440001)
@@ -351,67 +343,67 @@ void A_Raise(pspdef_t* psp)
             switch (player->readyweapon)
             {
             case wp_knife:
-                local_8 = S_BAYONET;
+                newpsp = S_BAYONET;
                 break;
             case wp_rifle:
-                local_8 = S_RIFLE;
+                newpsp = S_RIFLE;
                 break;
             case wp_shotgun:
-                local_8 = S_SGUN;
+                newpsp = S_SGUN;
                 break;
             case wp_auto:
-                local_8 = S_AUTO;
+                newpsp = S_AUTO;
                 break;
             default:
-                local_8 = S_SGUN;
+                newpsp = S_SGUN;
             }
         }
         else 
         {
             IO_Error("A_ChangeWeapon: bad weapon number\n");
         }
-        P_SetPSprite(2, local_8);
+        P_SetPsprite(2, newpsp);
     }
     return;
 }
 
 void A_FireGun(pspdef_t* psp)
 {
-    statenum_t local_8;
+    statenum_t newpsp;
 
     if (player->readyweapon < 8)
     {
         switch (player->readyweapon)
         {
         default:
-            local_8 = S_NULL;
+            newpsp = S_NULL;
             break;
         case wp_rifle:
             player->ammo[am_clip]--;
             P_PlayerShoot();
-            local_8 = S_RIFLASH1;
+            newpsp = S_RIFLASH1;
             break;
         case wp_shotgun:
             player->ammo[am_shell]--;
             P_PlayerShoot();
-            local_8 = S_SGUNFLASH1;
+            newpsp = S_SGUNFLASH1;
             break;
         case wp_auto:
             player->ammo[am_clip]--;
             P_PlayerShoot();
-            local_8 = S_AUTOFLASH1;
+            newpsp = S_AUTOFLASH1;
             break;
         case wp_missile:
             player->ammo[am_misl]--;
-            local_8 = S_SGUNFLASH1;
+            newpsp = S_SGUNFLASH1;
             break;
         case wp_claw:
             player->ammo[am_soul]--;
-            local_8 = S_SGUNFLASH1;
+            newpsp = S_SGUNFLASH1;
             break;
         case wp_bfg:
             player->ammo[am_cell]--;
-            local_8 = S_SGUNFLASH1;
+            newpsp = S_SGUNFLASH1;
             break;
         }
     }
@@ -423,7 +415,7 @@ void A_FireGun(pspdef_t* psp)
     {
         P_DrawAmmo();
     }
-    P_SetPSprite(1, local_8);
+    P_SetPsprite(1, newpsp);
     return;
 }
 
@@ -444,58 +436,52 @@ void A_Light2(pspdef_t* psp)
 
 void P_UseFrontLines(sector_t* sector)
 {
-    int local_2c;
-    int in_stack_ffffff9c;
-    int in_stack_ffffffb8;
-    sector_t* local_28;
-    line_t* local_24;
-    int local_20;
-    int iVar2;
+    fixed_t frac;
+    line_t* line;
+    int side;
+    int i;
 
     vertex_t vv1, vv2;
 
     if (sector->validcheck != validcheck)
     {
         sector->validcheck = validcheck;
-        iVar2 = 0;
-        local_28 = sector;
-        while (iVar2 < local_28->linecount) 
+        
+        for (i = 0; i < sector->linecount; i++)
         {
-            local_24 = &lines[local_28->lines[iVar2]];
-            if ((local_24->flags & ML_TWOSIDED) || (local_24->special != 0))
+            line = &lines[sector->lines[i]];
+            if ((line->flags & ML_TWOSIDED) || (line->special != 0))
             {
-                R_TransformVertex((vertex_t*)(points + local_24->p1), (vertex_t*)&vv2);
-                R_TransformVertex((vertex_t*)(points + local_24->p2), (vertex_t*)&vv1);
+                R_TransformVertex(&points[line->p1], &vv2);
+                R_TransformVertex(&points[line->p2], &vv1);
                 if (((int)vv2.tx < 0) && (0 < vv1.tx)) 
                 {
-                    local_2c = FixedDiv(-vv2.tx, vv1.tx - vv2.tx);
-                    local_20 = 0;
+                    frac = FixedDiv(-vv2.tx, vv1.tx - vv2.tx);
+                    side = 0;
                 }
                 else 
                 {
-                    if ((((int)vv2.tx < 1) || (-1 < vv1.tx)) || (!(local_24->flags & ML_TWOSIDED)))
-                        goto LAB_00021ce5;
+                    if ((((int)vv2.tx < 1) || (-1 < vv1.tx)) || (!(line->flags & ML_TWOSIDED)))
+                        continue;
 
-                    local_2c = FixedDiv(vv2.tx, vv2.tx - vv1.tx);
-                    local_20 = 1;
+                    frac = FixedDiv(vv2.tx, vv2.tx - vv1.tx);
+                    side = 1;
                 }
 
-                local_2c = vv2.tz + FixedMul(vv1.tz - vv2.tz, local_2c);
+                frac = vv2.tz + FixedMul(vv1.tz - vv2.tz, frac);
 
-                if ((local_2c < 0x280001) && (-1 < local_2c)) 
+                if ((frac < 0x280001) && (-1 < frac)) 
                 {
-                    if (local_24->special == 0) 
+                    if (line->special == 0) 
                     {
-                        P_UseFrontLines(sectors + sides[local_24->side[local_20 ^ 1]].sector);
+                        P_UseFrontLines(sectors + sides[line->side[side ^ 1]].sector);
                     }
                     else 
                     {
-                        P_PlayerUseSpecialLine(local_24, local_20);
+                        P_PlayerUseSpecialLine(line, side);
                     }
                 }
             }
-        LAB_00021ce5:
-            iVar2++;
         }
     }
     return;
@@ -539,9 +525,6 @@ void P_ChangeWeapon(weapontype_t newweapon)
 
 void P_SlowPlayer(void)
 {
-    player_t* ppVar2;
-
-    ppVar2 = player;
     if (debugmove == 0) 
     {
         if ((player->momx < -STOPSPEED) || (STOPSPEED < player->momx))
@@ -563,37 +546,32 @@ void P_SlowPlayer(void)
     }
     else
     {
-        player->momx = ppVar2->momy = 0;
+        player->momx = player->momy = 0;
     }
     return;
 }
 
 int P_CheckSolidLines(int sectornum)
 {
-    short sVar1;
-    //longlong lVar2;
-    int uVar3;
-    int local_20;
+    short sec;
+    fixed_t clipintercept;
+    fixed_t lineintercept;
     int iVar4;
-    uint8_t bVar5;
-    int local_30;
-    int local_2c;
-    sector_t* psVar6;
+    int i;
+    sector_t* sector;
 
     fixed_t temp;
 
     point_t p1, p2;
 
-    bVar5 = 0;
-    psVar6 = &sectors[sectornum];
-    if (psVar6->validcheck != validcheck)
+    sector = &sectors[sectornum];
+    if (sector->validcheck != validcheck)
     {
-        psVar6->validcheck = validcheck;
-        local_2c = 0;
-        local_30 = sectornum;
-        while (local_2c < psVar6->linecount)
+        sector->validcheck = validcheck;
+        
+        for (i = 0; i < sector->linecount; i++)
         {
-            clipline = &lines[psVar6->lines[local_2c]];
+            clipline = &lines[sector->lines[i]];
             if ((((clipline->bbox[1] <= clipbox[3]) && (clipbox[1] <= clipline->bbox[3])) &&
                 (clipbox[0] <= clipline->bbox[2])) && (clipline->bbox[0] <= clipbox[2])) 
             {
@@ -602,22 +580,23 @@ int P_CheckSolidLines(int sectornum)
                     p1 = points[clipline->p1];
                     p2 = points[clipline->p2];
 
-                    local_20 = clipline->yintercept;
+                    lineintercept = clipline->yintercept;
 
-                    iVar4 = local_20 + FixedMul(clipline->slope, clipbox[1]);
-                    temp = local_20 + FixedMul(clipline->slope, clipbox[3]);
+                    iVar4 = lineintercept + FixedMul(clipline->slope, clipbox[1]);
+                    temp = lineintercept + FixedMul(clipline->slope, clipbox[3]);
 
                     if ((iVar4 < clipbox[0] || clipbox[2] < iVar4) && ((temp < clipbox[0] || clipbox[2] < temp)))
                     {
-                        uVar3 = clipbox[0] - local_20;
+                        clipintercept = clipbox[0] - lineintercept;
 
-                        iVar4 = FixedDiv(uVar3, clipline->slope);
+                        iVar4 = FixedDiv(clipintercept, clipline->slope);
 
                         if ((iVar4 < clipbox[1]) || (clipbox[3] < iVar4))
                         {
-                            uVar3 = clipbox[2] - local_20;
-                            local_20 = FixedDiv(uVar3, clipline->slope);
-                            if ((local_20 < clipbox[1]) || (clipbox[3] < local_20)) goto LAB_00022118;
+                            clipintercept = clipbox[2] - lineintercept;
+                            lineintercept = FixedDiv(clipintercept, clipline->slope);
+                            if ((lineintercept < clipbox[1]) || (clipbox[3] < lineintercept))
+                                continue;
                         }
                     }
                 }
@@ -627,128 +606,119 @@ int P_CheckSolidLines(int sectornum)
                 }
                 if ((clipline->flags & ML_TWOSIDED)) 
                 {
-                    if ((int)sides[clipline->side[0]].sector == local_30) 
+                    if ((int)sides[clipline->side[0]].sector == sectornum) 
                     {
-                        sVar1 = sides[clipline->side[1]].sector;
+                        sec = sides[clipline->side[1]].sector;
                     }
                     else 
                     {
-                        sVar1 = sides[clipline->side[0]].sector;
+                        sec = sides[clipline->side[0]].sector;
                     }
-                    local_20 = (int)sVar1;
-                    if (sectors[local_20].ceilingheight - psVar6->floorheight < clipgap) 
+                    if (sectors[sec].ceilingheight - sector->floorheight < clipgap)
                     {
                         return 0;
                     }
-                    if (clipstepup < sectors[local_20].floorheight - psVar6->floorheight) 
+                    if (clipstepup < sectors[sec].floorheight - sector->floorheight)
                     {
                         return 0;
                     }
-                    local_20 = P_CheckSolidLines(local_20);
-                    if (local_20 == 0) 
+                    if (P_CheckSolidLines(sec) == 0)
                     {
                         return 0;
                     }
                 }
             }
-        LAB_00022118:
-            local_2c = local_2c + 1;
         }
     }
     return 1;
 }
 
-int P_CheckPosition(fixed_t x, fixed_t y, fixed_t size, int basesector)
+int P_CheckPosition(fixed_t ox, fixed_t oy, fixed_t size, int basesector)
 {
-    uint8_t* local_2c;
-    int local_24;
-    int local_30;
-    int local_20;
+    fixed_t leftblock, rightblock, topblock, bottomblock;
+    uint8_t* blmap;
+    fixed_t x, y;
 
-    clipbox[1] = x - size;
-    clipbox[3] = x + size;
-    clipbox[2] = y + size;
-    clipbox[0] = y - size;
+    clipbox[1] = ox - size;
+    clipbox[3] = ox + size;
+    clipbox[2] = oy + size;
+    clipbox[0] = oy - size;
 
-    local_30 = basesector;
-    local_2c = P_BlockOrg(x, y);
+    blmap = P_BlockOrg(ox, oy);
 
-    if ((*local_2c & 4) != 0) 
+    if ((*blmap & 4) != 0) 
     {
-        P_GetThingAt(local_2c);
+        P_GetThingAt(blmap);
     }
-    if ((local_2c[1] & 4) != 0) 
+    if ((blmap[1] & 4) != 0) 
     {
-        P_GetThingAt(local_2c + 1);
+        P_GetThingAt(blmap + 1);
     }
-    if ((local_2c[mapwidth] & 4) != 0)
+    if ((blmap[mapwidth] & 4) != 0)
     {
-        P_GetThingAt(local_2c + mapwidth);
+        P_GetThingAt(blmap + mapwidth);
     }
-    if ((local_2c[mapwidth + 1] & 4) != 0) 
+    if ((blmap[mapwidth + 1] & 4) != 0) 
     {
-        P_GetThingAt(local_2c + mapwidth + 1);
+        P_GetThingAt(blmap + mapwidth + 1);
     }
 
-    if (((((*local_2c & 2) == 0) && ((local_2c[1] & 2) == 0)) && ((local_2c[mapwidth] & 2) == 0)) && ((local_2c[mapwidth + 1] & 2) == 0)) 
+    if (((((blmap[0] & 2) == 0) && ((blmap[1] & 2) == 0)) && ((blmap[mapwidth] & 2) == 0)) && ((blmap[mapwidth + 1] & 2) == 0)) 
     {
-        local_24 = clipbox[0] - maporiginy >> 0x14;
-        while (local_20 = clipbox[1] - maporiginx >> 0x14, local_24 <= clipbox[2] - maporiginy >> 0x14)
+        rightblock = clipbox[0] - maporiginy >> 0x14;
+        leftblock = clipbox[2] - maporiginy >> 0x14;
+        x = rightblock;
+        while (x <= leftblock)
         {
-            while (local_20 <= clipbox[3] - maporiginx >> 0x14) 
+            topblock = clipbox[1] - maporiginx >> 0x14;
+            bottomblock = clipbox[3] - maporiginx >> 0x14;
+            y = topblock;
+            while (y <= bottomblock) 
             {
-                if (((blockmap[local_24 * mapwidth + local_20]) & 1) != 0) 
+                if (((blockmap[x * mapwidth + y]) & 1) != 0) 
                 {
                     validcheck++;
-                    local_30 = P_CheckSolidLines(local_30);
-                    return local_30;
+                    return P_CheckSolidLines(basesector);
                 }
-                local_20++;
+                y++;
             }
-            local_24++;
+            x++;
         }
-        local_30 = 1;
+        return 1;
     }
     else 
     {
-        local_30 = 0;
+        return 0;
     }
-    return local_30;
 }
 
 void P_ClipPlayerMove(void)
 {
-    player_t* ppVar1;
-    fixed_t x;
-    fixed_t y;
-    int iVar2;
+    fixed_t tryx;
+    fixed_t tryy;
 
-    x = player->r->x + player->momx;
-    y = player->r->y + player->momy;
-    iVar2 = P_CheckPosition(x, y, 0x100000, player->r->sector);
-    if (iVar2 == 0)
+    tryx = player->r->x + player->momx;
+    tryy = player->r->y + player->momy;
+
+    if (P_CheckPosition(tryx, tryy, 16 << FRACBITS, player->r->sector) == 0)
     {
-        x = player->r->x + player->momx;
-        y = player->r->y;
-        iVar2 = P_CheckPosition(x, y, 0x100000, player->r->sector);
-        if (iVar2 == 0) 
+        tryx = player->r->x + player->momx;
+        tryy = player->r->y;
+        if (P_CheckPosition(tryx, tryy, 16 << FRACBITS, player->r->sector) == 0)
         {
-            x = player->r->x;
-            y = player->r->y + player->momy;
-            iVar2 = P_CheckPosition(x, y, 0x100000, player->r->sector);
-            ppVar1 = player;
-            if (iVar2 == 0) 
+            tryx = player->r->x;
+            tryy = player->r->y + player->momy;
+            if (P_CheckPosition(tryx, tryy, 16 << FRACBITS, player->r->sector) == 0)
             {
-                player->momy = 0;
-                player->momx = ppVar1->momy;
+                player->momx = player->momy = 0;
                 return;
             }
         }
     }
-    iVar2 = P_CrossSectorBounds(player->r->sector, player->r->x, player->r->y, x, y);
-    player->r->sector = iVar2;
-    player->r->x = x;
-    player->r->y = y;
+
+    player->r->sector = P_CrossSectorBounds(player->r->sector, player->r->x, player->r->y, tryx, tryy);
+    player->r->x = tryx;
+    player->r->y = tryy;
     return;
 }
 
@@ -788,14 +758,14 @@ void P_CalcBob(void)
 
 void P_DeadThink(framecmd_t* cmd)
 {
-    int iVar1;
+    fixed_t delta;
 
     P_MovePlayer();
     P_SlowPlayer();
-    iVar1 = player->viewz - player->r->z;
-    if (iVar1 < 0x140001) 
+    delta = player->viewz - player->r->z;
+    if (delta < 0x140001) 
     {
-        if (iVar1 < 0x80001)
+        if (delta < 0x80001)
         {
             if ((cmd->buttons & 2) != 0) 
             {
@@ -816,10 +786,7 @@ void P_DeadThink(framecmd_t* cmd)
 
 void P_PlayerGameThink(framecmd_t* cmd)
 {
-    int* piVar1;
-    int* puVar2;
-
-    weapontype_t newweapon;
+    weapontype_t weaponchange;
 
     if (player->health == 0) 
     {
@@ -836,23 +803,22 @@ void P_PlayerGameThink(framecmd_t* cmd)
             P_Use();
         }
         player->strafedown = (cmd->buttons & 1);
-        newweapon = (cmd->buttons >> 2) & 0xf;
-        if (newweapon != wp_nochange) 
+        weaponchange = (cmd->buttons >> 2) & 0xf;
+        if (weaponchange != wp_nochange) 
         {
-            P_ChangeWeapon(newweapon);
+            P_ChangeWeapon(weaponchange);
         }
         player->firedown = (cmd->buttons & 2);
+
         if ((cmd->buttons & 1) == 0) 
         {
             player->r->angle = (player->r->angle - FixedMul(cmd->xmove, 0x20000)) & 0x1fff;
         }
-        else 
+        else if (cmd->xmove != 0)
         {
-            if (cmd->xmove != 0)
-            {
-                P_Thrust(player->r->angle + -0x800, (int)(short)(char)cmd->xmove * 640);
-            }
+            P_Thrust(player->r->angle + -0x800, (int)(short)(char)cmd->xmove * 640);
         }
+
         if (cmd->ymove != 0) 
         {
             P_Thrust(player->r->angle, (int)(short)(char)cmd->ymove * 640);

@@ -160,7 +160,7 @@ void P_DrawTime();
 void P_DrawPlayScreen();
 
 //psprites
-void P_SetPSprite(int position, statenum_t stnum);
+void P_SetPsprite(int position, statenum_t stnum);
 void P_SetupPSprites(int pnum);
 void P_CalcSwing();
 void P_DrawPlayerShapes(int pnum);
