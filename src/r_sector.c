@@ -43,9 +43,6 @@ int size1, size2;
 
 procline_t activehead;
 
-//[ISB] TODO: I couldn't get this function working right. It mostly works but it occasionally sorts one element beyond the list in
-//The disassembler was having a hard time with this function, and making sense of the ASM was hell. 
-#if 0
 void Merge(void)
 {
     int iVar1;
@@ -95,62 +92,61 @@ void Merge(void)
     } while (1);
 }
 
-void* MergeSort(int* esource, int* espare, int count)
+int* MergeSort(int* source, int* spare, int count)
 {
     int* piVar1;
-    int* local_20;
-    int* local_30;
-    unsigned int local_1c;
-    int local_18;
     int iVar2;
+    int iVar3;
+    int iVar4;
+    int* apiStack40[4];
+    int* local_18;
+    unsigned int local_14;
 
-    int* esourcea;
-
-    //TODO: ughhhh
-    local_30 = esource;
-    esourcea = esource;
-    if (1 < count) 
+    if (count < 2) 
     {
-        iVar2 = 1;
-        local_1c = 0;
-        local_20 = esource;
-        piVar1 = espare;
-        do {
-            edest = piVar1;
-            local_18 = 0;
-            local_30 = edest;
-            do {
-                size1 = iVar2;
-                esrc1 = local_20 + local_18;
-                esrc2 = esrc1 + size1;
-                size2 = count - (local_18 + size1);
-                if (size1 < size2) 
-                {
-                    size2 = size1;
-                }
-                local_18 = local_18 + size1 + size2;
-                iVar2 = size1;
-                Merge();
-            } while (iVar2 < count - local_18);
-
-            while (local_18 != count)
-            {
-                piVar1 = edest;
-                edest++;
-                //*piVar1 = *(int*)(*(int*)(&stack0xffffffc0 + local_1c * 4) + local_18 * 4);
-                //The final bit may be conpiler junk
-                *piVar1 = esourcea[local_1c + local_18];// +local_18 * 4;
-                local_18++;
-            }
-            local_1c = local_1c ^ 1;
-            iVar2 = iVar2 << 1;
-            piVar1 = local_20;
-            local_20 = local_30;
-        } while (iVar2 < count);
+        return source;
     }
-    return local_30;
+    local_14 = 0;
+    apiStack40[0] = source;
+    apiStack40[1] = spare;
+    local_18 = source;
+    apiStack40[3] = spare;
+    iVar3 = 1;
+    piVar1 = apiStack40[3];
+    do 
+    {
+        apiStack40[3] = piVar1;
+        iVar2 = 0;
+        edest = apiStack40[3];
+        do 
+        {
+            esrc1 = local_18 + iVar2;
+            esrc2 = esrc1 + iVar3;
+            size2 = count - (iVar2 + iVar3);
+            if (iVar3 < size2) 
+            {
+                size2 = iVar3;
+            }
+            iVar2 = iVar2 + iVar3 + size2;
+            size1 = iVar3;
+            Merge();
+        } while (iVar3 < count - iVar2);
+        while (piVar1 = edest, count != iVar2) 
+        {
+            edest = edest + 1;
+            *piVar1 = apiStack40[local_14][iVar2];
+            iVar2 = iVar2 + 1;
+        }
+        local_14 = local_14 ^ 1;
+        apiStack40[2] = local_18;
+        local_18 = apiStack40[3];
+        iVar4 = iVar3 * 2;
+        iVar2 = iVar3 * -2;
+        iVar3 = iVar4;
+        piVar1 = apiStack40[2];
+    } while (iVar4 < count);
+    return apiStack40[3];
 }
-#endif
 
 void R_AddActiveSeg(int procnum)
 {
@@ -243,11 +239,6 @@ void R_AddLineXEvents(int linenum)
     return;
 }
 
-int DebugCmp(const void* a, const void* b)
-{
-    return *((int*)a) - *((int*)b);
-}
-
 void R_SortXEvents(void)
 {
     int count;
@@ -259,9 +250,7 @@ void R_SortXEvents(void)
     }
     else 
     {
-        //sortedxevents = (int*)MergeSort(xevents, xevents + 200, count);
-        sortedxevents = &xevents[0];
-        qsort(sortedxevents, count, sizeof(int), DebugCmp);
+        sortedxevents = MergeSort(xevents, xevents + 200, count);
     }
     sortedxevents[count] = (sectorxh + 1) * 0x2000;
 
