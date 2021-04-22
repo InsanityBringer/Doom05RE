@@ -66,7 +66,7 @@ void G_WorldMap()
             mapname = mappts[gamestate].mapname;
         } while (mapname == NULL);
     }
-    G_WarpToMap(mapname);
+    G_WarpToMap(mappts[gamestate].mapname);
     gameaction = ga_runmap;
     return;
 }
