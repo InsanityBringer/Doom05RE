@@ -610,6 +610,12 @@ typedef struct
 	procline_t* proclines;
 } subsector_t;
 
+typedef struct
+{
+	int number;
+	fixed_t xl, xh;
+} drange_t;
+
 extern int* floorpixel, * ceilingpixel;
 extern int* newfloor, * newceiling;
 extern int* passfloor, * passceiling;
@@ -620,7 +626,7 @@ extern sector_t* sector;
 extern int newfseg;
 extern int newprocline;
 extern int extralight;
-extern int vwalldrange;
+extern drange_t vwalldrange;
 
 extern procline_t proclines[];
 extern forwardseg_t fsegs[];

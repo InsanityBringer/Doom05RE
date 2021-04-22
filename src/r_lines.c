@@ -31,16 +31,12 @@ fixed_t scale;
 
 fixed_t highscreen, lowscreen, topscreen, bottomscreen;
 
-//TODO: Determine the symbol table names for these
-int drange_linenum;
-int drange_xl;
-
 int newfseg;
 forwardseg_t* wallfseg;
 int newprocline;
 int extralight;
 
-int vwalldrange;
+drange_t vwalldrange;
 
 int* walllight;
 
@@ -273,7 +269,7 @@ void R_DrawEndSeg(void)
         topscreen += topscreenstep;
         bottomscreen += bottomscreenstep;
         sp_x++;
-    } while (sp_x <= vwalldrange);
+    } while (sp_x <= vwalldrange.xh);
     return;
 }
 
@@ -282,7 +278,7 @@ void R_DrawTopSeg(void)
     unsigned int uVar2;
     int iVar3;
 
-    while (sp_x <= vwalldrange)
+    while (sp_x <= vwalldrange.xh)
     {
         toppixel = topscreen + 0xffff >> FRACBITS;
         highpixel = (highscreen - 1) >> FRACBITS;
@@ -353,7 +349,7 @@ void R_DrawBottomSeg(void)
         lowscreen = lowscreen + lowscreenstep;
         bottomscreen = bottomscreen + bottomscreenstep;
         sp_x++;
-    } while (sp_x <= vwalldrange);
+    } while (sp_x <= vwalldrange.xh);
     return;
 }
 
@@ -364,7 +360,7 @@ void R_DrawTopBottomSeg(void)
     unsigned int uVar2;
     int iVar3;
 
-    while (sp_x <= vwalldrange)
+    while (sp_x <= vwalldrange.xh)
     {
         local_20 = R_LightFromVScale(scale);
         sp_colormap = walllight[local_20];
@@ -422,7 +418,7 @@ void R_DrawEmptySeg(void)
         topscreen += topscreenstep;
         bottomscreen += bottomscreenstep;
         sp_x++;
-    } while (sp_x <= vwalldrange);
+    } while (sp_x <= vwalldrange.xh);
     return;
 }
 
@@ -790,15 +786,15 @@ void R_DrawLineDrange(void)
     int iVar3;
     procline_t* local_20;
 
-    if (numlines <= drange_linenum) 
+    if (numlines <= vwalldrange.number) 
     {
         IO_Error("R_DrawLineDrange: bad line number\n");
     }
-    if (vwalldrange < drange_xl)
+    if (vwalldrange.xh < vwalldrange.xl)
     {
         IO_Error("R_DrawLineDrange: inverted range\n");
     }
-    uVar1 = lines[drange_linenum].slopetype;
+    uVar1 = lines[vwalldrange.number].slopetype;
     if (uVar1 == 0) 
     {
         walllight = esectorscalelight2;
@@ -811,7 +807,7 @@ void R_DrawLineDrange(void)
     {
         walllight = esectorscalelight;
     }
-    iVar2 = lines[drange_linenum].procline;
+    iVar2 = lines[vwalldrange.number].procline;
 
     local_20 = &proclines[iVar2];
     if (proclines[iVar2].seg == -1) 
@@ -826,7 +822,7 @@ void R_DrawLineDrange(void)
     collumnstep = forwardsegs[iVar2].collumnstep;
     highscreenstep = forwardsegs[iVar2].highscreenstep;
     lowscreenstep = forwardsegs[iVar2].lowscreenstep;
-    iVar3 = drange_xl - local_20->ipx1;
+    iVar3 = vwalldrange.xl - local_20->ipx1;
     if (iVar3 == 0) 
     {
         scale = local_20->scale1;
@@ -854,7 +850,7 @@ void R_DrawLineDrange(void)
             lowscreen = forwardsegs[iVar2].startlowscreen + iVar3 * lowscreenstep;
         }
     }
-    sp_x = drange_xl;
+    sp_x = vwalldrange.xl;
 
     switch (wallfseg->type) 
     {

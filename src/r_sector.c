@@ -257,10 +257,6 @@ void R_SortXEvents(void)
     return;
 }
 
-//TODO: Determine the symbol table names for these
-extern int drange_linenum;
-extern int drange_xl;
-
 void R_ProcessXEvents(void)
 {
     int* piVar1;
@@ -302,8 +298,8 @@ void R_ProcessXEvents(void)
     }
     psVar2 = vissec;
     local_28 = local_24->line;
-    drange_xl = sectorxl;
-    drange_linenum = local_28;
+    vwalldrange.xl = sectorxl;
+    vwalldrange.number = local_28;
     vissec->sectornum = local_24->sector;
     if (psVar2->sectornum != -1) 
     {
@@ -348,12 +344,12 @@ void R_ProcessXEvents(void)
         {
             IO_Error("R_ProcessXEvents: no visible collumn\n");
         }
-        if (local_24->line != drange_linenum) 
+        if (local_24->line != vwalldrange.number) 
         {
-            vwalldrange = iVar3 + -1;
+            vwalldrange.xh = iVar3 + -1;
             R_DrawLineDrange();
-            drange_linenum = local_24->line;
-            drange_xl = iVar3;
+            vwalldrange.number = local_24->line;
+            vwalldrange.xl = iVar3;
             if (local_24->sector == -1) 
             {
                 if (vissec->sectornum != -1) 
@@ -387,7 +383,7 @@ void R_ProcessXEvents(void)
             }
         }
     }
-    vwalldrange = iVar3 + -1;
+    vwalldrange.xh = iVar3 + -1;
     R_DrawLineDrange();
     if (vissec->sectornum != -1) 
     {
