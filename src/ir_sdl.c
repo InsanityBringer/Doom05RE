@@ -26,6 +26,7 @@ detail_t currentdetail;
 
 int windowx, windowy;
 int windoworg;
+int buffercrtc;
 
 int novideo;
 
@@ -305,7 +306,7 @@ void IO_BlitBlocks(void)
 		}
 		update[iVar2]--;
 		iVar1 = ublocksource[iVar2];
-		puVar3 = iVar1;// +buffercrtc_000450ec;
+		puVar3 = iVar1 + buffercrtc;
 		//out(0x3c5, 1);
 		int i;
 		//TODO: unroll
@@ -642,16 +643,16 @@ void R_InitVideoDevice(void)
 	R_SetViewBorder("FLOOR5_1");
 	screenblocks = 10;
 	currentdetail = 0;
-	//buffercrtc = 0xa8000;
+	buffercrtc = 0;
 	iVar1 = W_GetNumForName("COLORMAP");
-	colormaps = (uint8_t*)malloc(0x2100);
+	colormaps = (uint8_t*)malloc(8448);
 #ifdef ISB_LINT
 	if (colormaps == NULL)
 	{
 		IO_Error("R_InitVideoDevice: cannot allocate colormaps");
 		return;
 	}
-	if (lumpinfo[iVar1].size > 0x2100)
+	if (lumpinfo[iVar1].size > 8448)
 	{
 		IO_Error("R_InitVideoDevice: bad colormap size");
 		return;
@@ -659,14 +660,14 @@ void R_InitVideoDevice(void)
 #endif
 	memcpy(colormaps, (void*)lumpinfo[iVar1].position, lumpinfo[iVar1].size);
 	iVar1 = W_GetNumForName("COLORS15");
-	wordcolormaps = (uint16_t*)malloc(0x4200);
+	wordcolormaps = (uint16_t*)malloc(16896);
 #ifdef ISB_LINT
 	if (wordcolormaps == NULL)
 	{
 		IO_Error("R_InitVideoDevice: cannot allocate wordcolormaps");
 		return;
 	}
-	if (lumpinfo[iVar1].size > 0x4200)
+	if (lumpinfo[iVar1].size > 16896)
 	{
 		IO_Error("R_InitVideoDevice: bad wordcolormap size");
 		return;
@@ -718,10 +719,10 @@ void IO_BlitPlayScreen(void)
 				local_20 = 0;
 				while (local_20 < 4)
 				{
-					//watcom_outp(0x3c5, (byte)(1 << ((byte)local_20 & 0x1f)));
+					//watcom_outp(0x3c5, (byte)(1 << ((byte)start & 0x1f)));
 					IO_SetMapMask(1 << (local_20 & 0x1f));
 					local_28 = screenbuffer + windoworg + local_20 * 16000;
-					local_2c = (windoworg);
+					local_2c = windoworg + buffercrtc;
 					iVar1 = 0;
 					while (iVar1 < viewheight) 
 					{
@@ -730,8 +731,8 @@ void IO_BlitPlayScreen(void)
 						{
 							IO_WriteMungeDWord(((int*)local_28)[c], local_2c + (c << 2));
 						}
-						local_2c = local_2c + 0x50;
-						local_28 = local_28 + 0x50;
+						local_2c = local_2c + 80;
+						local_28 = local_28 + 80;
 						iVar1++;
 					}
 					local_20++;
@@ -741,10 +742,10 @@ void IO_BlitPlayScreen(void)
 				local_20 = 0;
 				while (local_20 < 3)
 				{
-					//watcom_outp(0x3c5, (byte)(3 << ((byte)local_20 & 0x1f)));
+					//watcom_outp(0x3c5, (byte)(3 << ((byte)start & 0x1f)));
 					IO_SetMapMask(3 << (local_20 & 0x1f));
 					local_28 = screenbuffer + windoworg + local_20 * 16000;
-					local_2c = windoworg;
+					local_2c = windoworg + buffercrtc;
 					iVar1 = 0;
 					while (iVar1 < viewheight)
 					{
@@ -753,8 +754,8 @@ void IO_BlitPlayScreen(void)
 						{
 							IO_WriteMungeDWord(((int*)local_28)[c], local_2c + (c << 2));
 						}
-						local_2c = local_2c + 0x50;
-						local_28 = local_28 + 0x50;
+						local_2c = local_2c + 80;
+						local_28 = local_28 + 80;
 						iVar1++;
 					}
 					local_20 += 2;
@@ -765,10 +766,10 @@ void IO_BlitPlayScreen(void)
 				local_20 = 0;
 				while (local_20 < 3) 
 				{
-					//watcom_outp(0x3c5, (byte)(3 << ((byte)local_20 & 0x1f)));
+					//watcom_outp(0x3c5, (byte)(3 << ((byte)start & 0x1f)));
 					IO_SetMapMask(3 << (local_20 & 0x1f));
 					local_28 = screenbuffer + windoworg + local_20 * 16000;
-					local_2c = windoworg;
+					local_2c = windoworg + buffercrtc;
 					iVar1 = 0;
 					while (iVar1 < viewheight) 
 					{
@@ -782,11 +783,11 @@ void IO_BlitPlayScreen(void)
 
 						for (c = 0; c < local_24 >> 2; c++)
 						{
-							IO_WriteMungeDWord(((int*)local_28)[c], (local_2c + 0x50) + (c << 2));
+							IO_WriteMungeDWord(((int*)local_28)[c], (local_2c + 80) + (c << 2));
 						}
 
-						local_2c = local_2c + 0xa0;
-						local_28 = local_28 + 0xa0;
+						local_2c = local_2c + 160;
+						local_28 = local_28 + 160;
 						iVar1++;
 					}
 					local_20 += 2;
@@ -819,10 +820,9 @@ void IO_DrawTics(void)
 		{
 			IO_Error("IO_DrawTics: tics = %i", tics);
 		}
-		//watcom_outp(0x3c5, 3);
 		IO_SetMapMask(3);
 		i = 0;
-		dest = 0x3e30;
+		dest = buffercrtc + 15920;
 		while (i < tics)
 		{
 			//*dest = 0xff;
@@ -938,9 +938,8 @@ void IO_UpdateScreen(void)
 		}
 		updatedone = 0;
 		IO_DrawTics();
-		//watcom_outp(0x3d4, 0xc);
-		//watcom_outp(0x3d5, (byte)(buffercrtc_000450ec >> 8));
-		//buffercrtc_000450ec = buffercrtc_000450ec ^ 0x8000;
+		IO_SetStartAddress(buffercrtc);
+		buffercrtc ^= 0x8000;
 	}
 	return;
 }
@@ -973,7 +972,7 @@ void V_DrawPatch(int x, int y, patch_t* patch)
 		{
 			iVar2 = local_30 + *local_18;
 			bVar1 = local_18[1];
-			local_24 = planewidthlookup[iVar2] /*+ buffercrtc_000450ec*/ + (local_34 >> 2);
+			local_24 = planewidthlookup[iVar2] + buffercrtc + (local_34 >> 2);
 			local_28 = local_18 + 2;
 			local_1c = iVar2;
 			while (local_1c < (iVar2 + bVar1)) 
@@ -1085,27 +1084,28 @@ extern void P_DrawPlayerShapes(int pnum);
 
 void TimeSpin(void)
 {
-	int local_20;
-	int angle;
+	int start;
+	int i;
+	int tics;
 
-	local_20 = IO_GetTime();
+	start = IO_GetTime();
 	do 
 	{
 		IO_DoEvents(); //[ISB] I should use a timer thread....
-		angle = IO_GetTime();
-	} while (angle == local_20);
-	local_20 = local_20 + 1;
-	angle = 0;
-	while (angle < 0x2000)
+		i = IO_GetTime();
+	} while (i == start);
+	start = start + 1;
+	
+	for (i = 0; i < 8192; i += 64)
 	{
-		R_RenderView(viewsector, viewx, viewy, viewz, angle);
+		R_RenderView(viewsector, viewx, viewy, viewz, i);
 		P_DrawPlayerShapes(viewplayer);
 		IO_UpdateScreen();
 		IO_DoEvents();
-		angle = angle + 0x40;
 	}
-	angle = IO_GetTime();
-	IO_Error("Time:%i  (%f ips)", angle - local_20, (double)(8960.0f / (float)(angle - local_20)));
+	i = IO_GetTime();
+	tics = i - start;
+	IO_Error("Time:%i  (%f ips)", tics, (double)(8960.0f / (float)tics));
 	return;
 }
 

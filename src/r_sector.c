@@ -95,57 +95,55 @@ void Merge(void)
 int* MergeSort(int* source, int* spare, int count)
 {
     int* piVar1;
-    int iVar2;
-    int iVar3;
-    int iVar4;
-    int* apiStack40[4];
-    int* local_18;
-    unsigned int local_14;
+    int start;
+    int size;
+    int* arrays[2];
+    int* sorted, unsorted;
+    int* temp;
+    int sort;
 
     if (count < 2) 
     {
         return source;
     }
-    local_14 = 0;
-    apiStack40[0] = source;
-    apiStack40[1] = spare;
-    local_18 = source;
-    apiStack40[3] = spare;
-    iVar3 = 1;
-    piVar1 = apiStack40[3];
+    sort = 0;
+    arrays[0] = source;
+    arrays[1] = spare;
+    temp = source;
+    sorted = spare;
+    size = 1;
+    piVar1 = sorted;
     do 
     {
-        apiStack40[3] = piVar1;
-        iVar2 = 0;
-        edest = apiStack40[3];
+        sorted = piVar1;
+        start = 0;
+        edest = sorted;
         do 
         {
-            esrc1 = local_18 + iVar2;
-            esrc2 = esrc1 + iVar3;
-            size2 = count - (iVar2 + iVar3);
-            if (iVar3 < size2) 
+            esrc1 = temp + start;
+            esrc2 = esrc1 + size;
+            size2 = count - (start + size);
+            if (size < size2) 
             {
-                size2 = iVar3;
+                size2 = size;
             }
-            iVar2 = iVar2 + iVar3 + size2;
-            size1 = iVar3;
+            start = start + size + size2;
+            size1 = size;
             Merge();
-        } while (iVar3 < count - iVar2);
-        while (piVar1 = edest, count != iVar2) 
+        } while (size < count - start);
+        while (piVar1 = edest, count != start) 
         {
             edest = edest + 1;
-            *piVar1 = apiStack40[local_14][iVar2];
-            iVar2 = iVar2 + 1;
+            *piVar1 = arrays[sort][start];
+            start = start + 1;
         }
-        local_14 = local_14 ^ 1;
-        apiStack40[2] = local_18;
-        local_18 = apiStack40[3];
-        iVar4 = iVar3 * 2;
-        iVar2 = iVar3 * -2;
-        iVar3 = iVar4;
-        piVar1 = apiStack40[2];
-    } while (iVar4 < count);
-    return apiStack40[3];
+        sort = sort ^ 1;
+        unsorted = temp;
+        temp = sorted;
+        size <<= 1;
+        piVar1 = unsorted;
+    } while (size < count);
+    return sorted;
 }
 
 void R_AddActiveSeg(int procnum)
@@ -494,7 +492,7 @@ void R_DrawSector(int sectornum, int xl, int xh, int* floorclip, int* ceilingcli
     local_14 = (sectorxh - sectorxl) + 1;
     local_1c = sectorxl;
     local_20 = sectorxh;
-    //uVar1 = watcom_stack386(local_14 * 0x14);
+    //uVar1 = watcom_stack386(sort * 0x14);
     stackptr -= (local_14 * 5);
     uVar1 = &stackbuffer[stackptr];
 

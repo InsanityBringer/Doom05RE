@@ -322,6 +322,7 @@ uint8_t* videoMemory = NULL;
 unsigned int* mungeBuffer = NULL;
 int vgaWidth, vgaHeight;
 uint8_t mapMask;
+int startAddress;
 
 void IO_GL_SetVideoMode(int w, int h, SDL_Rect* bounds)
 {
@@ -336,7 +337,7 @@ void IO_GL_SetVideoMode(int w, int h, SDL_Rect* bounds)
 	{
 		free(videoMemory);
 	}
-	videoMemory = malloc(w * h * 4);
+	videoMemory = malloc(w * h * 4 * 4);
 	mungeBuffer = (unsigned int*)videoMemory;
 
 	//Create the texture with the current contents of video memory.
@@ -390,6 +391,11 @@ void SDL_GL_SetHighColor(int w, int h)
 void IO_SetMapMask(uint8_t mask)
 {
 	mapMask = mask;
+}
+
+void IO_SetStartAddress(int address)
+{
+	startAddress = address;
 }
 
 void IO_WriteMunge(uint8_t pixel, int offset)
@@ -483,11 +489,11 @@ void IO_GL_DrawFramebuffer()
 
 	if (!highColorMode)
 	{
-		sglTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, vgaWidth, vgaHeight, GL_RED_INTEGER, GL_UNSIGNED_BYTE, videoMemory);
+		sglTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, vgaWidth, vgaHeight, GL_RED_INTEGER, GL_UNSIGNED_BYTE, &videoMemory[startAddress * 4]);
 	}
 	else
 	{
-		sglTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, vgaWidth / 2, vgaHeight, GL_RGBA, GL_UNSIGNED_SHORT_1_5_5_5_REV, videoMemory);
+		sglTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, vgaWidth / 2, vgaHeight, GL_RGBA, GL_UNSIGNED_SHORT_1_5_5_5_REV, &videoMemory[startAddress*4]);
 	}
 
 	sglClear(GL_COLOR_BUFFER_BIT);

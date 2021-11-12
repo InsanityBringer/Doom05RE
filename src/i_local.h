@@ -21,5 +21,6 @@
 extern int ticcount;
 
 void IO_SetMapMask(uint8_t mask);
+void IO_SetStartAddress(int address);
 void IO_WriteMunge(uint8_t pixel, int offset);
 void IO_WriteMungeDWord(uint32_t pixel, int offset);
