@@ -428,10 +428,6 @@ void R_DrawAdjacentSectors(subsector_t* start)
     return;
 }
 
-//[ISB] fake stack to avoid problems with portability and _alloca
-int stackbuffer[16384];
-int stackptr = 16384;
-
 int debugsec;
 
 void R_DrawSector(int sectornum, int xl, int xh, int* floorclip, int* ceilingclip, int* scaleclip)
@@ -445,7 +441,6 @@ void R_DrawSector(int sectornum, int xl, int xh, int* floorclip, int* ceilingcli
     int iVar3;
 
     subsector_t* oldvissec;
-    int oldstackptr = stackptr;
 
     if (numsectors <= sectornum) 
     {
@@ -492,15 +487,7 @@ void R_DrawSector(int sectornum, int xl, int xh, int* floorclip, int* ceilingcli
     local_14 = (sectorxh - sectorxl) + 1;
     local_1c = sectorxl;
     local_20 = sectorxh;
-    //uVar1 = watcom_stack386(sort * 0x14);
-    stackptr -= (local_14 * 5);
-    uVar1 = &stackbuffer[stackptr];
-
-    if (stackptr < 0)
-    {
-        IO_Error("R_DrawSector: emulated stack overflow\n");
-        return;
-    }
+    uVar1 = alloca(local_14 * 5 * sizeof(int));
 
     floorpixel = floorclip;
     ceilingpixel = ceilingclip;
@@ -538,7 +525,5 @@ void R_DrawSector(int sectornum, int xl, int xh, int* floorclip, int* ceilingcli
     outscale = &uVar1[-local_1c] + local_14 * 4;
 
     R_DrawSectorThings(&sectors[sectornum], local_1c, local_20);
-
-    stackptr = oldstackptr;
     return;
 }

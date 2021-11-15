@@ -16,6 +16,8 @@
 //-----------------------------------------------------------------------------
 
 #include "doomdef.h"
+//TODO: Portability
+#include <malloc.h>
 
 #include "r_local.h"
 
@@ -112,8 +114,7 @@ void R_GenerateTexture(maptexture_t* texture)
 	}*/
 
 	//Amount of posts in each column of the texture. Must be >0, no windows allowed.
-	//TODO: Find option that doesn't involve a malloc for every freakin texture cache.
-	local_54_1 = malloc((local_54_2->width + 3) * sizeof(uint8_t));
+	local_54_1 = alloca((local_54_2->width + 3) * sizeof(uint8_t));
 
 	mem = local_54_1;
 	puStack28 = local_54_1;
@@ -235,8 +236,6 @@ void R_GenerateTexture(maptexture_t* texture)
 		local_44 = local_44 + 1;
 		local_20 = local_20 + 1;
 	}
-
-	free(local_54_1);
 	return;
 }
 
