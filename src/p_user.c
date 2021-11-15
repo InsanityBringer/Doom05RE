@@ -18,6 +18,12 @@
 #include "doomdef.h"
 #include "p_local.h"
 
+#define LOWERSPEED		FRACUNIT*6
+#define RAISESPEED		FRACUNIT*6
+
+#define WEAPONBOTTOM	144*FRACUNIT
+#define WEAPONTOP		68*FRACUNIT
+
 int playerobjfound[4];
 player_t* player;
 player_t playerobjs[4];
@@ -185,7 +191,7 @@ void P_BringUpWeapon(void)
     }
     player->pendingweapon = wp_nochange;
     P_SetPsprite(2, newpsp);
-    psprites[playernum * NUMPSPRITES + 2].sy = 0x900000;
+    psprites[playernum * NUMPSPRITES + 2].sy = WEAPONBOTTOM;
     return;
 }
 
@@ -309,62 +315,62 @@ void A_Lower(pspdef_t* psp)
 {
     short* psVar1;
 
-    psp->sy += (6 << FRACBITS);
-    if (0x8fffff < psp->sy)
+    psp->sy += LOWERSPEED;
+
+    if (psp->sy < WEAPONBOTTOM) 
+        return;
+
+    if (player->health == 0)
     {
-        if (player->health == 0)
-        {
-            P_SetPsprite(2, S_NULL);
-        }
-        else
-        {
-            player->readyweapon = player->pendingweapon;
-            if (playernum == sd->consoleplayer)
-            {
-                P_DrawWeapon();
-                P_DrawAmmo();
-            }
-            P_BringUpWeapon();
-        }
+        P_SetPsprite(2, S_NULL);
     }
-    return;
+    else
+    {
+        player->readyweapon = player->pendingweapon;
+        if (playernum == sd->consoleplayer)
+        {
+            P_DrawWeapon();
+            P_DrawAmmo();
+        }
+        P_BringUpWeapon();
+    }
 }
 
 void A_Raise(pspdef_t* psp)
 {
     statenum_t newpsp;
 
-    psp->sy = psp->sy + -0x60000;
-    if (psp->sy < 0x440001)
+    psp->sy = psp->sy - RAISESPEED;
+    if (psp->sy > WEAPONTOP)
+        return;
+
+    psp->sy = WEAPONTOP;
+
+    if (player->readyweapon < 8)
     {
-        psp->sy = 0x440000;
-        if (player->readyweapon < 8)
+        switch (player->readyweapon)
         {
-            switch (player->readyweapon)
-            {
-            case wp_knife:
-                newpsp = S_BAYONET;
-                break;
-            case wp_rifle:
-                newpsp = S_RIFLE;
-                break;
-            case wp_shotgun:
-                newpsp = S_SGUN;
-                break;
-            case wp_auto:
-                newpsp = S_AUTO;
-                break;
-            default:
-                newpsp = S_SGUN;
-            }
+        case wp_knife:
+            newpsp = S_BAYONET;
+            break;
+        case wp_rifle:
+            newpsp = S_RIFLE;
+            break;
+        case wp_shotgun:
+            newpsp = S_SGUN;
+            break;
+        case wp_auto:
+            newpsp = S_AUTO;
+            break;
+        default:
+            newpsp = S_SGUN;
         }
-        else 
-        {
-            IO_Error("A_ChangeWeapon: bad weapon number\n");
-        }
-        P_SetPsprite(2, newpsp);
     }
-    return;
+    else 
+    {
+        IO_Error("A_ChangeWeapon: bad weapon number\n");
+    }
+    P_SetPsprite(2, newpsp);
 }
 
 void A_FireGun(pspdef_t* psp)
@@ -470,7 +476,7 @@ void P_UseFrontLines(sector_t* sector)
 
                 frac = vv2.tz + FixedMul(vv1.tz - vv2.tz, frac);
 
-                if ((frac < 0x280001) && (-1 < frac)) 
+                if ((frac <= 40*FRACUNIT) && (-1 < frac)) 
                 {
                     if (line->special == 0) 
                     {
@@ -763,9 +769,9 @@ void P_DeadThink(framecmd_t* cmd)
     P_MovePlayer();
     P_SlowPlayer();
     delta = player->viewz - player->r->z;
-    if (delta < 0x140001) 
+    if (delta <= 20*FRACUNIT) 
     {
-        if (delta < 0x80001)
+        if (delta <= 8*FRACUNIT)
         {
             if ((cmd->buttons & 2) != 0) 
             {
@@ -774,12 +780,12 @@ void P_DeadThink(framecmd_t* cmd)
         }
         else 
         {
-            player->viewz = player->viewz + -0x4000;
+            player->viewz = player->viewz - FRACUNIT / 4;
         }
     }
     else 
     {
-        player->viewz = player->viewz + -0x10000;
+        player->viewz = player->viewz - FRACUNIT;
     }
     return;
 }
