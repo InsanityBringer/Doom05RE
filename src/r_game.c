@@ -118,49 +118,42 @@ void R_LoadMapPlanes(int lump)
 }
 
 
-void R_InitThings(int lump)
+void R_LoadMapThings(int lump)
 {
-	int* piVar1;
-	int local_28;
-	uint8_t* local_24;
-	int iVar2;
+	int* mapthings;
+	int numthings;
+	mapthing_t* mapthing;
+	int i;
 
-	piVar1 = (int*)W_GetLump(lump + 5);
-	local_28 = *piVar1;
-	local_24 = (uint8_t*)(piVar1 + 1);
-	iVar2 = 0;
-	while (iVar2 < local_28) 
+	mapthings = (int*)W_GetLump(lump + 5);
+	numthings = *mapthings;
+	mapthing = (mapthing_t*)(mapthings + 1);
+	for (i = 0; i < numthings; i++)
 	{
-		P_InitThing((mapthing_t*)local_24);
-		iVar2++;
+		P_InitThing(mapthing);
 		//[ISB] TODO: Alignment safe some of this code. Or just disable alignment...
-		local_24 += 12;
+		mapthing++;
 	}
 	return;
 }
 
 void R_LoadMapPoints(int maplump)
 {
-	int32_t* ppVar1;
-	point_t* local_24;
-	mapvertex_t* local_20;
-	int iStack28;
+	mapvertex_t* mp;
+	point_t* pt;
+	int i;
 
-	ppVar1 = (int32_t*)W_GetLump(maplump + 2);
-	numpoints = *ppVar1;
-	ppVar1++;
-	local_20 = (mapvertex_t*)ppVar1;
+	mp = (int32_t*)W_GetLump(maplump + 2);
+	numpoints = *(int*)mp;
+	((int*)mp)++;
 	points = (point_t*)Z_Malloc(playzone, numpoints * sizeof(point_t));
-	iStack28 = 0;
-	local_24 = points;
-	while (iStack28 < numpoints) 
+	pt = points;
+	for (i = 0; i < numpoints; i++)
 	{
-		local_24->x = (fixed_t)local_20->x << FRACBITS;
-		local_24->y = (fixed_t)local_20->y << FRACBITS;
-		local_24++;
-		local_20++;
-		iStack28 = iStack28 + 1;
-		ppVar1 = local_20;
+		pt->x = (fixed_t)mp->x << FRACBITS;
+		pt->y = (fixed_t)mp->y << FRACBITS;
+		pt++;
+		mp++;
 	}
 	return;
 }
@@ -243,8 +236,7 @@ void R_LoadMapSectors(int maplump)
 	sectors = (sector_t*)Z_Malloc(playzone, numsectors * sizeof(sector_t));
 	iVar2 = 0;
 	local_2c = sectors;
-	//[ISB] I'll clean this hideous mess up later, since the variable data length structures make this
-	//a very Fun task.
+	//[ISB] I'll clean this hideous mess up later, since the variable data length structures make this a very Fun task.
 	while (iVar2 < numsectors) 
 	{
 		local_28 = (short*)((int)local_24 + local_24[iVar2 + 1]);
@@ -272,68 +264,57 @@ void R_LoadMapSectors(int maplump)
 	return;
 }
 
-
 void R_InitTables(void)
 {
-	int iVar1;
-	int iVar2;
-	int local_24;
-	float fVar3;
-	int local_2c;
-	int iVar4;
+	int level;
+	int startmap;
+	float value;
+	fixed_t intval;
+	int i, j;
 
-	iVar4 = 0;
-	while (iVar4 < 2048) 
+	for (i = 0; i < 2048; i++)
 	{
-		fVar3 = sin((((double)iVar4 + 0.5) * 3.14159265) / 4096.0);
-		//round_((double)fVar3 * 65536.0);
-		//fVar3 = (float10)FUN_0003075c();
+		value = sin((((double)i + 0.5) * 3.14159265) / 4096.0);
 
 		//[ISB] round is c99, needs replacement if backporting
-		local_2c = (int)round(fVar3 * 65536.0);
-		sines[iVar4] = local_2c;
-		sines[iVar4 + 0x2000] = local_2c;
-		sines[0xfff - iVar4] = local_2c;
-		sines[iVar4 + 0x1000] = -local_2c;
-		sines[0x1fff - iVar4] = -local_2c;
-		iVar4 = iVar4 + 1;
+		intval = (int)round(value * 65536.0);
+		sines[i] = intval;
+		sines[i + 8192] = intval;
+		sines[4095 - i] = intval;
+		sines[i + 4096] = -intval;
+		sines[8191 - i] = -intval;
 	}
-	cosines = (uintptr_t)&sines[0x800];
+	cosines = &sines[2048];
 	cos45 = sines[3072];
 	
-	for (iVar4 = 0; iVar4 < 832; iVar4++)
+	for (i = 0; i < 832; i++)
 	{
-		startspans[iVar4] = &spanlists[iVar4 * 16];
+		startspans[i] = &spanlists[i * 16];
 	}
 	
-	for (iVar4 = 0; iVar4 < 1152; iVar4++)
+	for (i = 0; i < 1152; i++)
 	{
-		viewfrontscale[iVar4] = 0x7fffffff;
-		viewbackscale[iVar4] = 0;
+		viewfrontscale[i] = 0x7fffffff;
+		viewbackscale[i] = 0;
 	}
 	memset((char*)forwardsegs, 0, sizeof(forwardsegs));
 	memset((char*)proclines, 0, sizeof(proclines));
-	iVar4 = 0;
-	while (iVar4 < 0x10) 
+	for (i = 0; i < 16; i++)
 	{
-		iVar1 = (0xf - iVar4) * 0x40;
-		iVar2 = iVar1 >> 0x1f;
-		local_2c = 0;
-		while (local_2c < 0x30)
+		level = (15 - i) * 64;
+		for (j = 0; j < 48; j++)
 		{
-			local_24 = ((int)((iVar1 + iVar2 * -0x10) - (uint32_t)(iVar2 << 3 < 0)) >> 4) - local_2c / 2;
-			if (local_24 < 0) 
+			startmap = level / 16 - j / 2;
+			if (startmap < 0)
 			{
-				local_24 = 0;
+				startmap = 0;
 			}
-			if (0x1f < local_24) 
+			if (startmap > 31)
 			{
-				local_24 = 0x1f;
+				startmap = 31;
 			}
-			scalelight[iVar4 * 0x30 + local_2c] = local_24;
-			local_2c = local_2c + 1;
+			scalelight[i * 48 + j] = startmap;
 		}
-		iVar4 = iVar4 + 1;
 	}
 	return;
 }
@@ -428,14 +409,15 @@ void R_AddTexture(maptexture_t* texture)
 
 void R_InitWorldTextures(void)
 {
-	patch_t* pmVar1;
-	int* local_30;
-	int iVar2;
-	char buf[8];
+	patch_t* patch;
+	char* names;
+	int i;
+	char name[8];
+	int* textures;
 
-	local_30 = (int*)W_GetName("PNAMES");
-	nummappatches = *local_30;
-	local_30 = local_30 + 1;
+	names = (char*)W_GetName("PNAMES");
+	nummappatches = *(int*)names;
+	((int*)names)++;
 	patchlookup = (mappatch_t * *)malloc(nummappatches * sizeof(mappatch_t*));
 #ifdef ISB_LINT
 	if (patchlookup == NULL)
@@ -444,16 +426,14 @@ void R_InitWorldTextures(void)
 		return;
 	}
 #endif
-	iVar2 = 0;
-	while (iVar2 < nummappatches)
+	for (i = 0; i < nummappatches; i++)
 	{
-		strncpy(buf, (char*)(local_30 + iVar2 * 2), 8);
-		pmVar1 = (patch_t*)W_GetName(buf);
-		patchlookup[iVar2] = pmVar1;
-		iVar2 = iVar2 + 1;
+		strncpy(name, (char*)(names + i * 8), 8);
+		patch = (patch_t*)W_GetName(name);
+		patchlookup[i] = patch;
 	}
-	local_30 = (int*)W_GetName("TEXTURES");
-	basetextures = *local_30;
+	textures = (int*)W_GetName("TEXTURES");
+	basetextures = *textures;
 	numtextures = 0;
 	texturelookupsize = basetextures + 64;
 	texturelookup = (maptexture_t * *)malloc(texturelookupsize * sizeof(maptexture_t*));
@@ -464,11 +444,9 @@ void R_InitWorldTextures(void)
 		return;
 	}
 #endif
-	iVar2 = 0;
-	while (iVar2 < basetextures) 
+	for (i = 0; i < basetextures; i++) 
 	{
-		R_AddTexture((maptexture_t*)((int)local_30 + local_30[iVar2 + 1]));
-		iVar2 = iVar2 + 1;
+		R_AddTexture((maptexture_t*)(((char*)textures) + textures[i + 1]));
 	}
 	return;
 }
@@ -497,31 +475,28 @@ void R_UnloadMap()
 	return;
 }
 
-
-
 void R_LoadMap(char* name)
 {
-	int lump;
-	char* local_20;
+	int maplump;
+	char* mapname;
 
-	local_20 = name;
+	mapname = name;
 	if (maploaded != 0) 
 	{
 		R_UnloadMap();
 	}
-	lump = W_GetNumForName(local_20);
-	R_LoadMapPlanes(lump);
-	R_LoadMapPoints(lump);
-	R_LoadMapLines(lump);
-	R_LoadMapSectors(lump);
+	maplump = W_GetNumForName(mapname);
+	R_LoadMapPlanes(maplump);
+	R_LoadMapPoints(maplump);
+	R_LoadMapLines(maplump);
+	R_LoadMapSectors(maplump);
 	R_InitBlockMap();
-	R_InitThings(lump);
+	R_LoadMapThings(maplump);
 	P_SpawnSpecialSectors();
 	maploaded = 1;
 	extralight = 0;
 	return;
 }
-
 
 void R_InitWorld(void)
 {

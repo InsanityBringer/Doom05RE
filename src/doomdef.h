@@ -482,6 +482,8 @@ void P_SpawnSpecialSectors();
 
 void P_EnterAutoMap();
 
+void P_InitThing(mapthing_t* mthing);
+
 //trace
 void P_PlayerShoot();
 int P_CrossSectorBounds(int sector, fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2);
