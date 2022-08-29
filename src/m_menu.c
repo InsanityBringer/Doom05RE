@@ -16,6 +16,10 @@
 //-----------------------------------------------------------------------------
 
 #include "doomdef.h"
+#include "w_wad.h"
+#include "p_play.h"
+#include "m_menu.h"
+#include "g_game.h"
 
 typedef struct
 {

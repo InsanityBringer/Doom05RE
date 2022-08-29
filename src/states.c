@@ -16,6 +16,7 @@
 //-----------------------------------------------------------------------------
 
 #include "doomdef.h"
+#include "p_local.h"
 
 char* sprnames[NUMSPRITES] = {"TROO", "PSHO", "PBAY", "PRIF", "PMAC",
 	"PLAY", "POSS", "SARG", "HEAD", "BOSS", "SHOT", "MGUN", "LAUN", "CSAW",

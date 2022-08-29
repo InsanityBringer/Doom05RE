@@ -16,6 +16,7 @@
 //-----------------------------------------------------------------------------
 
 #include "doomdef.h"
+#include "r_ref.h"
 #include "r_local.h"
 
 //TODO: Portability

@@ -16,7 +16,10 @@
 //-----------------------------------------------------------------------------
 
 #include "doomdef.h"
+#include "w_wad.h"
 #include "p_local.h"
+#include "g_game.h"
+#include "p_spec.h"
 
 char* alphSwitchList[16] =
 {
@@ -408,7 +411,7 @@ int EV_RaiseFloor(line_t* line)
         {
             floor = (floormove_t*)Z_Malloc(playzone, sizeof(floormove_t));
             P_AddThinker((thinker_t*)floor);
-            *(floormove_t**)&sec->specialdata = floor;
+            sec->specialdata = (void*)floor;
             floor->thinker.function = &T_MoveFloor;
             floor->direction = 1;
             floor->sector = sec;
@@ -442,7 +445,7 @@ int EV_LowerFloor(line_t* line)
         {
             floor = (floormove_t*)Z_Malloc(playzone, sizeof(floormove_t));
             P_AddThinker((thinker_t*)floor);
-            sector->specialdata = floor;
+            sector->specialdata = (void*)floor;
             floor->thinker.function = &T_MoveFloor;
             floor->direction = -1;
             floor->sector = sector;

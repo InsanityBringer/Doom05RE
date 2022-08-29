@@ -16,6 +16,9 @@
 //-----------------------------------------------------------------------------
 
 #include "doomdef.h"
+#include "w_wad.h"
+#include "g_game.h"
+#include "r_ref.h"
 
 typedef struct
 {
@@ -58,15 +61,15 @@ void G_WorldMap()
     {
         do 
         {
-            if (gamestate++ == 15) 
+            if (gamestate.mappoint++ == 15) 
             {
                 gameaction = ga_victory;
                 return;
             }
-            mapname = mappts[gamestate].mapname;
+            mapname = mappts[gamestate.mappoint].mapname;
         } while (mapname == NULL);
     }
-    G_WarpToMap(mappts[gamestate].mapname);
+    G_WarpToMap(mappts[gamestate.mappoint].mapname);
     gameaction = ga_runmap;
     return;
 }

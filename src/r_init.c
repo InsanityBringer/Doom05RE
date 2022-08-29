@@ -16,7 +16,9 @@
 //-----------------------------------------------------------------------------
 
 #include "doomdef.h"
-
+#include "w_wad.h"
+#include "r_ref.h"
+#include "p_play.h"
 #include "r_local.h"
 #include "r_data.h"
 

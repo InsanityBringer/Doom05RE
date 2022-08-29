@@ -10,6 +10,7 @@ set(GAME_SOURCES
 	src/d_misc.c
 	src/doomdata.h
 	src/doomdef.h
+	src/g_game.h
 	src/g_game.c
 	src/g_world.c
 	src/hmapc.c
@@ -17,16 +18,20 @@ set(GAME_SOURCES
 	src/i_local.h
 	src/i_sdl.c
 	src/ir_sdl.c
+	src/m_menu.h
 	src/m_menu.c
 	src/p_enemy.c
 	src/p_local.h
+	src/p_play.h
 	src/p_play.c
 	src/p_spec.c
+	src/p_spec.h
 	src/p_status.c
 	src/p_things.c
 	src/p_trace.c
 	src/p_user.c
 	src/r_data.h
+	src/r_ref.h
 	src/r_game.c
 	src/r_init.c
 	src/r_lines.c
@@ -43,10 +48,12 @@ set(GAME_SOURCES
 	src/states.c
 	src/states.h
 	src/v_munged.c
+	src/v_video.h
 	src/vmapc.c
 	src/vmaph.c
 	src/vmapl.c
 	src/w_wad.c
+	src/w_wad.h
 	src/z_zone.c
 )
 

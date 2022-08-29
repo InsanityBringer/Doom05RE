@@ -16,7 +16,7 @@
 //-----------------------------------------------------------------------------
 
 #include "doomdef.h"
-#include "v_local.h"
+#include "v_video.h"
 
 uint8_t screenbuffer[64000*4];
 uint8_t* ylookup[800];
@@ -343,7 +343,7 @@ void V_Startup(void)
 	{
 		iVar4 = i * 0x140 >> 0x1f;
 		//ylookup[i] = &screenbuffer + ((int)((i * 0x140 + iVar4 * -4) - (uint)(iVar4 << 1 < 0)) >> 2);
-		//[ISB] pointer arithemetic confuses me.
+		//[ISB] pointer arithemetic confuses me. TODO: fix this thing finally!
 		ylookup[i] = (uint8_t*)((uintptr_t)&screenbuffer + (uintptr_t)(i * 80));
 	}
 	for (i = 0; i < 200; i++)

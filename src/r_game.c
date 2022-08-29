@@ -16,6 +16,9 @@
 //-----------------------------------------------------------------------------
 
 #include "doomdef.h"
+#include "w_wad.h"
+#include "r_local.h"
+#include "p_play.h"
 #include <math.h>
 #include <limits.h>
 

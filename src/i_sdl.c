@@ -18,7 +18,7 @@
 #include "doomdef.h"
 #include "s_sound.h"
 #include "i_local.h"
-#include "v_local.h"
+#include "p_play.h"
 #include "sdl_gl.h"
 
 #include <stdarg.h>

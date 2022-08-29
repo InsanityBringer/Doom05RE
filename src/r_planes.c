@@ -16,6 +16,7 @@
 //-----------------------------------------------------------------------------
 
 #include "doomdef.h"
+#include "r_ref.h"
 #include "r_local.h"
 
 fixed_t xscale, yscale;
@@ -320,7 +321,7 @@ void R_DrawPlanes(void)
                 mr_x2 = *piVar1;
                 mr_xfrac = local_20 + mr_xstep * mr_x1;
                 mr_yfrac = local_24 + mr_ystep * mr_x1;
-                ((void(*)())R_MapRow)();
+                R_MapRow();
             } while (local_30 < local_34);
         }
         mr_y++;

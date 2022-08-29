@@ -16,8 +16,9 @@
 //-----------------------------------------------------------------------------
 
 #include "doomdef.h"
+#include "w_wad.h"
 #include "i_local.h"
-#include "v_local.h"
+#include "p_play.h"
 #include "r_local.h"
 #include "sdl_gl.h"
 

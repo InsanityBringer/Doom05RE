@@ -16,7 +16,35 @@
 //-----------------------------------------------------------------------------
 
 #include "doomdef.h"
+#include "w_wad.h"
+#include "g_game.h"
 #include "p_local.h"
+
+typedef enum
+{
+    ps_smoke,
+    ps_flash,
+    ps_weapon,
+    ps_shell1,
+    ps_shell2,
+    ps_shell3,
+    ps_shell4,
+    ps_gore1,
+    ps_gore2,
+    ps_gore3,
+    ps_gore4,
+    NUMPSPRITES
+} psprnum_t; //[ISB] shell casings, and on-screen gore effects? How times change...
+
+typedef struct
+{
+    state_t* state;
+    fixed_t sx;
+    fixed_t sy;
+    fixed_t speedx;
+    fixed_t speedy;
+    int tics;
+} pspdef_t;
 
 #define LOWERSPEED		FRACUNIT*6
 #define RAISESPEED		FRACUNIT*6
@@ -46,7 +74,9 @@ fixed_t clipstepup = 24 << FRACBITS;
 line_t* clipline;
 int clipbox[4];
 
-void P_SetPsprite(int position, statenum_t stnum)
+void P_BringUpWeapon(void);
+
+void P_SetPsprite(psprnum_t position, statenum_t stnum)
 {
     state_t* state;
     pspdef_t* psp;
@@ -137,22 +167,23 @@ void P_MovePlayerShapes(void)
     int i;
 
     playernum = 0;
-    while (playernum < 4)
+    while (playernum < MAXPLAYERS)
     {
         if (sd->playeringame[playernum] != 0) 
         {
             player = &playerobjs[playernum];
             psp = &psprites[playernum * NUMPSPRITES];
             
-            for (i = 0; i < NUMPSPRITES; i++)
+            for (i = 0; i < NUMPSPRITES; i++, psp++)
             {
-                if (((psp->state != NULL) &&
-                    (((i != 2 || (player->health != 0)) && (psp->tics != -1)))) &&
-                    (psp->tics = psp->tics + -1, psp->tics == 0))
+                if (((psp->state != 0) && (((i != ps_weapon || (player->health != 0)) && (psp->tics != -1)))))
                 {
-                    P_SetPsprite(i, psp->state->nextstate);
+                    psp->tics--;
+                    if (!psp->tics)
+                    {
+                        P_SetPsprite(i, psp->state->nextstate);
+                    }
                 }
-                psp++;
             }
         }
         playernum++;
@@ -190,7 +221,7 @@ void P_BringUpWeapon(void)
         IO_Error("A_ChangeWeapon: bad weapon number\n");
     }
     player->pendingweapon = wp_nochange;
-    P_SetPsprite(2, newpsp);
+    P_SetPsprite(ps_weapon, newpsp);
     psprites[playernum * NUMPSPRITES + 2].sy = WEAPONBOTTOM;
     return;
 }
@@ -256,7 +287,7 @@ void P_FireWeapon(void)
     {
         IO_Error("A_FireWeapon: bad weapon number\n");
     }
-    P_SetPsprite(2, newpsp);
+    P_SetPsprite(ps_weapon, newpsp);
     return;
 }
 
@@ -297,7 +328,7 @@ void A_WeaponReady(pspdef_t* psp)
         {
             IO_Error("A_ChangeWeapon: bad weapon number\n");
         }
-        P_SetPsprite(2, newpsp);
+        P_SetPsprite(ps_weapon, newpsp);
     }
     return;
 }
@@ -322,7 +353,7 @@ void A_Lower(pspdef_t* psp)
 
     if (player->health == 0)
     {
-        P_SetPsprite(2, S_NULL);
+        P_SetPsprite(ps_weapon, S_NULL);
     }
     else
     {
@@ -370,7 +401,7 @@ void A_Raise(pspdef_t* psp)
     {
         IO_Error("A_ChangeWeapon: bad weapon number\n");
     }
-    P_SetPsprite(2, newpsp);
+    P_SetPsprite(ps_weapon, newpsp);
 }
 
 void A_FireGun(pspdef_t* psp)
@@ -421,7 +452,7 @@ void A_FireGun(pspdef_t* psp)
     {
         P_DrawAmmo();
     }
-    P_SetPsprite(1, newpsp);
+    P_SetPsprite(ps_flash, newpsp);
     return;
 }
 

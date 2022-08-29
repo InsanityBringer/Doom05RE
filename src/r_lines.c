@@ -16,6 +16,7 @@
 //-----------------------------------------------------------------------------
 
 #include "doomdef.h"
+#include "r_ref.h"
 #include "r_local.h"
 
 int collumn;
@@ -261,7 +262,7 @@ void R_DrawEndSeg(void)
             sp_source = (uint8_t*)(iVar3 + 2);
             sp_frac = (wallfseg->toptextureskip << FRACBITS) + FixedMul((sp_y1 << FRACBITS) - topscreen, sp_fracstep);
 
-            ((void(*)())R_RawScale)();
+            R_RawScale();
         }
         outscale[sp_x] = scale;
         scale += scalestep;
@@ -300,7 +301,7 @@ void R_DrawTopSeg(void)
             sp_source = (uint8_t*)(iVar3 + 2);
 
             sp_frac = (wallfseg->toptextureskip << FRACBITS) + FixedMul((sp_y1 << FRACBITS) - topscreen, sp_fracstep);
-            ((void(*)())R_RawScale)();
+            R_RawScale();
         }
         outscale[sp_x] = scale;
         scale += scalestep;
@@ -340,7 +341,7 @@ void R_DrawBottomSeg(void)
             sp_source = (uint8_t*)(iVar3 + 2);
 
             sp_frac = (wallfseg->bottomtextureskip << FRACBITS) + FixedMul((sp_y1 << FRACBITS) - lowscreen, sp_fracstep);
-            ((void(*)())R_RawScale)();
+            R_RawScale();
         }
         outscale[sp_x] = scale;
         scale = scale + scalestep;
@@ -382,7 +383,7 @@ void R_DrawTopBottomSeg(void)
 
             sp_frac = (wallfseg->toptextureskip << FRACBITS) + FixedMul((sp_y1 << FRACBITS) - topscreen, sp_fracstep);
             //sp_source = colormaps;
-            ((void(*)())R_RawScale)();
+            R_RawScale();
         }
         uVar2 = R_SetClipRange(lowpixel, bottompixel);
         if (uVar2) 
@@ -391,7 +392,7 @@ void R_DrawTopBottomSeg(void)
             sp_source = (uint8_t*)(local_20 + 2);
 
             sp_frac = (wallfseg->bottomtextureskip << FRACBITS) + FixedMul((sp_y1 << FRACBITS) - lowscreen, sp_fracstep);
-            ((void(*)())R_RawScale)();
+            R_RawScale();
         }
         outscale[sp_x] = scale;
         scale += scalestep;

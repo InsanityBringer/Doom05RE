@@ -16,7 +16,11 @@
 //-----------------------------------------------------------------------------
 
 #include "doomdef.h"
+#include "w_wad.h"
+#include "g_game.h"
 #include "p_local.h"
+#include "r_ref.h"
+#include "m_menu.h"
 
 int screenfaded;
 int playernum;

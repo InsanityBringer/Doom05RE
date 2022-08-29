@@ -16,7 +16,9 @@
 //-----------------------------------------------------------------------------
 
 #include "doomdef.h"
+#include "w_wad.h"
 #include "p_local.h"
+#include "r_ref.h"
 
 int wnumber0;
 int snumber0;

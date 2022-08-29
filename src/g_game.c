@@ -16,6 +16,9 @@
 //-----------------------------------------------------------------------------
 
 #include "doomdef.h"
+#include "w_wad.h"
+#include "g_game.h"
+#include "p_play.h"
 
 int startepisode;
 gamestart_t gamestart;
@@ -26,7 +29,7 @@ int controlmenumap;
 
 int episode;
 int skilllevel;
-int gamestate;
+gamestate_t gamestate;
 uint8_t* demobuffer;
 
 char demoname[20];

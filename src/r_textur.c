@@ -18,7 +18,7 @@
 #include "doomdef.h"
 //TODO: Portability
 #include <malloc.h>
-
+#include "r_ref.h"
 #include "r_local.h"
 
 memzone_t* texturezone;

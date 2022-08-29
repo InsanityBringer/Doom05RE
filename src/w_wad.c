@@ -16,11 +16,26 @@
 //-----------------------------------------------------------------------------
 
 #include "doomdef.h"
+#include "w_wad.h"
 
 #include <string.h>
 //TODO: portability
 #include <io.h>
 #include <fcntl.h>
+
+typedef struct
+{
+	int identifaction;
+	int numlumps;
+	int infotableofs;
+} wadinfo_t;
+
+typedef struct
+{
+	int filepos;
+	int size;
+	char name[8];
+} filelump_t;
 
 int numlumps = 0;
 lumpinfo_t* lumpinfo;

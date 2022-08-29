@@ -19,6 +19,9 @@
 #include <fcntl.h>
 #include <ctype.h>
 #include "doomdef.h"
+#include "w_wad.h"
+#include "r_ref.h"
+#include "m_menu.h"
 
 int my_argc;
 char** my_argv;

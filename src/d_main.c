@@ -16,9 +16,12 @@
 //-----------------------------------------------------------------------------
 
 #include "doomdef.h"
+#include "w_wad.h"
+#include "p_play.h"
 #include "s_sound.h"
+#include "m_menu.h"
 
-//TODO: this needs to be removed for the hypothetical port back to dos
+//TODO: this needs to be removed for the likely to happen port back to dos
 #include <SDL_main.h>
 
 char* wadnames[] = { "DOOM.WAD", "CONFIG.LMP", NULL };

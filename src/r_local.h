@@ -16,6 +16,77 @@
 //-----------------------------------------------------------------------------
 #pragma once
 
+#include "r_ref.h"
+
+typedef struct procline_s
+{
+	struct procline_s* prev;
+	struct procline_s* next;
+	int side;
+	int ipx1;
+	int ipx2;
+	fixed_t texture1;
+	fixed_t texture2;
+	fixed_t scale1;
+	fixed_t scale2;
+	fixed_t scalestep;
+	fixed_t scale;
+	int line;
+	int chained;
+	int seg;
+	int sector;
+	int debug; //[ISB] pls fix
+} procline_t;
+
+typedef struct
+{
+	int type;
+	int startcollumn;
+	fixed_t collumnstep;
+	int starttopscreen;
+	fixed_t topscreenstep;
+	int starthighscreen;
+	fixed_t highscreenstep;
+	int startlowscreen;
+	fixed_t lowscreenstep;
+	int startbottomscreen;
+	fixed_t bottomscreenstep;
+	int toptextureskip;
+	int bottomtextureskip;
+	maptexture_t* texture;
+	int bottomtexture;
+} forwardseg_t;
+
+typedef struct
+{
+	int sectornum;
+	int xl;
+	int xh;
+	int numproclines;
+	procline_t* proclines;
+} subsector_t;
+
+typedef struct
+{
+	int number;
+	fixed_t xl, xh;
+} drange_t;
+
+typedef struct
+{
+	boolean rotate;
+	short lump[8];
+	uint8_t flip[8];
+} spriteframe_t;
+
+typedef struct
+{
+	int numframes;
+	spriteframe_t* spriteframes;
+} spritedef_t;
+
+#define MINZ (FRACUNIT*4)
+
 //ir_
 extern uint8_t* lowcollumntable[320];
 extern uint8_t* highcollumntable[320];
@@ -48,6 +119,17 @@ extern int numsprites;
 extern spritedef_t* sprites;
 void R_DrawSprite(int xclipl, int xcliph, vissprite_t* spr);
 
+extern int newfseg;
+extern int newprocline;
+extern int extralight;
+extern drange_t vwalldrange;
+
+extern procline_t proclines[];
+extern forwardseg_t fsegs[];
+
+extern subsector_t subsectors[];
+extern subsector_t* vissec;
+
 //r_init
 extern int viewheight, viewwidth;
 extern int sp_x, sp_y1, sp_y2;
@@ -74,6 +156,22 @@ void R_InitVideoDevice(); //provided in ir_*.c
 void R_DrawSectorThings(sector_t* sector, int xl, int xh);
 
 //r_game
+
+//lines
+void R_SetLineTypeAndBox(int linenum);
+void R_ClearProclines(void);
+void R_ClearFsegs(void);
+void R_MakeProcline(int line);
+void R_DrawLineDrange();
+void R_DrawBlockLine(int linenum, uint8_t bits);
+
+//planes
+void R_GenerateSpans(void);
+void R_PrepPlanes(void);
+void R_DrawPlanes(void);
+
+//sectors
+void R_DrawSector(int sectornum, int xl, int xh, int* floorclip, int* ceilingclip, int* scaleclip);
 
 //r_init
 extern fixed_t viewfrontscale[];

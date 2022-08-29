@@ -16,6 +16,10 @@
 //-----------------------------------------------------------------------------
 
 #include "doomdef.h"
+#include "w_wad.h"
+#include "r_ref.h"
+#include "g_game.h"
+#include "m_menu.h"
 
 extern  void R_TestScaleColumn();
 
@@ -24,6 +28,7 @@ int democycle;
 
 config_t config;
 
+//TODO: Find the actual structure for this
 typedef struct
 {
     fixed_t f1, f2, f3, f4, f5, f6, f7, f8, f9, f10;

@@ -16,11 +16,14 @@
 //-----------------------------------------------------------------------------
 
 #include "doomdef.h"
+#include "w_wad.h"
+#include "r_ref.h"
+#include "p_play.h"
 #include "r_local.h"
 
 char* spritename;
 spritedef_t* sprites;
-spriteframe_t tempsprite[26];
+spriteframe_t sprtemp[26];
 int numsprites;
 int maxframe;
 
@@ -29,18 +32,17 @@ int newvissprite;
 
 void R_DrawSprite(int xclipl, int xcliph, vissprite_t* spr)
 {
-	int local_1c;
-	int local_18;
-	uint8_t* pbVar2;
-	int local_2c;
+	int frac;
+	int texturecollumn;
+	uint8_t* collumn;
 
 	if (spr->x1 < xclipl) 
 	{
-		local_1c = spr->fracstep * (xclipl - spr->x1);
+		frac = spr->fracstep * (xclipl - spr->x1);
 		sp_x = xclipl;
 		if (spr->fracstep < 0)
 		{
-			local_1c = local_1c + spr->patch->width * FRACUNIT + -1;
+			frac = frac + spr->patch->width * FRACUNIT + -1;
 		}
 	}
 	else 
@@ -48,37 +50,38 @@ void R_DrawSprite(int xclipl, int xcliph, vissprite_t* spr)
 		sp_x = spr->x1;
 		if (spr->fracstep < 0) 
 		{
-			local_1c = spr->patch->width * FRACUNIT + -1;
+			frac = spr->patch->width * FRACUNIT + -1;
 		}
 		else 
 		{
-			local_1c = 0;
+			frac = 0;
 		}
 	}
-	local_2c = xcliph;
+
 	if (spr->x2 < xcliph)
 	{
-		local_2c = spr->x2;
+		xcliph = spr->x2;
 	}
 	sp_colormap = spr->colormap;
 	sp_fracstep = spr->iscale;
 
-	while (sp_x <= local_2c)
+	while (sp_x <= xcliph)
 	{
 		if ((spr->scale < inscale[sp_x]) && (outscale[sp_x] <= spr->scale))
 		{
-			local_18 = local_1c >> FRACBITS;
-			if ((local_18 < 0) || ((int)spr->patch->width <= local_18)) 
+			texturecollumn = frac >> FRACBITS;
+			if ((texturecollumn < 0) || (spr->patch->width <= texturecollumn)) 
 			{
-				IO_Error("R_DrawSprite: bad texturecollumn\n");
+				IO_Error("R_DrawSprite: bad texturecollumn");
+				return;
 			}
 
-			pbVar2 = &spr->patch->width + ((int)spr->patch->coloffsets[local_18]);
-			while (*pbVar2 != 0xff)
+			collumn = &spr->patch->width + spr->patch->coloffsets[texturecollumn];
+			while (*collumn != 0xff)
 			{
-				local_18 = spr->topscreen + *pbVar2 * spr->scale;
-				sp_y1 = local_18 + 0xffff >> FRACBITS;
-				sp_y2 = (int)(local_18 + pbVar2[1] * spr->scale + -1) >> FRACBITS;
+				texturecollumn = spr->topscreen + *collumn * spr->scale;
+				sp_y1 = texturecollumn + 0xffff >> FRACBITS;
+				sp_y2 = (int)(texturecollumn + collumn[1] * spr->scale + -1) >> FRACBITS;
 				if (floorpixel[sp_x] <= sp_y2) 
 				{
 					sp_y2 = floorpixel[sp_x] + -1;
@@ -89,16 +92,16 @@ void R_DrawSprite(int xclipl, int xcliph, vissprite_t* spr)
 				}
 				if (sp_y1 <= sp_y2)
 				{
-					sp_source = pbVar2 + 2;
+					sp_source = collumn + 2;
 
-					sp_frac = FixedMul(sp_y1 * FRACUNIT - local_18, sp_fracstep);
+					sp_frac = FixedMul(sp_y1 * FRACUNIT - texturecollumn, sp_fracstep);
 					((void(*)())R_RawScale)();
 				}
-				pbVar2 = pbVar2 + pbVar2[1] + 2;
+				collumn = collumn + collumn[1] + 2;
 			}
 		}
 		sp_x++;
-		local_1c = local_1c + spr->fracstep;
+		frac = frac + spr->fracstep;
 	}
 	return;
 }
@@ -146,32 +149,32 @@ void R_TestDrawSprite(int x, int y, int sprite, int frame, int rotation)
 
 void R_TestSprites(void)
 {
-	spritedef_t* local_24;
-	int local_20;
+	spritedef_t* sprdef;
+	int frame;
 	int sprite;
 
-	uint8_t buf[4480];
+	uint8_t emptyout[4480];
 
 	sprite = 0;
-	local_20 = 0;
-	memset(&buf, 0, 0x1180);
+	frame = 0;
+	memset(&emptyout, 0, 0x1180);
 	floorpixel = viewfloorpixels;
 	ceilingpixel = viewceilingpixels;
 	inscale = viewfrontscale;
 
-	outscale = (fixed_t*)&buf[0];
+	outscale = (fixed_t*)&emptyout[0];
 	do 
 	{
-		local_24 = &sprites[sprite];
+		sprdef = &sprites[sprite];
 		R_ClearBuffer();
-		R_TestDrawSprite(0x28, 0x5a, sprite, local_20, 0);
-		R_TestDrawSprite(0x78, 0x5a, sprite, local_20, 1);
-		R_TestDrawSprite(200, 0x5a, sprite, local_20, 2);
-		R_TestDrawSprite(0x118, 0x5a, sprite, local_20, 3);
-		R_TestDrawSprite(0x28, 0xbe, sprite, local_20, 4);
-		R_TestDrawSprite(0x78, 0xbe, sprite, local_20, 5);
-		R_TestDrawSprite(200, 0xbe, sprite, local_20, 6);
-		R_TestDrawSprite(0x118, 0xbe, sprite, local_20, 7);
+		R_TestDrawSprite(40, 90, sprite, frame, 0);
+		R_TestDrawSprite(120, 90, sprite, frame, 1);
+		R_TestDrawSprite(200, 90, sprite, frame, 2);
+		R_TestDrawSprite(280, 90, sprite, frame, 3);
+		R_TestDrawSprite(40, 190, sprite, frame, 4);
+		R_TestDrawSprite(120, 190, sprite, frame, 5);
+		R_TestDrawSprite(200, 190, sprite, frame, 6);
+		R_TestDrawSprite(280, 190, sprite, frame, 7);
 		playscreenupdateneeded = 2;
 		IO_UpdateScreen();
 		lastscan = 0;
@@ -183,20 +186,20 @@ void R_TestSprites(void)
 		if ((lastscan == KEY_UP) && (sprite < numsprites - 1)) 
 		{
 			sprite++;
-			local_20 = 0;
+			frame = 0;
 		}
 		if ((lastscan == KEY_DOWN) && (0 < sprite))
 		{
 			sprite--;
-			local_20 = 0;
+			frame = 0;
 		}
-		if ((lastscan == KEY_RIGHT) && (local_20 < local_24->numframes - 1)) 
+		if ((lastscan == KEY_RIGHT) && (frame < sprdef->numframes - 1)) 
 		{
-			local_20++;
+			frame++;
 		}
-		if ((lastscan == KEY_LEFT) && (0 < local_20))
+		if ((lastscan == KEY_LEFT) && (0 < frame))
 		{
-			local_20--;
+			frame--;
 		}
 	} while (lastscan != KEY_ESC);
 	lastscan = 0;
@@ -204,24 +207,180 @@ void R_TestSprites(void)
 	return;
 }
 
+/*
+=================
+=
+= R_InstallSpriteLump
+=
+= Local function for R_InitSprites
+=================
+*/
+
+void R_InstallSpriteLump(int lump, int frame, int rotation, int flipped)
+{
+	int		r;
+	char	buf[8];
+
+	if (frame >= 26 || rotation > 8)
+	{
+		strncpy(buf, lumpinfo[lump].name, 8);
+		IO_Error("R_InstallSpriteLump: Bad frame characters in %s", buf);
+		return;
+	}
+
+	if ((int)frame > maxframe)
+		maxframe = frame;
+
+	if (rotation == 0)
+	{
+		// the lump should be used for all rotations
+		if (!sprtemp[frame].rotate == true)
+			IO_Error("R_InitSprites: Sprite %s frame %c has multip rot=0 lump" , spritename, 'A' + frame);
+		if (sprtemp[frame].rotate == false)
+			IO_Error("R_InitSprites: Sprite %s frame %c has rotations and a rot=0 lump", spritename, 'A' + frame);
+
+		sprtemp[frame].rotate = 0;
+		for (r = 0; r < 8; r++)
+		{
+			sprtemp[frame].lump[r] = lump;
+			sprtemp[frame].flip[r] = flipped;
+		}
+		return;
+	}
+
+	// the lump is only used for one rotation
+	if (sprtemp[frame].rotate == false)
+		IO_Error("R_InitSprites: Sprite %s frame %c has rotations and a rot=0 lump" , spritename, 'A' + frame);
+
+	sprtemp[frame].rotate = 1;
+
+	rotation--;		// make 0 based
+	if (sprtemp[frame].lump[rotation] != -1)
+		IO_Error("R_InitSprites: Sprite %s : %c : %c has two lumps mapped to it", spritename, 'A' + frame, '1' + rotation);
+
+	sprtemp[frame].lump[rotation] = lump;
+	sprtemp[frame].flip[rotation] = flipped;
+}
+
+/*
+=================
+=
+= R_InitSpriteDefs
+=
+= Pass a null terminated list of sprite names (4 chars exactly) to be used
+= Builds the sprite rotation matrixes to account for horizontally flipped
+= sprites.  Will report an error if the lumps are inconsistant
+=
+Only called at startup
+=
+= Sprite lump names are 4 characters for the actor, a letter for the frame,
+= and a number for the rotation, A sprite that is flippable will have an
+= additional letter/number appended.  The rotation character can be 0 to
+= signify no rotations
+=================
+*/
+
+void R_InitSprites(char** namelist)
+{
+	char** check;
+	int		i, l, intname, frame, rotation;
+	int		start, end;
+
+	// count the number of sprite names
+	check = namelist;
+	while (*check != NULL)
+		check++;
+	numsprites = check - namelist;
+
+	if (!numsprites)
+		return;
+
+	sprites = (spritedef_t*)malloc(numsprites * sizeof(spritedef_t));
+
+	start = W_GetNumForName("S_START");
+	end = W_GetNumForName("S_END");
+
+	// scan all the lump names for each of the names, noting the highest
+	// frame letter
+	// Just compare 4 characters as ints
+	for (i = 0; i < numsprites; i++)
+	{
+		spritename = namelist[i];
+		memset(sprtemp, -1, sizeof(sprtemp));
+
+		maxframe = -1;
+		intname = *(int*)namelist[i];
+
+		//
+		// scan the lumps, filling in the frames for whatever is found
+		//
+		for (l = start + 1; l < end; l++)
+			if (*(int*)lumpinfo[l].name == intname)
+			{
+				frame = lumpinfo[l].name[4] - 'A';
+				rotation = lumpinfo[l].name[5] - '0';
+				R_InstallSpriteLump(l, frame, rotation, false);
+				if (lumpinfo[l].name[6])
+				{
+					frame = lumpinfo[l].name[6] - 'A';
+					rotation = lumpinfo[l].name[7] - '0';
+					R_InstallSpriteLump(l, frame, rotation, true);
+				}
+			}
+
+		//
+		// check the frames that were found for completeness
+		//
+		if (maxframe == -1)
+		{
+			IO_Error("R_InitSprites: No lumps found for sprite %s", namelist[i]);
+		}
+
+		maxframe++;
+		for (frame = 0; frame < maxframe; frame++)
+		{
+			switch ((int)sprtemp[frame].rotate)
+			{
+			case -1:	// no rotations were found for that frame at all
+				IO_Error("R_InitSprites: No patches found for %s frame %c"
+					, namelist[i], frame + 'A');
+			case 0:	// only the first rotation is needed
+				break;
+
+			case 1:	// must have all 8 frames
+				for (rotation = 0; rotation < 8; rotation++)
+					if (sprtemp[frame].lump[rotation] == -1)
+						IO_Error("R_InitSprites: Sprite %s frame %c is missing rotations"
+							, namelist[i], frame + 'A');
+			}
+		}
+
+		//
+		// allocate space for the frames present and copy sprtemp to it
+		//
+		sprites[i].numframes = maxframe;
+		sprites[i].spriteframes = (spriteframe_t*)malloc(maxframe * sizeof(spriteframe_t));
+		memcpy(sprites[i].spriteframes, sprtemp, maxframe * sizeof(spriteframe_t));
+	}
+
+}
+
 thing_t* R_GetNewThing(int sector)
 {
-	thing_t* ptVar1;
-	thing_t* ptVar2;
-	int local_28;
+	thing_t* rthing;
+	thing_t* rnext;
 
-	local_28 = sector;
-	ptVar2 = (thing_t*)Z_Malloc(playzone, sizeof(thing_t));
-	ptVar2->prev = (thing_t*)NULL;
-	ptVar1 = sectors[local_28].things;
-	ptVar2->next = ptVar1;
-	if (ptVar1 != NULL) 
+	rthing = (thing_t*)Z_Malloc(playzone, sizeof(thing_t));
+	rthing->prev = (thing_t*)NULL;
+	rnext = sectors[sector].things;
+	rthing->next = rnext;
+	if (rnext != NULL) 
 	{
-		ptVar1->prev = ptVar2;
+		rnext->prev = rthing;
 	}
-	sectors[local_28].things = ptVar2;
-	ptVar2->sector = local_28;
-	return ptVar2;
+	sectors[sector].things = rthing;
+	rthing->sector = sector;
+	return rthing;
 }
 
 void R_RemoveThing(thing_t* rthing)
@@ -247,7 +406,7 @@ void R_RemoveThing(thing_t* rthing)
 
 void R_ChangeThingSector(thing_t* rthing, int newsector)
 {
-	thing_t* ptVar1;
+	thing_t* rnext;
 
 	if (rthing->prev == NULL) 
 	{
@@ -261,181 +420,15 @@ void R_ChangeThingSector(thing_t* rthing, int newsector)
 	{
 		rthing->next->prev = rthing->prev;
 	}
-	ptVar1 = sectors[newsector].things;
+	rnext = sectors[newsector].things;
 	rthing->prev = NULL;
-	rthing->next = ptVar1;
-	if (ptVar1 != NULL)
+	rthing->next = rnext;
+	if (rnext != NULL)
 	{
-		ptVar1->prev = rthing;
+		rnext->prev = rthing;
 	}
 	sectors[newsector].things = rthing;
 	rthing->sector = newsector;
-	return;
-}
-
-uint32_t R_InstallSpriteLump(int lump, int param_2, int param_3, int param_4)
-{
-	uint32_t local_1c;
-	uint32_t local_20;
-	short sVar1;
-	uint32_t bVar2;
-	uint32_t local_18;
-	int iVar3;
-	char buf[8];
-
-	local_20 = param_2;
-	local_1c = lump;
-	local_18 = param_4;
-	if ((0x19 < param_2) || (8 < (uint32_t)param_3)) 
-	{
-		strncpy(buf, lumpinfo[lump].name, 8);
-		IO_Error("R_InitSprites: Bad frame characters in %s\n", buf);
-	}
-	bVar2 = (uint8_t)local_18;
-	sVar1 = (short)local_1c;
-	if (maxframe < (int)local_20)
-	{
-		maxframe = local_20;
-	}
-	if (param_3 == 0) 
-	{
-		if (tempsprite[local_20].rotate == 0) 
-		{
-			IO_Error("R_InitSprites: Sprite %s frame %c has multip rot=0 lump\n", spritename, local_20 + 0x41);
-		}
-		if (tempsprite[local_20].rotate == 1)
-		{
-			IO_Error("R_InitSprites: Sprite %s frame %c has rotations and a rot=0 lump\n", spritename, local_20 + 0x41);
-		}
-		tempsprite[local_20].rotate = 0;
-		local_1c = local_20 * 0x1c;
-		local_18 = 0;
-		while ((int)local_18 < 8) 
-		{
-			tempsprite[local_20].lump[local_18] = sVar1;
-			tempsprite[local_20].flip[local_18] = bVar2;
-			local_1c = local_18;
-			local_18 = local_18 + 1;
-		}
-	}
-	else 
-	{
-		if (tempsprite[local_20].rotate == 0)
-		{
-			IO_Error("R_InitSprites: Sprite %s frame %c has rotations and a rot=0 lump\n", spritename, local_20 + 0x41);
-		}
-		tempsprite[local_20].rotate = 1;
-		iVar3 = param_3 + -1;
-		if (tempsprite[local_20].lump[iVar3] != -1)
-		{
-			IO_Error("R_InitSprites: Sprite %s : %c : %c has two lumps mapped to it\n", spritename, local_20 + 0x41, param_3 + 0x2f);
-		}
-		tempsprite[local_20].lump[iVar3] = (short)local_1c;
-		local_1c = iVar3 * 2 & 0xffff0000U | local_1c & 0xff00 | local_18 & 0xff;
-		tempsprite[local_20].flip[iVar3] = (uint8_t)(local_18 & 0xff);
-	}
-	return local_1c;
-}
-
-void R_InitSprites(char** namelist)
-{
-	int pcVar1;
-	int iVar2;
-	int local_EAX_100;
-	int iVar3;
-	spriteframe_t* psVar4;
-	int local_34;
-	int local_30;
-	int local_2c;
-	int local_24;
-	int local_20;
-	char** ppcStack28;
-
-	ppcStack28 = namelist;
-	while (*ppcStack28 != NULL) 
-	{
-		ppcStack28 = ppcStack28 + 1;
-	}
-	numsprites = (int)((int)ppcStack28 - (int)namelist) / sizeof(char*);
-	if (numsprites != 0) 
-	{
-		sprites = (spritedef_t*)malloc(numsprites * sizeof(spritedef_t));
-#ifdef ISB_LINT
-		if (sprites == NULL)
-		{
-			IO_Error("R_InitSprites: can't allocate sprites\n");
-			return;
-		}
-#endif
-		local_EAX_100 = W_GetNumForName("S_START");
-		iVar3 = W_GetNumForName("S_END");
-		local_20 = 0;
-		while (local_20 < numsprites)
-		{
-			spritename = namelist[local_20];
-			memset((char*)tempsprite, -1, sizeof(tempsprite));
-			maxframe = -1;
-			pcVar1 = *(int*)namelist[local_20];
-			local_24 = local_EAX_100;
-			while (local_24 = local_24 + 1, local_24 < iVar3)
-			{
-				if (*(int*)lumpinfo[local_24].name == pcVar1)
-				{
-					R_InstallSpriteLump(local_24, lumpinfo[local_24].name[4] - 0x41, lumpinfo[local_24].name[5] - 0x30, 0);
-					if ((lumpinfo[local_24].name[6]) != '\0')
-					{
-						R_InstallSpriteLump(local_24, lumpinfo[local_24].name[6] - 0x41, lumpinfo[local_24].name[7] - 0x30, 1);
-					}
-				}
-			}
-			if (maxframe == -1) 
-			{
-				IO_Error("R_InitSprites: No lumps found for sprite %s\n", namelist[local_20]);
-			}
-			maxframe++;
-			local_2c = 0;
-			while (local_2c < maxframe) 
-			{
-				iVar2 = tempsprite[local_2c].rotate;
-				if (iVar2 < 0)
-				{
-					if (iVar2 == -1) 
-					{
-						IO_Error("R_InitSprites: No patches found for %s frame %c\n", namelist[local_20], local_2c + 0x41);
-					}
-				}
-				else 
-				{
-					if ((0 < iVar2) && (iVar2 == 1)) 
-					{
-						local_30 = 0;
-						while (local_30 < 8)
-						{
-							if (tempsprite[local_2c].lump[local_30] == -1) 
-							{
-								IO_Error("R_InitSprites: Sprite %s frame %c is missing rotations\n", namelist[local_20],
-									local_2c + 0x41);
-							}
-							local_30 = local_30 + 1;
-						}
-					}
-				}
-				local_2c = local_2c + 1;
-			}
-			sprites[local_20].numframes = maxframe;
-			psVar4 = (spriteframe_t*)malloc(maxframe * sizeof(spriteframe_t));
-#ifdef ISB_LINT
-			if (psVar4 == NULL)
-			{
-				IO_Error("R_InitSprites: can't allocate sprite frame list\n");
-				return;
-			}
-#endif
-			sprites[local_20].spriteframes = psVar4;
-			memcpy(sprites[local_20].spriteframes, tempsprite, maxframe * sizeof(spriteframe_t));
-			local_20++;
-		}
-	}
 	return;
 }
 
@@ -446,151 +439,165 @@ void R_ClearVisSprites()
 
 vissprite_t* R_NewVisSprite(void)
 {
-	int iVar1;
-
 	if (newvissprite == 128) 
 	{
 		IO_Error("R_NewVisSprite: no free spots\n");
 	}
-	iVar1 = newvissprite;
-	newvissprite = newvissprite + 1;
-	return &vissprites[iVar1];
+
+	newvissprite++;
+	return &vissprites[newvissprite-1];
 }
 
+/*
+===================
+=
+= R_ProjectSprite
+=
+= Generates a vissprite for a thing if it might be visible
+=
+===================
+*/
 
 void R_ProjectThing(thing_t* thing)
 {
-	uint8_t bVar1;
-	short sVar2;
-	int local_2c;
-	int local_44;
-	int local_38;
-	int local_34;
-	spriteframe_t* psVar5;
-	int local_5c;
-	vissprite_t* vissprite;
-	int extraout_EDX;
-	thing_t* local_6c;
-	int* local_64;
-	spritedef_t* local_4c;
+	fixed_t		trx, try;
+	fixed_t		gxt, gyt;
+	fixed_t		tx, tz;
+	fixed_t		xscale, yscale;
 	patch_t* patch;
+	int			x1, x2;
+	spritedef_t* sprdef;
+	spriteframe_t* sprframe;
+	int			lump;
+	unsigned	rot;
+	boolean		flip;
+	int			collumntop;
+	vissprite_t* vis;
+	int			light;
 
-	thing->vissprite = (void*)NULL;
-	local_2c = thing->x - viewx;
-	local_44 = thing->y - viewy;
+	thing->vissprite = NULL;
 
-	local_38 = FixedMul(local_2c, viewcos) + FixedMul(local_44, viewsin);
+	//
+	// transform the origin point
+	//
+	trx = thing->x - viewx;
+	try = thing->y - viewy;
 
-	if (0x3ffff < local_38)
-	{
-		local_34 = FixedDiv(xproject, local_38);
-		local_38 = FixedDiv(yproject, local_38);
+	gxt = FixedMul(trx, viewcos);
+	gyt = -FixedMul(try, viewsin);
+	tz = gxt - gyt;
 
-		local_2c = -(FixedMul(local_44, viewcos) - FixedMul(local_2c, viewsin));
+	if (tz < MINZ)
+		return;		// thing is behind view plane
 
-		local_6c = thing;
-		if (numsprites <= thing->sprite)
-		{
-			IO_Error("R_TryAddThing: invalid sprite number %i\n", thing->sprite);
-		}
-		local_4c = &sprites[local_6c->sprite];
-		if (local_4c->numframes <= local_6c->frame) 
-		{
-			IO_Error("R_TryAddThing: invalid sprite frame %i : %i\n", local_6c->sprite, local_6c->frame);
-		}
-		psVar5 = &local_4c->spriteframes[local_6c->frame];
-		if (psVar5->rotate == 0)
-		{
-			sVar2 = psVar5->lump[0];
-			bVar1 = psVar5->flip[0];
-		}
-		else 
-		{
-			local_5c = (viewangle - local_6c->angle) + 0x1200 >> 10 & 7;
-			sVar2 = psVar5->lump[local_5c];
-			bVar1 = psVar5->flip[local_5c];
-		}
-		local_5c = bVar1;
-		patch = (patch_t*)lumpinfo[sVar2].position;
-		local_2c = local_2c + patch->leftoffs * -FRACUNIT;
+	xscale = FixedDiv(xproject, tz);
+	yscale = FixedDiv(yproject, tz);
 
-		local_44 = (FixedMul(local_2c, local_34) + centerxfrac) >> FRACBITS;
+	gxt = -FixedMul(trx, viewsin);
+	gyt = FixedMul(try, viewcos);
+	tx = -(gyt + gxt);
 
-		if (local_44 <= viewwidth)
-		{
-			local_2c = (FixedMul(local_2c + patch->width * FRACUNIT, local_34) + centerxfrac) >> FRACBITS;
+//#ifdef RANGECHECK
+	if (thing->sprite >= numsprites)
+		IO_Error("R_TryAddThing: invalid sprite number %i\n", thing->sprite);
+//#endif
+	sprdef = &sprites[thing->sprite];
 
-			if (0 < local_2c)
-			{
-				vissprite = R_NewVisSprite();
-				local_6c->vissprite = vissprite;
-				vissprite->x1 = local_44;
-				vissprite->x2 = local_2c - 1;
-				vissprite->fracstep = FixedDiv(FRACUNIT, local_34);
+//#ifdef RANGECHECK
+	if (thing->frame >= sprdef->numframes)
+		IO_Error("R_TryAddThing: invalid sprite frame %i : %i\n", thing->sprite, thing->frame);
+//endif
+	sprframe = &sprdef->spriteframes[thing->frame];
 
-				if (local_5c != 0)
-				{
-					vissprite->fracstep = -vissprite->fracstep;
-				}
-
-				vissprite->scale = local_38;
-				local_2c = viewz - (local_6c->z + patch->topoffset * FRACUNIT);
-				vissprite->iscale = FixedDiv(FRACUNIT, local_38);
-				vissprite->patch = patch;
-				vissprite->topscreen = FixedMul(local_2c, local_38) + centeryfrac;
-				vissprite->colormap = scalelight[R_LightFromVScale(local_38) + (sectors[thing->sector].lightlevel >> 4) * 48];
-			}
-		}
+	if (sprframe->rotate)
+	{	// choose a different rotation based on player view
+		rot = (viewangle - thing->angle) + 0x1200 >> 10 & 7;
+		lump = sprframe->lump[rot];
+		flip = (boolean)sprframe->flip[rot];
 	}
-	return;
+	else
+	{	// use single rotation for all views
+		lump = sprframe->lump[0];
+		flip = (boolean)sprframe->flip[0];
+	}
+
+	patch = (patch_t*)lumpinfo[lump].position;
+
+//
+// calculate edges of the shape
+//
+	tx -= (patch->leftoffs * FRACUNIT);
+	x1 = (FixedMul(tx, xscale) + centerxfrac) >> FRACBITS;
+	if (x1 > viewwidth)
+		return;		// off the right side
+
+	tx += (patch->width * FRACUNIT);
+	x2 = (FixedMul(tx, xscale) + centerxfrac) >> FRACBITS;
+	if (x2 <= 0)
+		return;		// off the left side
+
+	vis = R_NewVisSprite();
+	thing->vissprite = vis;
+	vis->x1 = x1;
+	vis->x2 = x2-1;
+	vis->fracstep = FixedDiv(FRACUNIT, xscale);
+	if (flip)
+		vis->fracstep = -vis->fracstep;
+
+	vis->scale = yscale;
+	collumntop = viewz - (thing->z + patch->topoffset * FRACUNIT);
+	vis->iscale = FixedDiv(FRACUNIT, yscale);
+	vis->patch = patch;
+	vis->topscreen = FixedMul(collumntop, yscale) + centeryfrac;
+
+	light = R_LightFromVScale(yscale) + (sectors[thing->sector].lightlevel >> 4) * 48;
+	vis->colormap = scalelight[light];
 }
 
 void R_DrawSectorThings(sector_t* sector, int xl, int xh)
 {
-	thing_t* ptVar1;
-	thing_t* ptVar2;
-	thing_t* local_14;
+	thing_t* rthing, *rnext, *rprev;
 
 	if (sector->validcheck != validcheck) 
 	{
 		sector->validcheck = validcheck;
-		ptVar1 = sector->things;
-		while (local_14 = ptVar1, local_14 != NULL) 
+		rnext = sector->things;
+		while (rthing = rnext, rthing != NULL) 
 		{
-			ptVar1 = local_14->next;
-			R_ProjectThing(local_14);
-			while (((ptVar2 = local_14->prev, ptVar2 != NULL &&
-				(ptVar2->vissprite != NULL)) &&
-				((local_14->vissprite == NULL ||
-					(local_14->vissprite->scale <= ptVar2->vissprite->scale))))) 
+			rnext = rthing->next;
+			R_ProjectThing(rthing);
+			while (((rprev = rthing->prev, rprev != NULL &&
+				(rprev->vissprite != NULL)) &&
+				((rthing->vissprite == NULL ||
+					(rthing->vissprite->scale <= rprev->vissprite->scale))))) 
 			{
-				if (local_14->next != NULL) 
+				if (rthing->next != NULL) 
 				{
-					local_14->next->prev = ptVar2;
+					rthing->next->prev = rprev;
 				}
-				ptVar2->next = local_14->next;
-				local_14->next = ptVar2;
-				local_14->prev = ptVar2->prev;
-				if (local_14->prev == NULL) 
+				rprev->next = rthing->next;
+				rthing->next = rprev;
+				rthing->prev = rprev->prev;
+				if (rthing->prev == NULL) 
 				{
-					sector->things = local_14;
+					sector->things = rthing;
 				}
 				else 
 				{
-					local_14->prev->next = local_14;
+					rthing->prev->next = rthing;
 				}
-				ptVar2->prev = local_14;
+				rprev->prev = rthing;
 			}
 		}
 	}
-	local_14 = sector->things;
-	while (local_14 != NULL)
+	rthing = sector->things;
+	while (rthing != NULL)
 	{
-		if (local_14->vissprite != NULL) 
+		if (rthing->vissprite != NULL) 
 		{
-			R_DrawSprite(xl, xh, local_14->vissprite);
+			R_DrawSprite(xl, xh, rthing->vissprite);
 		}
-		local_14 = local_14->next;
+		rthing = rthing->next;
 	}
 	return;
 }

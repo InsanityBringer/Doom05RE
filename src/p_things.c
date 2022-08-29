@@ -17,6 +17,14 @@
 
 #include "doomdef.h"
 #include "p_local.h"
+#include "r_ref.h"
+
+typedef struct
+{
+	int number;
+	enum statenum_t state;
+	int bmapflags;
+} spawninfo_t;
 
 spawninfo_t spawninfo[33] =
 {
