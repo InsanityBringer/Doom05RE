@@ -32,6 +32,10 @@ typedef struct
 	short coloffsets[8];
 } patch_t;
 
+#define SCREENWIDTH 320
+#define SCREENHEIGHT 200
+#define SCREENBWIDE (SCREENWIDTH>>2)
+
 extern uint8_t screenbuffer[];
 extern uint8_t* ylookup[];
 extern int planewidthlookup[];

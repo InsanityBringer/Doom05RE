@@ -26,16 +26,22 @@
 
 //rip c++ support
 //you know, maybe I should make this dbool with dtrue and dfalse before it floods the entire source
-typedef enum
-{
-	false,
-	true
-} boolean;
+#ifndef __BYTEBOOL__
+#define __BYTEBOOL__
+typedef unsigned char byte;
+typedef enum { false, true } boolean;
+#endif
 
 typedef int fixed_t;
 
-#define FRACUNIT 0x10000
 #define FRACBITS 16
+#define FRACUNIT (1<<FRACBITS)
+
+#define TICRATE 35
+
+//Angles are different from release Doom, only existing as "fine" angles
+#define NUMANGLES 8192
+#define ANGLEMASK (NUMANGLES-1)
 
 inline fixed_t FixedMul(fixed_t a, fixed_t b)
 {
@@ -113,6 +119,8 @@ typedef enum
 	sk_deadlybaby
 } skill_t;
 
+#define NUMHISCORES 6
+
 typedef struct
 {
 	char name[16];
@@ -124,7 +132,7 @@ typedef struct
 {
 	int hdetail;
 	int viewsize;
-	hscore_t scores[6];
+	hscore_t scores[NUMHISCORES];
 } config_t;
 
 //global variables
@@ -176,7 +184,7 @@ void D_SaveConfig();
 int D_CheckParm(char* check);
 int D_AckWait(int tics);
 void D_Synchronize();
-void D_FadeIn(uint8_t* palette);
+void D_FadeIn(byte* palette);
 void D_FadeOut();
-int D_WriteFile(char* name, uint8_t* source, int length);
+int D_WriteFile(char* name, byte* source, int length);
 void D_ScreenShot(int savepcx);

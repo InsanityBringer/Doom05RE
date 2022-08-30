@@ -20,12 +20,10 @@ typedef enum
 	gs_warp
 } gamestart_t;
 
-//TODO: I didn't notice this structure
-//Need to determine the proper data types still, and if it's actually used anywhere.  
 typedef struct
 {
-	int mapcomplete;
 	int mappoint;
+	int mapcompleted[16];
 } gamestate_t;
 
 extern gamestart_t gamestart;

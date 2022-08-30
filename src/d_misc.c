@@ -52,94 +52,38 @@ int rndindex;
 
 void D_Alert(char* text)
 {
-	int iVar1;
+	int w;
 
-	iVar1 = V_StringWidth(text, hudfont);
-	V_Window(iVar1 + 32, 40);
-	V_CenterString(0x5a, text, hudfont);
+	w = V_StringWidth(text, hudfont);
+	V_Window(w + 32, 40);
+	V_CenterString(90, text, hudfont);
 	IO_UpdateScreen();
 	IO_Ack();
 	IO_ClearKeys();
 	return;
 }
 
-void D_LoadConfig()
-{
-	uint32_t* src;
-	int local_EAX_63;
-	int local_20;
-
-	local_EAX_63 = W_CheckNumForName("CONFIG");
-	if (local_EAX_63 == -1) 
-	{
-		config.hdetail = 1;
-		config.viewsize = 8;
-		local_20 = 0;
-		while (local_20 < 6) 
-		{
-			strncpy(config.scores[local_20].name, "Id Software", 16);
-			config.scores[local_20].skill = 4;
-			config.scores[local_20].score = 10000;
-			local_20++;
-		}
-	}
-	else 
-	{
-		src = W_GetLump(local_EAX_63);
-#if 0 //{ISB] "safe" copy here
-		local_EAX_63 = (int)memcpy(&config, src, lumpinfo[local_EAX_63].size);
-#endif
-		config.hdetail = *src; src++;
-		config.viewsize = *src; src++;
-
-		for (local_20 = 0; local_20 < 6; local_20++)
-		{
-			memcpy(config.scores[local_20].name, (void*)src, 16); src += 4;
-			config.scores[local_20].skill = *src; src++;
-			config.scores[local_20].score = *src; src++;
-		}
-	}
-}
-
 int D_CheckParm(char* check)
 {
-	char cVar1;
-	unsigned int uVar2;
-	int iVar3;
-	char* local_28;
-	char* local_20;
-	char* pcVar4;
-	int iVar5;
+	int i;
+	char* parm;
 
-	iVar5 = 1;
-	local_28 = check;
-	do 
+	for (i = 1; i < my_argc; i++)
 	{
-		if (my_argc <= iVar5) 
-		{
-			return 0;
-		}
-		local_20 = my_argv[iVar5];
-		do 
-		{
-			uVar2 = isalpha((int)(short)*local_20);
-			pcVar4 = local_20;
-			if (uVar2 != 0) break;
-			pcVar4 = local_20 + 1;
-			cVar1 = *local_20;
-			local_20 = pcVar4;
-		} while (cVar1 != '\0');
+		parm = my_argv[i];
 
-		iVar3 = _stricmp(local_28, pcVar4);
-		if (iVar3 == 0)
-		{
-			return iVar5;
-		}
-		iVar5++;
-	} while (1);
+		//strange. Finds the first letter in the parameter string, this isn't in the final version at all.
+		//Wolfenstein 3D's US_CheckParm has similar code. 
+		while (*parm != 0 && !isalpha(*parm))
+			parm++;
+
+		if (!_stricmp(check, parm))
+			return i;
+	}
+	return 0;
 }
 
-int D_WriteFile(char* name, uint8_t* source, int length)
+int D_WriteFile(char* name, byte* source, int length)
 {
 	int handle;
 	int count;
@@ -163,22 +107,21 @@ int D_WriteFile(char* name, uint8_t* source, int length)
 
 int D_AckWait(int tics)
 {
-	int iVar1;
-	int iVar2;
-	int local_28;
+	int start;
+	int time;
+	int c;
 
-	local_28 = tics;
-	iVar1 = IO_GetTime();
+	start = IO_GetTime();
 	do 
 	{
-		iVar2 = IO_GetTime();
-		if (local_28 <= iVar2 - iVar1) 
+		time = IO_GetTime();
+		if (tics <= time - start) 
 		{
 			return 0;
 		}
-		iVar2 = IO_CheckAck();
-	} while (iVar2 == 0);
-	return iVar2;
+		c = IO_CheckAck();
+	} while (c == 0);
+	return c;
 }
 
 void D_Synchronize()
@@ -191,14 +134,14 @@ uint8_t D_Rnd(void)
 	return rndtable[rndindex];
 }
 
-void D_FadeIn(uint8_t* palette)
+void D_FadeIn(byte* palette)
 {
-	V_FadeIn(0, 0xff, 0x10, palette);
+	V_FadeIn(0, 255, 16, palette);
 }
 
 void D_FadeOut()
 {
-	V_FadeOut(0, 0xFF, 0x80, 0x80, 0x80, 0x20);
+	V_FadeOut(0, 255, 128, 128, 128, 32);
 }
 
 //Screenshot nonsense
@@ -208,7 +151,7 @@ typedef struct
 	short h;
 	short x;
 	short y;
-	int8_t nplanes;
+	int8_t nPlanes;
 	int8_t masking;
 	int8_t compression;
 	int8_t padding;
@@ -230,263 +173,248 @@ int LongBigEndian(int l)
 		(l >> 0x10 & 0xff) * 0x100 + (l >> 0x18);
 }
 
-void WriteLBMFile(char* filename, uint8_t* data, int width, int height, uint8_t* palette)
+void WriteLBMFile(char* filename, byte* data, int width, int height, byte* palette)
 {
-	uint8_t* pbVar1;
-	int* plVar2;
-	uint8_t* source;
-	int iVar3;
-	int lVar4;
-	iffbmhd_t local_4c;
-	uint8_t* local_14;
+	//Adapted from the ROTT source, which seems to be derived directly from this routine.
+	byte* lbm, * lbmptr;
+	long* formlength, * bmhdlength, * cmaplength, * bodylength;
+	long    length;
+	iffbmhd_t  basebmhd;
+	int     i;
 
-	int length;
+	lbm = lbmptr = (byte*)malloc(SCREENWIDTH * SCREENHEIGHT + 1000);
 
-	source = (uint8_t*)malloc(width * height + 1000);
+	//
+	// start FORM
+	//
+	*lbmptr++ = 'F';
+	*lbmptr++ = 'O';
+	*lbmptr++ = 'R';
+	*lbmptr++ = 'M';
 
-	//FORM
-	*source = 0x46;
-	source[1] = 0x4f;
-	source[2] = 0x52;
-	source[3] = 0x4d;
+	formlength = (long*)lbmptr;
+	lbmptr += 4;                      // leave space for length
 
-	//PBM 
-	source[8] = 0x50;
-	source[9] = 0x42;
-	source[10] = 0x4d;
-	source[0xb] = 0x20;
+	*lbmptr++ = 'P';
+	*lbmptr++ = 'B';
+	*lbmptr++ = 'M';
+	*lbmptr++ = ' ';
 
-	//BMHD
-	source[0xc] = 0x42;
-	source[0xd] = 0x4d;
-	source[0xe] = 0x48;
-	source[0xf] = 0x44;
+	//
+	// write BMHD
+	//
+	*lbmptr++ = 'B';
+	*lbmptr++ = 'M';
+	*lbmptr++ = 'H';
+	*lbmptr++ = 'D';
 
-	memset((char*)&local_4c, 0, sizeof(iffbmhd_t));
-	local_4c.w = ShortBigEndian(width);
-	local_4c.h = ShortBigEndian(height);
-	//[ISB] The swaps are supposed to be there, despite being byte-sized. This causes only 0s to be written, but apparently dpaint is fine with it.
-	local_4c.nplanes = ShortBigEndian(8);
-	local_4c.xAspect = ShortBigEndian(5);
-	local_4c.yAspect = ShortBigEndian(6);
-	local_4c.pageWidth = ShortBigEndian(0x140);
-	local_4c.pageHeight = ShortBigEndian(200);
+	bmhdlength = (long*)lbmptr;
+	lbmptr += 4;                      // leave space for length
 
-	memcpy(source + 0x14, &local_4c, 0x14);
-	pbVar1 = source + 0x28;
+	memset(&basebmhd, 0, sizeof(basebmhd));
+	basebmhd.w = ShortBigEndian(width);
+	basebmhd.h = ShortBigEndian(height);
+	//[ISB] The swaps are supposed to be there, despite being byte-sized. This causes only 0s to be written, but apparently dpaint is fine with it. This bug was maintained in ROTT. 
+	basebmhd.nPlanes = ShortBigEndian(8);
+	basebmhd.xAspect = ShortBigEndian(5);
+	basebmhd.yAspect = ShortBigEndian(6);
+	basebmhd.pageWidth = ShortBigEndian(width);
+	basebmhd.pageHeight = ShortBigEndian(height);
 
-	//lVar4 = LongBigEndian((pbVar1 + (-4 - (int)(source + 0x10))));
+	memcpy(lbmptr, &basebmhd, sizeof(basebmhd));
+	lbmptr += sizeof(basebmhd);
 
-	//write BMHD length
-	length = (int)(pbVar1 - (source + 20));
-	*(int*)(source + 0x10) = LongBigEndian(length);
+	length = lbmptr - (byte*)bmhdlength - 4;
+	*bmhdlength = LongBigEndian(length);
+	if (length & 1)
+	*lbmptr++ = 0;          // pad chunk to even offset
 
-	local_14 = pbVar1;
+	//
+	// write CMAP
+	//
+	*lbmptr++ = 'C';
+	*lbmptr++ = 'M';
+	*lbmptr++ = 'A';
+	*lbmptr++ = 'P';
 
-	if ((length & 1) != 0) 
-	{
-		local_14 = source + 0x29;
-		*pbVar1 = 0;
-	}
+	cmaplength = (int*)lbmptr;
+	lbmptr += 4;                      // leave space for length
 
-	//CMAP
-	*local_14 = 0x43;
-	local_14[1] = 0x4d;
-	local_14[2] = 0x41;
-	local_14[3] = 0x50;
-	memcpy(local_14 + 8, palette, 0x300);
+	memcpy (lbmptr,&palette[0],768);
+	lbmptr += 768;
 
+	length = lbmptr - (byte*)cmaplength - 4;
+	*cmaplength = LongBigEndian(length);
+	if (length & 1)
+	*lbmptr++ = 0;          // pad chunk to even offset
 
-	pbVar1 = local_14 + 0x308;
-	length = (int)(pbVar1 - (local_14 + 8));
-	//lVar4 = LongBigEndian((long)(pbVar1 + (-4 - (int)(local_14 + 4))));
-	*(int*)(local_14 + 4) = LongBigEndian(length);
+	//
+	// write BODY
+	//
+	*lbmptr++ = 'B';
+	*lbmptr++ = 'O';
+	*lbmptr++ = 'D';
+	*lbmptr++ = 'Y';
 
-	if ((length & 1) != 0) 
-	{
-		*pbVar1 = 0;
-		pbVar1 = local_14 + 0x309;
-	}
+	bodylength = (int*)lbmptr;
+	lbmptr += 4;                      // leave space for length
 
-	local_14 = pbVar1;
+	memcpy(lbmptr, data, width * height);
+	lbmptr += width * height;
 
-	//BODY
-	*local_14 = 0x42;
-	local_14[1] = 0x4f;
-	local_14[2] = 0x44;
-	local_14[3] = 0x59;
+	length = lbmptr - (byte*)bodylength - 4;
+	*bodylength = LongBigEndian(length);
+	if (length & 1)
+	*lbmptr++ = 0;          // pad chunk to even offset
 
-	plVar2 = (int*)(local_14 + 4);
+	//
+	// done
+	//
+	length = lbmptr - (byte*)formlength - 4;
+	*formlength = LongBigEndian(length);
+	if (length & 1)
+	*lbmptr++ = 0;          // pad chunk to even offset
 
-	memcpy(local_14 + 8, data, width * height);
-
-	pbVar1 = local_14 + 8 + width * height;
-
-	length = (int)(pbVar1 - (local_14 + 8));
-	//iVar3 = LongBigEndian((int)(pbVar1 + (-4 - (int)piVar2)));
-	*plVar2 = LongBigEndian(length);
-
-	local_14 = pbVar1;
-	if ((length & 1) != 0) 
-	{
-		local_14 = pbVar1 + 1;
-		*pbVar1 = 0;
-	}
-
-	length = (int)(local_14 - (source + 8));
-	//iVar3 = LongBigEndian((int)(local_14 + (-4 - (int)(source + 4))));
-	*(int*)(source + 4) = LongBigEndian(length);
-
-	if ((length & 1) != 0)
-	{
-		*local_14 = 0;
-		local_14 = local_14 + 1;
-	}
-	D_WriteFile(filename, source, (int)(local_14 + -(int)source));
-	free(source);
-	return;
+	//
+	// write output file
+	//
+	D_WriteFile(filename, lbm, lbmptr - lbm);
+	free(lbm);
 }
 
-void WritePCXFile(char* filename, uint8_t* data, int width, int height, uint8_t* palette)
+typedef struct
 {
-	//TODO: I'll clean this up and make it use the structure when I am not so tired.
-	char* local_2c;
-	uint8_t* local_28;
-	int local_20;
-	uint8_t* pbVar1;
-	uint8_t* local_1c;
-	uint8_t* local_18;
-	int iVar2;
+	char    manufacturer;
+	char    version;
+	char    encoding;
+	char    bits_per_pixel;
+	unsigned short  xmin, ymin, xmax, ymax;
+	unsigned short  hres, vres;
+	unsigned char   palette[48];
+	char    reserved;
+	char    color_planes;
+	unsigned short  bytes_per_line;
+	unsigned short  palette_type;
+	char    filler[58];
+	unsigned char   data;           // unbounded
+} pcx_t;
 
-	local_2c = filename;
-	local_28 = data;
-	local_20 = height;
-	local_18 = (uint8_t*)malloc(width * height * 2 + 1000);
-	*local_18 = 10;
-	local_18[1] = 5;
-	local_18[2] = 1;
-	local_18[3] = 8;
-	*(short*)(local_18 + 4) = 0;
-	*(short*)(local_18 + 6) = 0;
-	*(short*)(local_18 + 8) = (short)width + -1;
-	*(short*)(local_18 + 10) = (short)local_20 + -1;
-	*(short*)(local_18 + 0xc) = (short)width;
-	*(short*)(local_18 + 0xe) = (short)local_20;
-	memset((char*)(local_18 + 0x10), 0, 0x30);
-	local_18[0x41] = 1;
-	*(short*)(local_18 + 0x42) = (short)width;
-	*(short*)(local_18 + 0x44) = 2;
-	memset((char*)(local_18 + 0x46), 0, 0x3a);
-	iVar2 = 0;
-	local_1c = local_18 + 0x80;
-	while (width * local_20 - iVar2 != 0 && iVar2 <= width * local_20) 
-	{
-		if ((*local_28 & 0xc0) == 0xc0) 
+void WritePCXFile(char* filename, byte* data, int width, int height, byte* palette)
+{
+	int     i, length;
+	pcx_t* pcx;
+	byte* pack;
+
+	pcx = malloc(width * height * 2 + 1000);
+
+	pcx->manufacturer = 0x0a;   // PCX id
+	pcx->version = 5;           // 256 color
+	pcx->encoding = 1;      // uncompressed
+	pcx->bits_per_pixel = 8;        // 256 color
+	pcx->xmin = 0;
+	pcx->ymin = 0;
+	pcx->xmax = width - 1;
+	pcx->ymax = height - 1;
+	pcx->hres = width;
+	pcx->vres = height;
+	memset(pcx->palette, 0, sizeof(pcx->palette));
+	pcx->color_planes = 1;      // chunky image
+	pcx->bytes_per_line = width;
+	pcx->palette_type = 2;       // not a grey scale
+	memset(pcx->filler, 0, sizeof(pcx->filler));
+
+	//
+	// pack the image
+	//
+	pack = &pcx->data;
+
+	for (i = 0; i < width * height; i++)
+		if ((*data & 0xc0) != 0xc0)
+			*pack++ = *data++;
+		else
 		{
-			*local_1c = 0xc1;
-			pbVar1 = local_1c + 2;
-			local_1c[1] = *local_28;
+			*pack++ = 0xc1;
+			*pack++ = *data++;
 		}
-		else 
-		{
-			pbVar1 = local_1c + 1;
-			*local_1c = *local_28;
-		}
-		local_28 = local_28 + 1;
-		iVar2 = iVar2 + 1;
-		local_1c = pbVar1;
-	}
-	*local_1c = 0xc;
-	iVar2 = 0;
-	while (local_1c = local_1c + 1, iVar2 < 0x300) 
-	{
-		*local_1c = *palette;
-		iVar2 = iVar2 + 1;
-		palette = palette + 1;
-	}
-	D_WriteFile(local_2c, local_18, (int)(local_1c + -(int)local_18));
-	free(local_18);
-	return;
+
+	//
+	// write the palette
+	//
+	*pack++ = 0x0c; // palette ID byte
+	for (i = 0; i < 768; i++)
+		*pack++ = *palette++;
+
+	//
+	// write output file
+	//
+	length = pack - (byte*)pcx;
+	D_WriteFile(filename, pcx, length);
+
+	free(pcx);
 }
 
 void D_ScreenShot(int savepcx)
 {
-	uint8_t* pbVar1;
-	int iVar2;
-	uint8_t bVar3;
-	uint8_t local_344;
-	uint8_t abStack832[768];
-	char local_40[12];
-	uint8_t* local_30;
-	uint8_t* local_2c;
-	uint8_t* local_28;
-	int local_24;
-	int local_20;
-	int iStack28;
+	int i, x, y;
+	char lbmname[12];
+	byte* linear, *source, *dest;
+	byte palette[768];
 
-	bVar3 = 0;
-	local_28 = (uint8_t*)malloc(64000);
-	local_30 = screenbuffer;
-	local_24 = 0;
-	local_2c = local_28;
-	while (local_24 < 200)
+	linear = (byte*)malloc(SCREENHEIGHT * SCREENWIDTH);
+	source = screenbuffer;
+	dest = linear;
+	for (y = 0; y < SCREENHEIGHT; y++)
 	{
-		local_20 = 0;
-		while (local_20 < 0x50) 
+		for (x = 0; x < SCREENBWIDE; x++)
 		{
-			*local_2c = *local_30;
-			local_2c[1] = local_30[16000];
-			pbVar1 = local_2c + 3;
-			local_2c[2] = local_30[32000];
-			local_2c = local_2c + 4;
-			*pbVar1 = local_30[48000];
-			local_30 = local_30 + 1;
-			local_20 = local_20 + 1;
+			*dest = *source;
+			dest[1] = source[16000];
+			dest[2] = source[32000];
+			dest[3] = source[48000];
+			dest += 4;
+			source++;
 		}
-		local_24 = local_24 + 1;
 	}
-	V_Window(0x8c, 0x28);
-	V_CenterString(0x5a, "saving screen", hudfont);
+	V_Window(140, 40);
+	V_CenterString(90, "saving screen", hudfont);
 	IO_UpdateScreen();
 
-	strncpy(local_40, "DOOM00.", 8);
-	local_40[7] = 0;
+	strncpy(lbmname, "DOOM00.", 8);
+	lbmname[7] = 0;
 
 	if (savepcx == 0) 
 	{
-		strcat(local_40, "lbm");
+		strcat(lbmname, "lbm");
 	}
 	else 
 	{
-		strcat(local_40, "pcx");
+		strcat(lbmname, "pcx");
 	}
-	iStack28 = 0;
-	while (iStack28 < 100)
+	
+	for (i = 0; i < 100; i++)
 	{
-		local_40[4] = (char)(iStack28 / 10) + '0';
-		local_40[5] = (char)(iStack28 % 10) + '0';
-		iVar2 = _access(local_40, 0);
-		if (iVar2 == -1) break;
-
-		iStack28 = iStack28 + 1;
+		lbmname[4] = (char)(i / 10) + '0';
+		lbmname[5] = (char)(i % 10) + '0';
+		if (_access(lbmname, 0) == -1) break;
 	}
-	if (iStack28 == 100) 
+
+	if (i == 100) 
 	{
 		IO_Error("IO_ScreenShot: Couldn't create an LBM");
 	}
 
-	IO_GetPalette(abStack832);
+	IO_GetPalette(palette);
 	if (savepcx == 0) 
 	{
-		WriteLBMFile(local_40, local_28, 0x140, 200, abStack832);
+		WriteLBMFile(lbmname, linear, SCREENWIDTH, SCREENHEIGHT, palette);
 	}
 	else 
 	{
-		WritePCXFile(local_40, local_28, 0x140, 200, abStack832);
+		WritePCXFile(lbmname, linear, SCREENWIDTH, SCREENHEIGHT, palette);
 	}
-	free(local_28);
-	V_Window(0x8c, 0x28);
-	V_CenterString(0x5a, "Screen saved", hudfont);
+	free(linear);
+	V_Window(140, 40);
+	V_CenterString(90, "Screen saved", hudfont);
 	IO_UpdateScreen();
 	IO_Ack();
 	return;

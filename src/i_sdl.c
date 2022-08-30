@@ -401,7 +401,7 @@ Uint32 IO_TimerCallback(Uint32 interval, void* param)
 int IO_InternalTime()
 {
 	Uint32 SDLTics = SDL_GetTicks() - basetime;
-	float secs = SDLTics / 1000.0f;
+	double secs = SDLTics / 1000.0;
 
 	return (int)(secs * 35);
 }

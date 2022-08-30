@@ -28,17 +28,19 @@ int democycle;
 
 config_t config;
 
-//TODO: Find the actual structure for this
 typedef struct
 {
-    fixed_t f1, f2, f3, f4, f5, f6, f7, f8, f9, f10;
-} planepoint_t;
+    fixed_t x, y, z;
+    fixed_t texx, texy;
+    fixed_t tx, ty, tz;
+    fixed_t px, py;
+} modelvertex_t;
 
-planepoint_t vertex[4] =
-{ {0xFF600000, 0x640000, 0, 0x10000, 0x10000, 0, 0, 0, 0, 0},
-{0xA00000, 0x640000, 0, 0x13F0000, 0x10000, 0, 0, 0, 0, 0},
-{0xA00000, 0xFF9C0000, 0, 0x13F0000, 0xC70000, 0, 0, 0, 0, 0},
-{0xFF600000, 0xFF9C0000, 0, 0x10000, 0xC70000, 0, 0, 0, 0, 0} };
+modelvertex_t vertex[4] =
+{ {-160 * FRACUNIT, 100 * FRACUNIT, 0, 0x10000, 0x10000, 0, 0, 0, 0, 0},
+{160 * FRACUNIT, 100 * FRACUNIT, 0, 0x13F0000, 0x10000, 0, 0, 0, 0, 0},
+{160 * FRACUNIT, -100 * FRACUNIT, 0, 0x13F0000, 0xC70000, 0, 0, 0, 0, 0},
+{-160 * FRACUNIT, -100 * FRACUNIT, 0, 0x10000, 0xC70000, 0, 0, 0, 0, 0} };
 
 uint8_t* dm_dest;
 int dm_x1, dm_x2;
@@ -54,16 +56,6 @@ void D_PolygonRow()
     int local_10;
     int local_8;
 
-    /*if ((((dm_x1 < 0) || (viewwidth + 1 < dm_x2)) || (dm_x2 <= dm_x1)))
-    {
-        IO_Error("MapRow: mr_x1 = %i  mr_x2 = %i", dm_x1, dm_x2);
-        return;
-    }*/
-    /*if (dm_picture == NULL)
-    {
-        IO_Error("MapRow: NULL picture");
-        return;
-    }*/
     local_8 = dm_x2;
     local_14 = dm_dest + (dm_x2 >> 2);
 
@@ -90,140 +82,157 @@ void D_PolygonRow()
 
 void D_DrawSpinBackground(void)
 {
-    memset(screenbuffer, 0xb9, 64000);
+    memset(screenbuffer, 185, 64000);
     return;
 }
 
 void D_RenderPolygon(void)
 {
     int iVar1;
-    int iVar2;
-    int local_54;
-    int iVar3;
-    int local_50;
-    int local_4c;
-    int local_48;
-    int local_44;
-    int local_40;
-    int local_3c;
-    int local_38;
-    int local_34;
-    int local_30;
-    int local_2c;
-    int local_28;
-    int local_24;
-    int local_20;
-    int iVar4;
+    int count;
+    int dm_y;
+    int rightvertex;
+    int leftvertex;
+    int lefttexystep;
+    int lefttexy;
+    int lefttexxstep;
+    int lefttexx;
+    int righttexystep;
+    int righttexy;
+    int righttexxstep;
+    int righttexx;
+    int leftstep;
+    int rightstep;
+    int leftfrac;
+    int rightfrac;
+    int stopy;
 
-    local_50 = 0;
-    local_54 = 1;
-    while (local_54 < 4)
+    leftvertex = 0;
+
+    //find the vertex with the lowest y value to start
+    dm_y = 1;
+    while (dm_y < 4)
     {
-        if (vertex[local_54].f10 < vertex[local_50].f10)
+        if (vertex[dm_y].py < vertex[leftvertex].py)
         {
-            local_50 = local_54;
+            leftvertex = dm_y;
         }
-        local_54 = local_54 + 1;
+        dm_y++;
     }
-    local_54 = vertex[local_50].f10;
-    iVar3 = local_50;
+    dm_y = vertex[leftvertex].py;
+
+
+    rightvertex = leftvertex;
     while (1)
     {
-        if (199 < local_54)
+        //end clipped off the top of the screen
+        if (199 < dm_y)
         {
             return;
         }
-        if (local_54 == vertex[local_50].f10)
+
+        //Reached the left vertex's y value
+        if (dm_y == vertex[leftvertex].py)
         {
             while (1)
             {
-                local_24 = vertex[local_50].f9;
-                local_40 = vertex[local_50].f4;
-                local_48 = vertex[local_50].f5;
-                local_50 = local_50 + 1;
-                if (local_50 == 4)
+                leftfrac = vertex[leftvertex].px;
+                lefttexx = vertex[leftvertex].texx;
+                lefttexy = vertex[leftvertex].texy;
+                leftvertex = leftvertex + 1;
+                if (leftvertex == 4)
                 {
-                    local_50 = 0;
+                    leftvertex = 0;
                 }
-                local_4c = vertex[local_50].f10 - local_54;
-                if (local_4c != 0) break;
-                if (iVar3 == local_50)
+                lefttexystep = vertex[leftvertex].py - dm_y;
+                if (lefttexystep != 0) break;
+                if (rightvertex == leftvertex)
                 {
                     return;
                 }
             }
-            local_2c = (vertex[local_50].f9 - local_24) / local_4c;
-            local_44 = (vertex[local_50].f4 - local_40) / local_4c;
-            local_4c = (vertex[local_50].f5 - local_48) / local_4c;
+            leftstep = (vertex[leftvertex].px - leftfrac) / lefttexystep;
+            lefttexxstep = (vertex[leftvertex].texx - lefttexx) / lefttexystep;
+            lefttexystep = (vertex[leftvertex].texy - lefttexy) / lefttexystep;
         }
-        if (local_54 == vertex[iVar3].f10)
+
+        //Reached the right? vertex's y value
+        if (dm_y == vertex[rightvertex].py)
         {
             do
             {
-                local_20 = vertex[iVar3].f9;
-                local_30 = vertex[iVar3].f4;
-                local_38 = vertex[iVar3].f5;
-                iVar3 = iVar3 + -1;
-                if (iVar3 == -1)
+                rightfrac = vertex[rightvertex].px;
+                righttexx = vertex[rightvertex].texx;
+                righttexy = vertex[rightvertex].texy;
+                rightvertex = rightvertex + -1;
+                if (rightvertex == -1)
                 {
-                    iVar3 = 3;
+                    rightvertex = 3;
                 }
-                local_3c = vertex[iVar3].f10 - local_54;
-            } while (local_3c == 0);
-            local_28 = (vertex[iVar3].f9 - local_20) / local_3c;
-            local_34 = (vertex[iVar3].f4 - local_30) / local_3c;
-            local_3c = (vertex[iVar3].f5 - local_38) / local_3c;
+                righttexystep = vertex[rightvertex].py - dm_y;
+            } while (righttexystep == 0);
+            rightstep = (vertex[rightvertex].px - rightfrac) / righttexystep;
+            righttexxstep = (vertex[rightvertex].texx - righttexx) / righttexystep;
+            righttexystep = (vertex[rightvertex].texy - righttexy) / righttexystep;
         }
-        if (vertex[local_50].f10 < vertex[iVar3].f10)
+
+
+        if (vertex[leftvertex].py < vertex[rightvertex].py)
         {
-            iVar4 = vertex[local_50].f10;
-        }
-        else
-        {
-            iVar4 = vertex[iVar3].f10;
-        }
-        if (iVar4 < 1)
-        {
-            local_54 = iVar4 - local_54;
-            local_20 = local_20 + local_28 * local_54;
-            local_24 = local_24 + local_2c * local_54;
-            local_30 = local_30 + local_34 * local_54;
-            local_38 = local_38 + local_3c * local_54;
-            local_40 = local_40 + local_44 * local_54;
-            local_48 = local_48 + local_4c * local_54;
-            local_54 = iVar4;
+            stopy = vertex[leftvertex].py;
         }
         else
         {
-            if (local_54 < 0)
+            stopy = vertex[rightvertex].py;
+        }
+
+        //end clipped off the top of the screen?
+        if (stopy < 1)
+        {
+            dm_y = stopy - dm_y;
+            rightfrac = rightfrac + rightstep * dm_y;
+            leftfrac = leftfrac + leftstep * dm_y;
+            righttexx = righttexx + righttexxstep * dm_y;
+            righttexy = righttexy + righttexystep * dm_y;
+            lefttexx = lefttexx + lefttexxstep * dm_y;
+            lefttexy = lefttexy + lefttexystep * dm_y;
+            dm_y = stopy;
+        }
+        else
+        {
+            //clip starting point off the top of the screen
+            if (dm_y < 0)
             {
-                local_20 = local_20 - local_28 * local_54;
-                local_24 = local_24 - local_2c * local_54;
-                local_30 = local_30 - local_34 * local_54;
-                local_38 = local_38 - local_3c * local_54;
-                local_40 = local_40 - local_44 * local_54;
-                local_48 = local_48 - local_4c * local_54;
-                local_54 = 0;
+                rightfrac = rightfrac - rightstep * dm_y;
+                leftfrac = leftfrac - leftstep * dm_y;
+                righttexx = righttexx - righttexxstep * dm_y;
+                righttexy = righttexy - righttexystep * dm_y;
+                lefttexx = lefttexx - lefttexxstep * dm_y;
+                lefttexy = lefttexy - lefttexystep * dm_y;
+                dm_y = 0;
             }
-            if (200 < iVar4)
+
+            //end clipped off of the bottom of the screen
+            if (200 < stopy)
             {
-                iVar4 = 200;
+                stopy = 200;
             }
-            while (local_54 < iVar4)
+
+            while (dm_y < stopy)
             {
-                dm_dest = ylookup[local_54];
-                dm_x2 = local_20 >> 0x10;
-                iVar1 = local_24 >> 0x10;
-                if (local_20 < local_24)
+                dm_dest = ylookup[dm_y];
+                dm_x2 = rightfrac >> FRACBITS;
+                iVar1 = leftfrac >> FRACBITS;
+                if (rightfrac < leftfrac)
                 {
-                    iVar2 = (iVar1 - dm_x2) + 1;
+                    count = (iVar1 - dm_x2) + 1;
                     dm_x1 = iVar1;
-                    if (0 < iVar2)
+                    if (0 < count)
                     {
-                        dm_xstep = (local_40 - local_30) / iVar2;
-                        dm_ystep = (local_48 - local_38) / iVar2;
-                        dm_xfrac = local_30;
-                        dm_yfrac = local_38;
+                        dm_xstep = (lefttexx - righttexx) / count;
+                        dm_ystep = (lefttexy - righttexy) / count;
+                        dm_xfrac = righttexx;
+                        dm_yfrac = righttexy;
                         //LAB_0001cb49:
                         if (dm_x2 < 0)
                         {
@@ -238,25 +247,25 @@ void D_RenderPolygon(void)
                         {
                             D_PolygonRow();
                         }
-                        local_20 = local_20 + local_28;
-                        local_24 = local_24 + local_2c;
-                        local_30 = local_30 + local_34;
-                        local_38 = local_38 + local_3c;
-                        local_40 = local_40 + local_44;
-                        local_48 = local_48 + local_4c;
+                        rightfrac = rightfrac + rightstep;
+                        leftfrac = leftfrac + leftstep;
+                        righttexx = righttexx + righttexxstep;
+                        righttexy = righttexy + righttexystep;
+                        lefttexx = lefttexx + lefttexxstep;
+                        lefttexy = lefttexy + lefttexystep;
                     }
                 }
                 else
                 {
-                    iVar2 = (dm_x2 - iVar1) + 1;
+                    count = (dm_x2 - iVar1) + 1;
                     dm_x1 = dm_x2;
                     dm_x2 = iVar1;
-                    if (0 < iVar2)
+                    if (0 < count)
                     {
-                        dm_xstep = (local_30 - local_40) / iVar2;
-                        dm_ystep = (local_38 - local_48) / iVar2;
-                        dm_xfrac = local_40;
-                        dm_yfrac = local_48;
+                        dm_xstep = (righttexx - lefttexx) / count;
+                        dm_ystep = (righttexy - lefttexy) / count;
+                        dm_xfrac = lefttexx;
+                        dm_yfrac = lefttexy;
 
                         if (dm_x2 < 0)
                         {
@@ -271,19 +280,19 @@ void D_RenderPolygon(void)
                         {
                             D_PolygonRow();
                         }
-                        local_20 = local_20 + local_28;
-                        local_24 = local_24 + local_2c;
-                        local_30 = local_30 + local_34;
-                        local_38 = local_38 + local_3c;
-                        local_40 = local_40 + local_44;
-                        local_48 = local_48 + local_4c;
+                        rightfrac = rightfrac + rightstep;
+                        leftfrac = leftfrac + leftstep;
+                        righttexx = righttexx + righttexxstep;
+                        righttexy = righttexy + righttexystep;
+                        lefttexx = lefttexx + lefttexxstep;
+                        lefttexy = lefttexy + lefttexystep;
                         //goto LAB_0001cb49;
                     }
                 }
-                local_54++;
+                dm_y++;
             }
         }
-        if (local_50 == iVar3)
+        if (leftvertex == rightvertex)
         {
             return;
         }
@@ -292,196 +301,164 @@ void D_RenderPolygon(void)
 
 void D_MapPlane(int xr, int yr, int zr, int scale)
 {
-    int iVar1;
-    int iVar2;
-    int iVar3;
-    int iVar4;
-    int iVar5;
-    int lVar6;
-    int lVar7;
-    int lVar8;
-    int lVar9;
-    int lVar10;
-    int lVar11;
-    int lVar12;
-    int local_30;
+    fixed_t matr[4]; //TODO: I really need to figure out how to extract type information. This may only be 8 byte sof stack
+    fixed_t cx, cy, cz;
+    fixed_t sx, sy, sz;
+    int i;
 
-    iVar1 = cosines[xr];
-    iVar2 = cosines[zr];
-    iVar3 = sines[xr];
-    iVar4 = sines[yr];
-    iVar5 = sines[zr];
+    cx = cosines[xr];
+    cy = cosines[yr];
+    cz = cosines[zr];
+    sx = sines[xr];
+    sy = sines[yr];
+    sz = sines[zr];
 
-    lVar6 = FixedMul(iVar2, cosines[yr]);
-    lVar7 = FixedMul(FixedMul(iVar5, iVar3), iVar4);
+    matr[0] = FixedMul(cz, cy);
+    matr[1] = FixedMul(FixedMul(sz, sx), sy);
 
-    lVar8 = FixedMul(-iVar5, cosines[yr]);
-    lVar9 = FixedMul(FixedMul(iVar2, iVar3), iVar4);
+    matr[2] = FixedMul(-sz, cy);
+    matr[3] = FixedMul(FixedMul(cz, sx), sy);
 
-    local_30 = 0;
-    while (local_30 < 4)
+    for (i = 0; i < 4; i++)
     {
-        lVar10 = FixedMul(vertex[local_30].f1, lVar6 + lVar7);
-        lVar11 = FixedMul(vertex[local_30].f2, lVar8 + lVar9);
-        lVar12 = FixedMul(vertex[local_30].f3, FixedMul(iVar1, iVar4));
+        vertex[i].tx = FixedMul(vertex[i].x, matr[0] + matr[1]) 
+            + FixedMul(vertex[i].y, matr[2] + matr[3]) 
+            + FixedMul(vertex[i].z, FixedMul(cx, sy));
 
-        vertex[local_30].f6 = lVar10 + lVar11 + lVar12;
+        vertex[i].ty = FixedMul(vertex[i].x, FixedMul(sz, cx))
+            + FixedMul(vertex[i].y, FixedMul(cz, cx))
+            + FixedMul(vertex[i].z, -sx);
 
-        lVar10 = FixedMul(vertex[local_30].f1, FixedMul(iVar5, iVar1));
-        lVar11 = FixedMul(vertex[local_30].f2, FixedMul(iVar2, iVar1));
-        lVar12 = FixedMul(vertex[local_30].f3, -iVar3);
-
-        vertex[local_30].f7 = lVar10 + lVar11 + lVar12;
-
-        vertex[local_30].f9 = FixedMul(vertex[local_30].f6, scale) + 0xA00000;
-        vertex[local_30].f10 = 100 - (FixedMul(vertex[local_30].f7, scale) >> FRACBITS);
-
-        local_30++;
+        vertex[i].px = FixedMul(vertex[i].tx, scale) + (160 << FRACBITS);
+        vertex[i].py = 100 - (FixedMul(vertex[i].ty, scale) >> FRACBITS);
     }
     D_DrawSpinBackground();
     D_RenderPolygon();
-    V_MarkUpdateBlock(0, 0, 0x13f, 199);
+    V_MarkUpdateBlock(0, 0, SCREENWIDTH-1, SCREENHEIGHT-1);
     IO_UpdateScreen();
 }
 
 void D_PlaneToBuffer(uint8_t* source)
 {
-    uint8_t* pbVar1;
-    uint8_t* local_28;
-    uint8_t* local_24;
-    int local_20;
-    int iVar2;
+    uint8_t* dest;
+    int x, y;
 
-    local_24 = screenbuffer;
-    local_20 = 0;
-    local_28 = source;
-    while (local_20 < 200)
+    dest = screenbuffer;
+    for (y = 0; y < SCREENHEIGHT; y++)
     {
-        iVar2 = 0;
-        while (iVar2 < 0x50)
+        for (x = 0; x < SCREENBWIDE; x++)
         {
-            *local_24 = *local_28;
-            local_24[16000] = local_28[1];
-            pbVar1 = local_28 + 3;
-            local_24[32000] = local_28[2];
-            local_28 = local_28 + 4;
-            local_24[48000] = *pbVar1;
-            local_24 = local_24 + 1;
-            iVar2 = iVar2 + 1;
+            *dest = *source;
+            dest[16000] = source[1];
+            dest[32000] = source[2];
+            dest[48000] = source[3];
+            source += 4;
+            dest++;
         }
-        local_28 = local_28 + 0xc0;
-        local_20 = local_20 + 1;
+        source += 0xc0;
     }
-    V_MarkUpdateBlock(0, 0, 319, 199);
+    V_MarkUpdateBlock(0, 0, SCREENWIDTH - 1, SCREENHEIGHT - 1);
     IO_UpdateScreen();
     return;
 }
 
-int D_BufferToPlane(uint8_t* dest)
+void D_BufferToPlane(uint8_t* dest)
 {
-    uint8_t* pbVar1;
-    uint8_t* local_28;
-    uint8_t* local_24;
-    int pbVar2;
-    int iVar3;
+    uint8_t* source;
+    int x, y;
 
-    local_24 = screenbuffer;
-    pbVar1 = dest;
-    local_28 = dest;
-    pbVar2 = 0;
-    while (pbVar2 < 200)
+    source = screenbuffer;
+    for (y = 0; y < SCREENHEIGHT; y++)
     {
-        iVar3 = 0;
-        while (iVar3 < 0x50)
+        for (x = 0; x < SCREENBWIDE; x++)
         {
-            *local_28 = *local_24;
-            local_28[1] = local_24[16000];
-            pbVar1 = local_28 + 3;
-            local_28[2] = local_24[32000];
-            local_28 = local_28 + 4;
-            *pbVar1 = local_24[48000];
-            local_24 = local_24 + 1;
-            iVar3 = iVar3 + 1;
+            *dest = *source;
+            dest[1] = source[16000];
+            dest[2] = source[32000];
+            dest[3] = source[48000];
+            dest += 4;
+            source++;
         }
-        local_28 = local_28 + 0xc0;
-        pbVar1 = pbVar2;
-        pbVar2++;
+        dest += 0xc0;
     }
-    return (int)pbVar1;
 }
 
 int D_SpinScreenIn(void)
 {
-    int local_38;
-    int iVar1;
-    int xr;
+    int start;
+    int f;
+    fixed_t scale;
+    int xa, ya, za; //for some reason the stack has space for 3 variables even though they're all the same..
+    int c;
 
     dm_picture = (uint8_t*)malloc(0x19000);
     rawplane = dm_picture;
     D_BufferToPlane(dm_picture);
     IO_StartAck();
     lastscan = 0;
-    local_38 = IO_GetTime();
+    start = IO_GetTime();
     do
     {
-        iVar1 = IO_GetTime();
-        iVar1 = iVar1 - local_38;
-        if (119 < iVar1)
+        f = IO_GetTime() - start;
+        if (119 < f)
         {
             D_PlaneToBuffer(rawplane);
             free(rawplane);
             return 0;
         }
-        xr = (iVar1 * 0x2800) / 0x78 - 0x800U & 0x1fff;
-        D_MapPlane(xr, xr, xr, FixedDiv(0xA0000, (0x96 - (iVar1 * 0x8c) / 0x78) << FRACBITS));
-        iVar1 = IO_CheckAck();
-    } while (iVar1 == 0);
-    return iVar1;
+        xa = ya = za = (f * 10240) / 120 - 2048 & ANGLEMASK;
+        scale = FixedDiv(10 << FRACBITS, (150 - (f * 140) / 120) << FRACBITS);
+        D_MapPlane(xa, ya, za, scale);
+        c = IO_CheckAck();
+    } while (c == 0);
+    return c;
 }
 
 int D_SpinScreenOut(void)
 {
-    int local_38;
-    int iVar1;
-    int xr;
+    int start;
+    int f;
+    fixed_t scale;
+    int xa, ya, za; //for some reason the stack has space for 3 variables even though they're all the same..
+    int c;
 
     dm_picture = (uint8_t*)malloc(0x19000);
     rawplane = dm_picture;
     D_BufferToPlane(dm_picture);
     IO_StartAck();
     lastscan = 0;
-    local_38 = IO_GetTime();
+    start = IO_GetTime();
     do
     {
-        iVar1 = IO_GetTime();
-        iVar1 = iVar1 - local_38;
-        if (119 < iVar1)
+        f = IO_GetTime() - start;
+        if (119 < f)
         {
             D_DrawSpinBackground();
-            V_MarkUpdateBlock(0, 0, 319, 199);
+            V_MarkUpdateBlock(0, 0, SCREENWIDTH - 1, SCREENHEIGHT - 1);
             IO_UpdateScreen();
             free(rawplane);
             return 0;
         }
-        xr = (iVar1 * 0x2800) / 0x78 & 0x1fff;
-        D_MapPlane(xr, xr, xr, FixedDiv(0xA0000, ((iVar1 * 0x8c) / 0x78 + 10) << FRACBITS));
-        iVar1 = IO_CheckAck();
-    } while (iVar1 == 0);
-    return iVar1;
+        xa = ya = za = (f * 10240) / 120 & ANGLEMASK;
+        scale = FixedDiv(10 << FRACBITS, ((f * 140) / 120 + 10) << FRACBITS);
+        D_MapPlane(xa, ya, za, scale);
+        c = IO_CheckAck();
+    } while (c == 0);
+    return c;
 }
 
 void D_SpinScreen(void)
 {
-    int iVar1;
+    int c;
 
-    iVar1 = D_SpinScreenIn();
-    if (iVar1 == 0)
+    c = D_SpinScreenIn();
+    if (c == 0)
     {
-        iVar1 = D_AckWait(0x8c);
-        if (iVar1 == 0)
+        c = D_AckWait(TICRATE * 4);
+        if (c == 0)
         {
-            iVar1 = D_SpinScreenOut();
-            if (iVar1 != 0)
+            c = D_SpinScreenOut();
+            if (c != 0)
             {
                 gamestart = gs_controlmap;
                 demoaction = da_startgame;
@@ -503,14 +480,9 @@ void D_SpinScreen(void)
 
 void D_Title()
 {
-    uint8_t* pal;
-    pic_t* pic;
-
     demoaction = da_demo1;
-    pal = W_GetName("TITLEPAL");
-    IO_SetPalette(pal);
-    pic = (pic_t*)W_GetName("TITLEPIC");
-    V_DrawPic(0, 0, pic);
+    IO_SetPalette(W_GetName("TITLEPAL"));
+    V_DrawPic(0, 0, (pic_t*)W_GetName("TITLEPIC"));
     D_SpinScreen();
 }
 
@@ -548,36 +520,71 @@ void D_SaveConfig()
     return;
 }
 
+void D_LoadConfig()
+{
+    int i, num;
+
+    num = W_CheckNumForName("CONFIG");
+    if (num == -1)
+    {
+        config.hdetail = 1;
+        config.viewsize = 8;
+        for (i = 0; i < NUMHISCORES; i++)
+        {
+            strncpy(config.scores[i].name, "Id Software", 16);
+            config.scores[i].skill = sk_deadly;
+            config.scores[i].score = 10000;
+        }
+    }
+    else
+    {
+#if 0 //{ISB] "safe" copy here
+        local_EAX_63 = (int)memcpy(&config, src, lumpinfo[local_EAX_63].size);
+#else
+        int* src = W_GetLump(num);
+        config.hdetail = *src; src++;
+        config.viewsize = *src; src++;
+
+        for (i = 0; i < NUMHISCORES; i++)
+        {
+            memcpy(config.scores[i].name, (void*)src, 16); src += 4;
+            config.scores[i].skill = *src; src++;
+            config.scores[i].score = *src; src++;
+        }
+#endif
+    }
+}
+
 void D_DemoLoop(void)
 {
-    int episode;
-    int skill;
+    int p;
 
     demoaction = da_filmwarp;
-    episode = D_CheckParm("run");
-    if (episode != 0)
+    p = D_CheckParm("run");
+    if (p != 0)
     {
-        episode = atoi(my_argv[episode + 1]);
-        skill = sk_baby;
-        G_StartNewGame(episode, skill, 0);
+        p = atoi(my_argv[p + 1]);
+        G_StartNewGame(p, sk_baby, 0);
         demoaction = da_startgame;
         gamestart = gs_warp;
     }
-    episode = D_CheckParm("play");
-    if (episode != 0)
+
+    p = D_CheckParm("play");
+    if (p != 0)
     {
-        G_PlayDemo(my_argv[episode + 1]);
+        G_PlayDemo(my_argv[p + 1]);
         G_GameLoop();
         IO_Quit();
     }
-    episode = D_CheckParm("record");
-    if (episode != 0)
+
+    p = D_CheckParm("record");
+    if (p != 0)
     {
-        if (my_argc <= episode + 2)
+        if (my_argc <= p + 2)
         {
             IO_Error("doom RECORD <level> <demoname>\n");
         }
-        G_RecordDemo(my_argv[episode + 1], my_argv[episode + 2]);
+        G_RecordDemo(my_argv[p + 1], my_argv[p + 2]);
         IO_Quit();
     }
     if (commpresent != 0)
@@ -589,39 +596,39 @@ void D_DemoLoop(void)
     {
         switch (demoaction)
         {
-        case 0:
+        case da_filmwarp:
             democycle = da_demo1;
             D_Title();
             break;
-        case 1:
+        case da_story:
             democycle = da_demo3;
             D_Story();
             break;
-        case 2:
+        case da_credits:
             democycle = da_demo2;
             D_Credits();
             break;
-        case 3:
+        case da_scores:
             democycle = da_demo4;
             D_HighScores();
             break;
-        case 4:
+        case da_demo1:
             democycle = da_credits;
             G_PlayDemo("DEMO1");
             break;
-        case 5:
+        case da_demo2:
             democycle = da_story;
             G_PlayDemo("DEMO2");
             break;
-        case 6:
+        case da_demo3:
             democycle = da_scores;
             G_PlayDemo("DEMO3");
             break;
-        case 7:
+        case da_demo4:
             democycle = da_filmwarp;
             G_PlayDemo("DEMO4");
             break;
-        case 8:
+        case da_startgame:
             G_GameLoop();
             if (demoaction != da_startgame)
             {

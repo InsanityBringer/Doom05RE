@@ -130,7 +130,7 @@ extern int goldshift;
 extern int redshift;
 
 extern uint8_t* demoend;
-extern int demo;
+extern demostate_t demo;
 extern uint8_t* demo_p;
 
 

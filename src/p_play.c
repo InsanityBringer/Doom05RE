@@ -47,7 +47,7 @@ thinker_t thinkercap;
 player_t playerobjs[MAXPLAYERS];
 
 uint8_t* demoend;
-int demo;
+demostate_t demo;
 uint8_t* demo_p;
 
 #define STARTREDPALS 1

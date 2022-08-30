@@ -23,12 +23,12 @@
 int startepisode;
 gamestart_t gamestart;
 gameaction_t gameaction;
-int startskill;
+skill_t startskill;
 int startplayer;
 int controlmenumap;
 
 int episode;
-int skilllevel;
+skill_t skilllevel;
 gamestate_t gamestate;
 uint8_t* demobuffer;
 
@@ -114,7 +114,7 @@ void G_RecordDemo(char* map, char* demoname)
 #ifdef ISB_LINT
 	if (demobuffer == NULL)
 	{
-		IO_Error("G_RecordDemo: Can't allocate demo buffer\n");
+		IO_Error("G_RecordDemo: Can't allocate demo buffer");
 		return;
 	}
 #endif
@@ -122,7 +122,7 @@ void G_RecordDemo(char* map, char* demoname)
 	strncpy((char*)demobuffer, map, 8);
 	demo_p += 8;
 	demoend = demobuffer + 0x10000;
-	demo = 1;
+	demo = dm_recording;
 	P_PlayLoop();
 	if (D_WriteFile(demoname, demobuffer, (int)(demo_p - demobuffer)) == 0)
 	{
@@ -140,9 +140,9 @@ void G_StartSavedGame(int save)
 
 void G_StartNewGame(int episode, int skill, int player)
 {
-	demoaction = 8;
+	demoaction = da_startgame;
 	startepisode = episode;
-	gamestart = 1;
+	gamestart = gs_newgame;
 	startskill = skill;
 	startplayer = player;
 	return;
@@ -165,10 +165,9 @@ void G_SetupNewGame(void)
 
 void G_SetupNetGame(void)
 {
-	//it is also but a dream. 
 	int i;
 
-	skilllevel = 4;
+	skilllevel = sk_deadly;
 	viewplayer = sd->consoleplayer;
 	viewplayerangle = 0;
 	
@@ -181,8 +180,8 @@ void G_SetupNetGame(void)
 	}
 
 	G_WarpToMap(sd->mapname);
-	demoaction = 9;
-	gameaction = 0;
+	demoaction = da_gameloop;
+	gameaction = ga_runmap;
 	return;
 }
 
@@ -202,7 +201,7 @@ void G_SetupDemo(void)
 {
 	int lump;
 
-	startskill = 4;
+	startskill = sk_deadly;
 	startepisode = 1;
 	startplayer = 0;
 	G_SetupNewGame();
@@ -212,28 +211,28 @@ void G_SetupDemo(void)
 	G_WarpToMap((char*)demobuffer);
 	demo_p = (void*)((char*)demo_p + 8);
 	demoend = demobuffer + lumpinfo[lump].size;
-	demo = 2;
+	demo = dm_playback;
 	P_PlayLoop();
-	demo = 0;
+	demo = dm_user;
 	return;
 }
 
 
 void G_GameLoop(void)
 {
-	demoaction = 9;
+	demoaction = da_gameloop;
 	switch (gamestart) 
 	{
-	case 0:
+	case gs_controlmap:
 		G_SetupControls();
 		return;
-	case 1:
+	case gs_newgame:
 		G_SetupNewGame();
 		break;
-	case 2:
+	case gs_demo:
 		G_SetupDemo();
 		return;
-	case 5:
+	case gs_warp:
 		G_SetupNewGame();
 	}
 	
@@ -258,7 +257,7 @@ void G_GameLoop(void)
 		}
 		else
 		{
-			IO_Error("G_GameLoop: unknown gameaction\n");
+			IO_Error("G_GameLoop: unknown gameaction");
 		}
 		D_FadeOut();
 	}
