@@ -459,8 +459,6 @@ int R_NewFseg(void)
     return iVar1;
 }
 
-extern int debugsec;
-
 void R_MakeProcline(int line)
 {
     long long lVar1;
@@ -608,7 +606,6 @@ void R_MakeProcline(int line)
                     (mv2.yscale - mv1.yscale) / (mv2.ipx - mv1.ipx) + 1;
                 proclines[iVar2].line = local_28;
                 proclines[iVar2].chained = 0;
-                proclines[iVar2].debug = 0;
                 if (!(line_p->flags & ML_TWOSIDED)) 
                 {
                     proclines[iVar2].sector = -1;
@@ -619,11 +616,6 @@ void R_MakeProcline(int line)
                     proclines[iVar2].sector = (int)sides[line_p->side[local_88]].sector;
                 }
                 proclines[iVar2].seg = -1;
-
-                if (debugsec == 57)
-                {
-                    printf("\t\tpost clipping: (%d) to (%d) scaling: %f to %f (step: %f), newprocline %d\n", mv1.ipx, mv2.ipx, proclines[iVar2].scale1 / (float)FRACUNIT, proclines[iVar2].scale2 / (float)FRACUNIT, proclines[iVar2].scalestep / (float)FRACUNIT, newprocline);
-                }
             }
         }
     }

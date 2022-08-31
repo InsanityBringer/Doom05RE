@@ -35,7 +35,6 @@ typedef struct procline_s
 	int chained;
 	int seg;
 	int sector;
-	int debug; //[ISB] pls fix
 } procline_t;
 
 typedef struct

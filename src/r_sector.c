@@ -429,8 +429,6 @@ void R_DrawAdjacentSectors(subsector_t* start)
     return;
 }
 
-int debugsec;
-
 void R_DrawSector(int sectornum, int xl, int xh, int* floorclip, int* ceilingclip, int* scaleclip)
 {
     int local_20;

@@ -217,7 +217,7 @@ thing_t* P_GetNewThing(mapthing_t* mthing)
 
 	if (mthing->ang > 359) 
 	{
-		IO_Error("P_GetNewThing: bad angle for thing at (%i,%i)\n", mthing->origin.x, mthing->origin.y);
+		IO_Error("P_GetNewThing: bad angle for thing at (%i,%i)", mthing->origin.x, mthing->origin.y);
 	}
 	refthing->angle = ((int)mthing->ang << 13) / 360;
 	refthing->flags = 0;
@@ -235,17 +235,14 @@ actor_t* P_InitActor(mapthing_t* mthing, statenum_t state, int bblockflags)
 	P_AddActor(actorcap);
 	P_SetState(actorcap, state);
 
-	if ((bblockflags & 2) == 0) 
+	if (bblockflags & BMF_GETTABLE) 
 	{
-		if ((bblockflags & 4) != 0) 
+		if (!P_PlaceGetMarks(actorcap->r))
 		{
-			if (P_PlaceGetMarks(actorcap->r) == 0)
-			{
-				IO_Error("P_InitActor: Overlapping getable objects at %i, %i\n", actorcap->r->x >> FRACBITS, actorcap->r->y >> FRACBITS);
-			}
+			IO_Error("P_InitActor: Overlapping getable objects at %i, %i", actorcap->r->x >> FRACBITS, actorcap->r->y >> FRACBITS);
 		}
 	}
-	else 
+	else if (bblockflags & BMF_SOLID)
 	{
 		P_PlaceBlockMarks(actorcap->r);
 	}
@@ -289,31 +286,31 @@ void P_InitThing(mapthing_t* mthing)
 		}
 		if (mthing->type == 3001)
 		{
-			P_InitActor(mthing, S_TROO_STND, 2);
+			P_InitActor(mthing, S_TROO_STND, BMF_SOLID);
 			actorcap->health = 20;
 			return;
 		}
 		else if (mthing->type == 3002)
 		{
-			P_InitActor(mthing, S_SARG_STND, 2);
+			P_InitActor(mthing, S_SARG_STND, BMF_SOLID);
 			actorcap->health = 40;
 			return;
 		}
 		else if (mthing->type == 3003)
 		{
-			P_InitActor(mthing, S_BOSS_STND, 2);
+			P_InitActor(mthing, S_BOSS_STND, BMF_SOLID);
 			actorcap->health = 250;
 			return;
 		}
 		else if (mthing->type == 3004)
 		{
-			P_InitActor(mthing, S_POSS_STND, 2);
+			P_InitActor(mthing, S_POSS_STND, BMF_SOLID);
 			actorcap->health = 10;
 			return;
 		}
 		else if (mthing->type == 3005)
 		{
-			P_InitActor(mthing, S_HEAD_STND, 2);
+			P_InitActor(mthing, S_HEAD_STND, BMF_SOLID);
 			actorcap->health = 100;
 			return;
 		}
