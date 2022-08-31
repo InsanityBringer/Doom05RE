@@ -254,7 +254,7 @@ int P_PlayerShootThing(player_t* player, thing_t* ithing)
 {
     int damage;
 
-    if (!(ithing->flags & 4)) 
+    if (!(ithing->flags & TF_PLAYER)) 
     {
         if (player->readyweapon < 8)
         {
@@ -332,7 +332,7 @@ void P_PlayerShoot(void)
             {
                 if (crossing_p <= crossingstart) 
                 {
-                    IO_Error("P_PlayerShoot: ran out of crossings\n");
+                    IO_Error("P_PlayerShoot: ran out of crossings");
                 }
                 if (crossingstart->thing == (thing_t*)NULL) break;
                 if (P_PlayerShootThing(player, crossingstart->thing) != 0)

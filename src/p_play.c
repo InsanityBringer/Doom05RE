@@ -35,7 +35,7 @@ shared_t* sd;
 
 thinker_t* currentthinker;
 
-uint8_t* playpalette;
+byte* playpalette;
 int currentpalette;
 
 int viewplayer;
@@ -46,9 +46,9 @@ int playerthingfound[MAXPLAYERS];
 thinker_t thinkercap;
 player_t playerobjs[MAXPLAYERS];
 
-uint8_t* demoend;
+byte* demoend;
 demostate_t demo;
-uint8_t* demo_p;
+byte* demo_p;
 
 #define STARTREDPALS 1
 #define STARTGOLDPALS 8

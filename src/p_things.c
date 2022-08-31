@@ -28,45 +28,45 @@ typedef struct
 
 spawninfo_t spawninfo[33] =
 {
-	{2001,S_SHOT,4},
-	{2002,S_MGUN,4},
-	{2003,S_LAUN,4},
-	{2005,S_CSAW,4},
-	{2007,S_CLIP,4},
-	{2008,S_SHEL,4},
-	{2010,S_MISL,4},
-	{2011,S_STIM,4},
-	{2012,S_MEDI,4},
-	{2013,S_SOUL,4},
-	{2014,S_BON1,4},
-	{2015,S_BON2,4},
-	{2016,S_BON3,4},
-	{2017,S_BON4,4},
-	{2018,S_ARM1,4},
-	{2019,S_ARM2,4},
-	{2022,S_POW1,4},
-	{2023,S_POW2,4},
-	{2024,S_POW3,4},
-	{2025,S_POW4,4},
-	{2026,S_POW5,4},
-	{2027,S_GBAR,2},
-	{2028,S_COLU,2},
-	{2037,S_RBAR,2},
-	{2045,S_IGOG,4},
-	{2046,S_MMIS,4},
-	{2048,S_MBUL,4},
-	{2049,S_MSHE,4},
-	{10,S_ELEC,4},
-	{5,S_GKEY,4},
-	{6,S_SKEY,4},
-	{7,S_BKEY,4},
+	{2001,S_SHOT,BMF_GETTABLE},
+	{2002,S_MGUN,BMF_GETTABLE},
+	{2003,S_LAUN,BMF_GETTABLE},
+	{2005,S_CSAW,BMF_GETTABLE},
+	{2007,S_CLIP,BMF_GETTABLE},
+	{2008,S_SHEL,BMF_GETTABLE},
+	{2010,S_MISL,BMF_GETTABLE},
+	{2011,S_STIM,BMF_GETTABLE},
+	{2012,S_MEDI,BMF_GETTABLE},
+	{2013,S_SOUL,BMF_GETTABLE},
+	{2014,S_BON1,BMF_GETTABLE},
+	{2015,S_BON2,BMF_GETTABLE},
+	{2016,S_BON3,BMF_GETTABLE},
+	{2017,S_BON4,BMF_GETTABLE},
+	{2018,S_ARM1,BMF_GETTABLE},
+	{2019,S_ARM2,BMF_GETTABLE},
+	{2022,S_POW1,BMF_GETTABLE},
+	{2023,S_POW2,BMF_GETTABLE},
+	{2024,S_POW3,BMF_GETTABLE},
+	{2025,S_POW4,BMF_GETTABLE},
+	{2026,S_POW5,BMF_GETTABLE},
+	{2027,S_GBAR,BMF_SOLID},
+	{2028,S_COLU,BMF_SOLID},
+	{2037,S_RBAR,BMF_SOLID},
+	{2045,S_IGOG,BMF_GETTABLE},
+	{2046,S_MMIS,BMF_GETTABLE},
+	{2048,S_MBUL,BMF_GETTABLE},
+	{2049,S_MSHE,BMF_GETTABLE},
+	{10,S_ELEC,BMF_GETTABLE},
+	{5,S_GKEY,BMF_GETTABLE},
+	{6,S_SKEY,BMF_GETTABLE},
+	{7,S_BKEY,BMF_GETTABLE},
 	{-1,S_NULL,0},
 };
 
 actor_t actor;
 actor_t* actorcap;
 
-uint8_t* P_BlockOrg(int x, int y)
+byte* P_BlockOrg(int x, int y)
 {
 	int tx = (x - maporiginx) + -0x100000 >> 0x14;
 	int ty = (y - maporiginy) + -0x100000 >> 0x14;
@@ -76,17 +76,17 @@ uint8_t* P_BlockOrg(int x, int y)
 
 int P_PlaceGetMarks(thing_t* rthing)
 {
-	uint8_t* map;
+	byte* map;
 
 	map = P_BlockOrg(rthing->x, rthing->y);
 
-	if (((((map[0] & 4) == 0) && ((map[1] & 4) == 0)) && ((map[mapwidth] & 4) == 0)) && ((map[mapwidth + 1] & 4) == 0)) 
+	if (((((map[0] & BMF_GETTABLE) == 0) && ((map[1] & BMF_GETTABLE) == 0)) && ((map[mapwidth] & BMF_GETTABLE) == 0)) && ((map[mapwidth + 1] & BMF_GETTABLE) == 0))
 	{
-		map[0] |= 4;
-		map[1] |= 4;
-		map[mapwidth] |= 4;
-		map[mapwidth + 1] |= 4;
-		rthing->flags |= 1;
+		map[0] |= BMF_GETTABLE;
+		map[1] |= BMF_GETTABLE;
+		map[mapwidth] |= BMF_GETTABLE;
+		map[mapwidth + 1] |= BMF_GETTABLE;
+		rthing->flags |= TF_GETTABLE;
 		return 1;
 	}
 	else 
@@ -101,12 +101,12 @@ void P_PlaceBlockMarks(thing_t* rthing)
 
 	map = P_BlockOrg(rthing->x, rthing->y);
 
-	map[0] |= 2;
-	map[1] |= 2;
-	map[mapwidth] |= 2;
-	map[mapwidth + 1] |= 2;
+	map[0] |= BMF_SOLID;
+	map[1] |= BMF_SOLID;
+	map[mapwidth] |= BMF_SOLID;
+	map[mapwidth + 1] |= BMF_SOLID;
 
-	rthing->flags |= 8;
+	rthing->flags |= TF_SOLID;
 	return;
 }
 
@@ -116,10 +116,10 @@ void P_RemoveGetMarks(thing_t* rthing)
 
 	map = P_BlockOrg(rthing->x, rthing->y);
 
-	map[0] &= 0xfb;
-	map[1] &= 0xfb;
-	map[mapwidth] &= 0xfb;
-	map[mapwidth + 1] &= 0xfb;
+	map[0] &= ~BMF_GETTABLE;
+	map[1] &= ~BMF_GETTABLE;
+	map[mapwidth] &= ~BMF_GETTABLE;
+	map[mapwidth + 1] &= ~BMF_GETTABLE;
 	return;
 }
 
@@ -129,10 +129,10 @@ void P_RemoveBlockMarks(thing_t* rthing)
 
 	map = P_BlockOrg(rthing->x, rthing->y);
 
-	map[0] &= 0xfd;
-	map[1] &= 0xfd;
-	map[mapwidth] &= 0xfd;
-	map[mapwidth + 1] &= 0xfd;
+	map[0] &= ~BMF_SOLID;
+	map[1] &= ~BMF_SOLID;
+	map[mapwidth] &= ~BMF_SOLID;
+	map[mapwidth + 1] &= ~BMF_SOLID;
 	return;
 }
 
@@ -158,11 +158,11 @@ void P_AddActor(actor_t* newactor)
 
 void P_RemoveActor(actor_t* newactor)
 {
-	if ((newactor->r->flags & 8) != 0) 
+	if ((newactor->r->flags & TF_SOLID) != 0) 
 	{
 		P_RemoveBlockMarks(newactor->r);
 	}
-	if ((newactor->r->flags & 1) != 0)
+	if ((newactor->r->flags & TF_GETTABLE) != 0)
 	{
 		P_RemoveGetMarks(newactor->r);
 	}
@@ -187,7 +187,7 @@ void P_SetState(actor_t* actor, statenum_t state)
 		actor->r->frame = states[state].frame;
 		if (states[state].action != (void*)NULL)
 		{
-			(*(void(*)(actor_t*))states[state].action)(actor);
+			states[state].action(actor);
 		}
 	}
 	return;
@@ -197,7 +197,7 @@ void T_StateCycleMove(actor_t* actor)
 {
 	if (actor->tics != -1) 
 	{
-		actor->tics = actor->tics + -1;
+		actor->tics--;
 		while (actor->tics == 0)
 		{
 			P_SetState(actor, actor->state->nextstate);
@@ -219,7 +219,7 @@ thing_t* P_GetNewThing(mapthing_t* mthing)
 	{
 		IO_Error("P_GetNewThing: bad angle for thing at (%i,%i)\n", mthing->origin.x, mthing->origin.y);
 	}
-	refthing->angle = ((int)mthing->ang << 0xd) / 360;
+	refthing->angle = ((int)mthing->ang << 13) / 360;
 	refthing->flags = 0;
 
 	return refthing;
@@ -266,7 +266,7 @@ void P_SpawnPlayer(mapthing_t* mthing)
 	rthing->sprite = SPR_PLAY;
 	rthing->frame = 0;
 	rthing->specialdata = player;
-	rthing->flags = 0xc; 
+	rthing->flags = TF_PLAYER | TF_SOLID; 
 
 	playerobjs[mthing->type - 1].pendingweapon = wp_nochange;
 

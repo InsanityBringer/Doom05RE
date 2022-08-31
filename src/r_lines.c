@@ -701,7 +701,7 @@ void R_MakeFseg(int line)
         if (!(plVar6->flags & ML_MAPPED))
         {
             plVar6->flags |= ML_MAPPED;
-            R_DrawBlockLine(local_50, '\x10');
+            R_DrawBlockLine(local_50, BMF_MAPPED);
         }
     }
     else
@@ -718,7 +718,7 @@ void R_MakeFseg(int line)
                 (sector->floorheight != local_4c->floorheight)))) 
         {
             plVar6->flags |= ML_MAPPED;
-            R_DrawBlockLine(local_50, '\x10');
+            R_DrawBlockLine(local_50, BMF_MAPPED);
         }
         if (local_4c->ceilingheight < sector->ceilingheight)
         {
@@ -877,7 +877,7 @@ void R_DrawLineDrange(void)
     return;
 }
 
-void R_DrawBlockLine(int linenum, uint8_t bits)
+void R_DrawBlockLine(int linenum, byte bits)
 {
     short sVar1;
     short sVar2;

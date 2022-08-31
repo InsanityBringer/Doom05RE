@@ -47,7 +47,7 @@ int patchstartlump;
 
 fixed_t maporiginx, maporiginy;
 int mapwidth, mapheight;
-uint8_t* blockmap;
+byte* blockmap;
 
 uint8_t** flatlookup;
 
@@ -70,7 +70,7 @@ maptexture_t** texturelookup;
 int nummapflats;
 int* flattranslation;
 
-uint8_t amapcolor[256];
+byte amapcolor[256];
 
 void R_InitLumps(void)
 {
@@ -370,9 +370,9 @@ void R_InitBlockMap(void)
 	uVar3 = 0;
 	while ((int)uVar3 < 0xff) 
 	{
-		if ((uVar3 & 0x10) == 0) 
+		if ((uVar3 & BMF_MAPPED) == 0) 
 		{
-			amapcolor[uVar3] = 0xcd;
+			amapcolor[uVar3] = 205;
 		}
 		else 
 		{
@@ -383,7 +383,7 @@ void R_InitBlockMap(void)
 	linenum = 0;
 	while (linenum < numlines)
 	{
-		R_DrawBlockLine(linenum, '\x01');
+		R_DrawBlockLine(linenum, BMF_CHECKLINES);
 		linenum++;
 	}
 	return;

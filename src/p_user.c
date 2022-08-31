@@ -99,7 +99,7 @@ void P_SetPsprite(psprnum_t position, statenum_t stnum)
         }
         if (states[stnum].action != NULL)
         {
-            ((void(*)())states[stnum].action)(psp);
+            states[stnum].action(psp);
         }
         stnum = state->nextstate;
     } while (psp->tics == 0);
@@ -683,24 +683,24 @@ int P_CheckPosition(fixed_t ox, fixed_t oy, fixed_t size, int basesector)
 
     blmap = P_BlockOrg(ox, oy);
 
-    if ((*blmap & 4) != 0) 
+    if ((*blmap & BMF_GETTABLE) != 0) 
     {
         P_GetThingAt(blmap);
     }
-    if ((blmap[1] & 4) != 0) 
+    if ((blmap[1] & BMF_GETTABLE) != 0)
     {
         P_GetThingAt(blmap + 1);
     }
-    if ((blmap[mapwidth] & 4) != 0)
+    if ((blmap[mapwidth] & BMF_GETTABLE) != 0)
     {
         P_GetThingAt(blmap + mapwidth);
     }
-    if ((blmap[mapwidth + 1] & 4) != 0) 
+    if ((blmap[mapwidth + 1] & BMF_GETTABLE) != 0)
     {
         P_GetThingAt(blmap + mapwidth + 1);
     }
 
-    if (((((blmap[0] & 2) == 0) && ((blmap[1] & 2) == 0)) && ((blmap[mapwidth] & 2) == 0)) && ((blmap[mapwidth + 1] & 2) == 0)) 
+    if (((((blmap[0] & BMF_SOLID) == 0) && ((blmap[1] & BMF_SOLID) == 0)) && ((blmap[mapwidth] & BMF_SOLID) == 0)) && ((blmap[mapwidth + 1] & BMF_SOLID) == 0))
     {
         rightblock = clipbox[0] - maporiginy >> 0x14;
         leftblock = clipbox[2] - maporiginy >> 0x14;
@@ -712,7 +712,7 @@ int P_CheckPosition(fixed_t ox, fixed_t oy, fixed_t size, int basesector)
             y = topblock;
             while (y <= bottomblock) 
             {
-                if (((blockmap[x * mapwidth + y]) & 1) != 0) 
+                if (((blockmap[x * mapwidth + y]) & BMF_CHECKLINES) != 0) 
                 {
                     validcheck++;
                     return P_CheckSolidLines(basesector);

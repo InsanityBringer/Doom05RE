@@ -115,6 +115,11 @@ typedef struct thing_s
 	void* specialdata;
 } thing_t;
 
+#define TF_GETTABLE				1	//thing has placed get marks
+#define TF_UNUSED2				2
+#define TF_PLAYER				4	//thing->specialdata points to a player_t, not an actor_t
+#define TF_SOLID				8	//thing has placed block marks
+
 typedef struct
 {
 	short sector;
@@ -214,8 +219,14 @@ extern maptexture_t** texturelookup;
 
 extern fixed_t maporiginx, maporiginy;
 extern int mapwidth, mapheight;
-extern uint8_t* blockmap;
-extern uint8_t amapcolor[];
+extern byte* blockmap;
+
+#define BMF_CHECKLINES				1 //Check lines of the thing's sector for collisions in this cell
+#define BMF_SOLID					2 //This cell is solid
+#define BMF_GETTABLE				4 //This cell contains a gettable item
+#define BMF_MAPPED					16 //This cell will be shown on the automap
+
+extern byte amapcolor[];
 
 extern int viewwidth, viewheight;
 

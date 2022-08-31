@@ -221,7 +221,7 @@ typedef struct
 	int sprite;
 	int frame;
 	int tics;
-	void* action;
+	void (*action)();
 	int nextstate;
 	int misc1;
 	int misc2;
@@ -246,7 +246,7 @@ typedef struct actor_s
 	struct actor_s* next;
 	state_t* state;
 	int tics;
-	uint8_t* maporigin;
+	byte* maporigin;
 	int health;
 } actor_t;
 
@@ -302,3 +302,10 @@ void P_SetState(actor_t* actor, statenum_t state);
 
 void P_DamagePlayer(int player, int damage);
 void P_DamageEnemy(actor_t* actor, int damage);
+
+//blockmap
+byte* P_BlockOrg(int x, int y);
+int P_PlaceGetMarks(thing_t* rthing);
+void P_PlaceBlockMarks(thing_t* rthing);
+void P_RemoveGetMarks(thing_t* rthing);
+void P_RemoveBlockMarks(thing_t* rthing);

@@ -129,10 +129,9 @@ extern int automapup;
 extern int goldshift;
 extern int redshift;
 
-extern uint8_t* demoend;
+extern byte* demoend;
 extern demostate_t demo;
-extern uint8_t* demo_p;
-
+extern byte* demo_p;
 
 extern int wnumber0;
 extern int snumber0;
@@ -143,12 +142,6 @@ extern pic_t* healthbar;
 extern pic_t* armorbar;
 extern pic_t* timebar;
 extern pic_t* blankbar;
-
-uint8_t* P_BlockOrg(int x, int y);
-int P_PlaceGetMarks(thing_t* rthing);
-void P_PlaceBlockMarks(thing_t* rthing);
-void P_RemoveGetMarks(thing_t* rthing);
-void P_RemoveBlockMarks(thing_t* rthing);
 
 //playsim
 void P_Startup();

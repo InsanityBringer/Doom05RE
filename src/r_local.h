@@ -163,7 +163,7 @@ void R_ClearProclines(void);
 void R_ClearFsegs(void);
 void R_MakeProcline(int line);
 void R_DrawLineDrange();
-void R_DrawBlockLine(int linenum, uint8_t bits);
+void R_DrawBlockLine(int linenum, byte bits);
 
 //planes
 void R_GenerateSpans(void);
