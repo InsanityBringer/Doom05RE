@@ -285,6 +285,7 @@ void IO_SetPalette(uint8_t* pal)
 
 void IO_WaitVBL(int vbls)
 {
+	//SDL_Delay((1000 / 70) * vbls);
 }
 
 void IO_BlitBlocks(void)
@@ -601,7 +602,7 @@ void R_SetViewSize(int blocks, detail_t detail, int redrawall)
 		R_DrawViewEdge();
 	}
 	
-	V_MarkUpdateBlock(0, 0, 0x13f, 0xa7);
+	V_MarkUpdateBlock(0, 0, SCREENWIDTH-1, SCREENHEIGHT-SBARHEIGHT-1);
 	//IO_NoPlayBlit();
 	return;
 }

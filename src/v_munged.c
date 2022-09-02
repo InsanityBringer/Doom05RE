@@ -18,15 +18,15 @@
 #include "doomdef.h"
 #include "v_video.h"
 
-uint8_t screenbuffer[64000*4];
-uint8_t* ylookup[800];
+byte screenbuffer[64000*4];
+byte* ylookup[800];
 int planelookup[320];
 int planewidthlookup[200];
 
-uint8_t* collumnpointer[320];
-uint32_t ublocksource[200];
+byte* collumnpointer[320];
+unsigned int ublocksource[200];
 
-uint8_t update[200];
+byte update[200];
 
 int playscreenupdateneeded;
 int blockupdateneeded;
@@ -35,294 +35,207 @@ int winxl, winxh;
 int winyl, winyh;
 int cursorx, cursory;
 
-void V_MarkUpdateBlock(int x1, int y1, int x2, int y2)
-{
-	int iVar1;
-	uint8_t* local_2c;
-	int iVar2;
-
-	int newx, newy;
-
-	if ((((x1 < 0) || (x2 > 0x4ff)) || (y1 < 0)) || (y2 > 199))
-	{
-		IO_Error("bad V_MarkUpdateBlock(%i,%i,%i,%i)", x1, y1, x2, y2);
-	}
-	newx = x1 / 16;
-	newy = y1 / 0x14;
-	iVar1 = x2 / 16;
-	local_2c = &update[newx + newy * 0x14];
-	while (iVar2 = newx, newy <= y2 / 0x14)
-	{
-		while (iVar2 <= iVar1) 
-		{
-			*local_2c = 2;
-			local_2c = local_2c + 1;
-			iVar2 = iVar2 + 1;
-		}
-		local_2c = local_2c + (0x13 - (iVar1 - newx));
-		newy++;
-	}
-	blockupdateneeded = 2;
-	return;
-}
-
 void V_FadeOut(int start, int end, int red, int green, int blue, int steps)
 {
-	int local_20;
-	int local_1c;
-	int local_14;
-	int iVar1;
-	uint8_t pal[768];
-	uint8_t newpal[768];
+	byte basep[768];
+	byte work[768];
+	int i, j;
+	int delta;
 
-	local_20 = end;
-	local_1c = start;
-	IO_GetPalette(&pal[0]);
-	iVar1 = 0;
-	while (local_14 = local_1c, iVar1 <= steps) 
+	IO_GetPalette(&basep[0]);
+	for (i = 0; i <= steps; i++)
 	{
-		while (local_14 <= local_20) 
+		for (j = start; j <= end; j++)
 		{
-			newpal[local_14 * 3 + 0] = (((red - pal[local_14 * 3 + 0]) * iVar1) / steps) + pal[local_14 * 3 + 0];
-			newpal[local_14 * 3 + 1] = (((green - pal[local_14 * 3 + 1]) * iVar1) / steps) + pal[local_14 * 3 + 1];
-			newpal[local_14 * 3 + 2] = (((blue - pal[local_14 * 3 + 2]) * iVar1) / steps) + pal[local_14 * 3 + 2];
-			local_14++;
+			delta = red - basep[j * 3 + 0];
+			work[j * 3 + 0] = basep[j * 3 + 0] + delta * i / steps;
+			delta = green - basep[j * 3 + 1];
+			work[j * 3 + 1] = basep[j * 3 + 1] + delta * i / steps;
+			delta = blue - basep[j * 3 + 2];
+			work[j * 3 + 2] = basep[j * 3 + 2] + delta * i / steps;
 		}
-		IO_SetPalette(&newpal[0]);
+		IO_SetPalette(&work[0]);
 		IO_DoEvents(); //[ISB]
-		iVar1++;
 	}
 	return;
 }
 
-void V_FadeIn(int start, int end, int steps, uint8_t* palette)
+void V_FadeIn(int start, int end, int steps, byte* palette)
 {
-	int local_28;
-	int local_20;
-	int local_1c;
-	int local_18;
-	int local_14;
+	int i, j;
+	int delta;
 
-	uint8_t pal[768];
-	uint8_t newpal[768];
+	byte basep[768];
+	byte work[768];
 
-	local_28 = end;
-	local_20 = start;
-	local_14 = steps;
-	IO_GetPalette(&pal[0]);
-	local_20 = local_20 * 3;
-	local_28 = local_28 * 3;
-	local_18 = 0;
-	while (local_1c = local_20, local_18 < local_14)
+	IO_GetPalette(&basep[0]);
+	start *= 3;
+	end *= 3;
+	for (i = 0; i < steps; i++)
 	{
-		while (local_1c <= local_28) 
+		for (j = start; j <= end; j++)
 		{
-			newpal[local_1c] = pal[local_1c] + (((palette[local_1c] - pal[local_1c]) * local_18) / local_14);
-			local_1c++;
+			delta = palette[j] - basep[j];
+			work[j] = basep[j] + delta * i / steps;
 		}
-		IO_SetPalette(&newpal[0]);
+		IO_SetPalette(&work[0]);
 		IO_DoEvents(); //[ISB]
-		local_18++;
 	}
 	IO_SetPalette(&palette[0]);
 	return;
 }
 
-void V_Bar(int xl, int yl, int width, int height, int color)
+void V_Bar(int x1, int y1, int width, int height, int color)
 {
-	int local_24;
-	int local_28;
-	uint8_t* local_2c;
-	int local_3c;
-	int local_38;
-	int local_14;
-	int iVar1;
+	int p;
+	int y;
+	int px1, px2;
+	int x2, y2;
+	int count;
+	byte* dest;
 
-	width = xl + width;
-	local_24 = yl + height;
-	iVar1 = 0;
-	local_3c = xl;
-	local_38 = yl;
-	while (iVar1 < 4)
+	x2 = x1 + width;
+	y2 = y1 + height;
+	for (p = 0; p < 4; p++)
 	{
-		local_28 = (3 - iVar1) + local_3c >> 2;
-		local_2c = ylookup[iVar1 * 200 + local_38] + local_28;
-		local_28 = ((3 - iVar1) + width >> 2) - local_28;
-		local_14 = local_38;
-		while (local_14 < local_24) 
+		px1 = (3 - p) + x1 >> 2;
+		dest = ylookup[p * 200 + y1] + px1;
+		px2 = (3 - p) + x2 >> 2;
+		count = px2 - px1;
+		for (y = y1; y < y2; y++)
 		{
-			memset(local_2c, color, local_28);
-			local_2c += 0x50;
-			local_14++;
+			memset(dest, color, count);
+			dest += SCREENBWIDE;
 		}
-		iVar1++;
 	}
-	V_MarkUpdateBlock(local_3c, local_38, width + -1, local_24 + -1);
+	V_MarkUpdateBlock(x1, y1, x2 + -1, y2 + -1);
 	return;
 }
 
 void V_DrawPic(int x, int y, pic_t* pic)
 {
-	int local_2c;
-	int local_30;
-	int iVar1;
-	uint8_t* local_18;
-	int local_3c;
-	int iVar2;
-	int local_38;
-	int local_28;
-	int local_24;
-	uint8_t* local_20;
-	int iVar3;
+	int yy;
+	byte* screen, * source, * dest;
+	int planey, plane;
+	int width, height;
 
-	local_2c = pic->width;
-	local_30 = pic->height;
-	local_20 = &pic->data;
-	local_3c = x;
-	local_38 = y;
-	V_MarkUpdateBlock(x, y, local_2c * 4 + x + -1, y + local_30 + -1);
-	iVar1 = (local_3c & 3) * 200;
-	iVar2 = (int)local_3c >> 2;
-	local_24 = 0;
-	local_28 = iVar1;
-	while (local_24 < 4) 
+	width = pic->width;
+	height = pic->height;
+	source = &pic->data;
+
+	V_MarkUpdateBlock(x, y, width * 4 + x - 1, y + height - 1);
+
+	planey = (x & 3) * 200;
+	x >>= 2;
+	for (plane = 0; plane < 4; plane++)
 	{
-		local_18 = ylookup[local_28 + local_38] + iVar2;
-		iVar3 = 0;
-		iVar1 = local_24;
-		while (iVar3 < (int)local_30) 
+		dest = ylookup[planey + y] + x;
+		screen = dest; //[ISB] I don't know why this is done, but the stack usage implies this.
+		for (yy = 0; yy < height; yy++)
 		{
-			memcpy(local_18, local_20, local_2c);
-			local_18 = local_18 + 0x50;
-			local_20 = (uint8_t*)((int)local_20 + local_2c);
-			iVar3 = iVar3 + 1;
+			memcpy(screen, source, width);
+			screen += SCREENBWIDE;
+			source += width;
 		}
-		local_28 = local_28 + 200;
-		if (local_28 == 800) 
+
+		planey += 200;
+
+		if (planey == 800) 
 		{
-			local_28 = 0;
-			iVar2 = iVar2 + 1;
+			planey = 0;
+			x++;
 		}
-		local_24 = iVar1 + 1;
 	}
 	return;
 }
 
-int V_DrawChar(int x, int y, int ch, font_t* font)
+int V_DrawChar(int sx, int sy, int ch, font_t* font)
 {
-	uint8_t bVar1;
-	short sVar2;
-	uint8_t* local_24;
-	int local_28;
-	uint8_t* pix;
-	int local_1c;
-	int local_14;
-	int iVar3;
+	byte pix;
+	int x, y, width, plane;
+	byte* source, * dest;
+	int backup; //there's a dword-size hole between backup and font, but it seems unimportant. Used just for return. 
 
-	pix = (uint8_t*)((uintptr_t)&font->height + (uintptr_t)font->charofs[ch]);
-	bVar1 = font->width[ch];
-	local_24 = ylookup[y] + (x / 4);
-	local_1c = planelookup[x];
-	sVar2 = font->height;
-	local_28 = bVar1;
-	while (local_28 != 0)
+	source = ((byte*)&font->height) + font->charofs[ch];
+	width = font->width[ch];
+	x = width;
+	dest = ylookup[sy] + (sx / 4);
+	plane = planelookup[sx];
+	backup = font->height * SCREENBWIDE;
+	while (x-- != 0)
 	{
-		local_14 = (int)font->height;
-		while (local_14 != 0) 
+		y = font->height;
+		while (y-- != 0) 
 		{
-			if (*pix != 0)
-			{
-				local_24[local_1c] = *pix;
-			}
-			local_24 += 0x50;
-			pix++;
-			local_14--;
+			pix = *source;
+			if (pix != 0)
+				dest[plane] = pix;
+			
+			dest += SCREENBWIDE;
+			source++;
 		}
-		local_24 += (int)sVar2 * -0x50;
-		if (local_1c == 48000)
+		dest -= backup;
+
+		if (plane == 48000)
 		{
-			local_24++;
-			local_1c = 0;
-			local_28--;
+			dest++;
+			plane = 0;
 		}
 		else 
 		{
-			local_1c += 16000;
-			local_28--;
+			plane += 16000;
 		}
 	}
-	return bVar1;
+	return width;
 }
 
 int V_DrawString(int sx, int sy, char* string, font_t* font)
 {
-	int iVar1;
-	int local_24;
-	int local_20;
-	font_t* local_18;
-	int x2;
+	int tx;
 
-	local_24 = sx;
-	local_20 = sy;
-	local_18 = font;
-	x2 = sx;
+	tx = sx;
 	while (*string != '\0') 
 	{
-		iVar1 = V_DrawChar(x2, local_20, (int)(short)*string, local_18);
-		x2 += iVar1 + 1;
+		tx += V_DrawChar(tx, sy, (int)(short)*string, font) + 1;
 		string++;
 	}
-	V_MarkUpdateBlock(local_24, local_20, x2, local_18->height + local_20 + -1);
-	return x2;
+	V_MarkUpdateBlock(sx, sy, tx, font->height + sy - 1);
+	return tx;
 }
 
 int V_StringWidth(char* string, font_t* font)
 {
-	char* local_24;
-	int iVar1;
+	int width = 0;
+	while (*string != '\0') 
+		width += font->width[*string++] + 1;
 
-	iVar1 = 0;
-	local_24 = string;
-	while (*local_24 != '\0') 
-	{
-		iVar1 = iVar1 + font->width[(short)*local_24] + 1;
-		local_24++;
-	}
-	return iVar1;
+	return width;
 }
 
-void V_CenterString(int sy, char* string, font_t* font)
+void V_CenterString(int y, char* string, font_t* font)
 {
-	int iVar1;
-	int local_28;
-	char* local_24;
+	int w, x;
 
-	local_28 = sy;
-	local_24 = string;
-	iVar1 = V_StringWidth(string, font);
-	V_DrawString(160 - iVar1 / 2, local_28, local_24, font);
+	w = V_StringWidth(string, font);
+	V_DrawString(SCREENWIDTH / 2 - w / 2, y, string, font);
 }
 
 void V_Window(int width, int height)
 {
-	int local_1c;
-	int iVar1;
-
-	winxl = 0xa0 - width / 2;
+	winxl = SCREENWIDTH / 2 - width / 2;
 	winxh = winxl + width;
-	winyl = 100 - height / 2;
+	winyl = SCREENHEIGHT / 2 - height / 2;
 	winyh = winyl + height;
-	local_1c = width;
-	iVar1 = height;
-	V_Bar(winxl, winyl, width, height, 0xc6);
-	V_Bar(winxl + 6, winyl + 6, local_1c + -12, iVar1 + -12, 3);
+
+	V_Bar(winxl, winyl, width, height, 198);
+	V_Bar(winxl + 6, winyl + 6, width - 12, height - 12, 3);
+
 	winxl = winxl + 8;
 	winxh = winxh + -8;
 	winyl = winyl + 8;
 	winyh = winyh + -8;
 	cursory = winyl;
 	cursorx = winxl;
-	return;
 }
 
 void V_Printf(char* fmt, ...)
@@ -330,39 +243,61 @@ void V_Printf(char* fmt, ...)
 	//TODO: this is very broken in the original
 }
 
+void V_MarkUpdateBlock(int x1, int y1, int x2, int y2)
+{
+	int x, y;
+	int xt1, yt1, xt2, yt2;
+	byte* nextline;
+	byte* mark;
+
+	if ((((x1 < 0) || (x2 > 1279)) || (y1 < 0)) || (y2 > 199))
+	{
+		IO_Error("bad V_MarkUpdateBlock(%i,%i,%i,%i)", x1, y1, x2, y2);
+	}
+
+	xt1 = x1 / 16;
+	yt1 = y1 / 20;
+	xt2 = x2 / 16;
+	yt2 = y2 / 20;
+	mark = &update[xt1 + yt1 * 20];
+	for (y = yt1; y <= yt2; y++)
+	{
+		nextline = mark + 20;
+		for (x = xt1; x <= xt2; x++)
+		{
+			*mark++ = 2;
+		}
+		mark = nextline;
+	}
+
+	blockupdateneeded = 2;
+	return;
+}
+
 void V_Startup(void)
 {
-	int iVar1;
-	int iVar2;
-	uint32_t* local_28;
-	int iVar4;
-	int uVar5;
-	int i, j;
+	int x, y, i;
+	unsigned int* usrc;
 
 	for (i = 0; i < 800; i++)
 	{
-		iVar4 = i * 0x140 >> 0x1f;
-		//ylookup[i] = &screenbuffer + ((int)((i * 0x140 + iVar4 * -4) - (uint)(iVar4 << 1 < 0)) >> 2);
-		//[ISB] pointer arithemetic confuses me. TODO: fix this thing finally!
-		ylookup[i] = (uint8_t*)((uintptr_t)&screenbuffer + (uintptr_t)(i * 80));
+		ylookup[i] = screenbuffer + i * SCREENBWIDE;
 	}
-	for (i = 0; i < 200; i++)
+	for (i = 0; i < SCREENHEIGHT; i++)
 	{
-		planewidthlookup[i] = (i * 0x50);
+		planewidthlookup[i] = i * SCREENBWIDE;
 	}
-	for (i = 0; i < 320; i++) 
+	for (i = 0; i < SCREENWIDTH; i++) 
 	{
 		collumnpointer[i] = &screenbuffer[0] + (i >> 2) + ((i & 3) * 16000);
 	}
-	local_28 = ublocksource;
-	for (i = 0; i < 10; i++)
+
+	usrc = ublocksource;
+	for (y = 0; y < 10; y++)
 	{
-		for (j = 0; j < 0x14; j++)
+		for (x = 0; x < 20; x++)
 		{
-			iVar1 = i * 0x140 >> 0x1f;
-			iVar2 = j * 0x10 >> 0x1f;
-			*local_28 = (((i * 0x140 + iVar1 * -4) - (uint32_t)(iVar1 << 1 < 0)) >> 2) * 0x14 + (((j * 0x10 + iVar2 * -4) - (uint32_t)(iVar2 << 1 < 0)) >> 2);
-			local_28++;
+			*usrc++ = y * SCREENBWIDE * 20 + x * 4; //I think this is correct
 		}
 	}
 	memset(update, 0, 200);
@@ -370,6 +305,6 @@ void V_Startup(void)
 	blockupdateneeded = 0;
 	for (i = 0; i < 320; i++)
 	{
-		planelookup[i] = (uint8_t*)((i & 3) * 16000);
+		planelookup[i] = (i & 3) * 16000;
 	}
 }

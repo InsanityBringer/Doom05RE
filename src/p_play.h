@@ -111,6 +111,8 @@ typedef struct
 	int strafedown;
 } player_t;
 
+#define SBARHEIGHT 32
+
 extern shared_t* sd;
 
 extern int processedframe;
@@ -157,3 +159,6 @@ void P_InitThing(mapthing_t* mthing);
 //trace
 void P_PlayerShoot();
 int P_CrossSectorBounds(int sector, fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2);
+
+//statues
+void P_DrawPlayScreen(); //Needed by platform-specific video code. 

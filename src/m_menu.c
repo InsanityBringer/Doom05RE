@@ -342,7 +342,7 @@ void M_EndGame(int choice)
 
 void M_ReadThis(int choice)
 {
-	//D_Alert("this");
+	D_Alert("this");
 	return;
 }
 

@@ -281,7 +281,6 @@ void P_DrawHealth();
 void P_DrawArmor();
 void P_DrawCards();
 void P_DrawTime();
-void P_DrawPlayScreen();
 
 //psprites
 void P_SetupPSprites(int pnum);

@@ -2,33 +2,33 @@
 
 typedef struct
 {
-	uint8_t width;
-	uint8_t height;
-	uint8_t data;
+	byte width;
+	byte height;
+	byte data;
 } pic_t;
 
 typedef struct
 {
 	short height;
-	uint8_t width[256];
+	byte width[256];
 	short charofs[256];
 } font_t;
 
 typedef struct
 {
-	uint8_t topdelta;
-	uint8_t length;
-	uint8_t data;
+	byte topdelta;
+	byte length;
+	byte data;
 } post_t;
 
 typedef post_t collumn_t;
 
 typedef struct
 {
-	uint8_t width;
-	uint8_t height;
-	int8_t leftoffs;
-	int8_t topoffset;
+	byte width;
+	byte height;
+	signed char leftoffs;
+	signed char topoffset;
 	short coloffsets[8];
 } patch_t;
 
@@ -36,21 +36,21 @@ typedef struct
 #define SCREENHEIGHT 200
 #define SCREENBWIDE (SCREENWIDTH>>2)
 
-extern uint8_t screenbuffer[];
-extern uint8_t* ylookup[];
+extern byte screenbuffer[];
+extern byte* ylookup[];
 extern int planewidthlookup[];
 
-extern uint8_t* collumnpointer[];
-extern uint32_t ublocksource[];
+extern byte* collumnpointer[];
+extern unsigned int ublocksource[];
 
-extern uint8_t update[];
+extern byte update[];
 
 extern int playscreenupdateneeded;
 extern int blockupdateneeded;
 
 void V_DrawPatch(int x, int y, patch_t* patch);
 void V_FadeOut(int start, int end, int red, int green, int blue, int steps);
-void V_FadeIn(int start, int end, int steps, uint8_t* palette);
+void V_FadeIn(int start, int end, int steps, byte* palette);
 int V_DrawChar(int x, int y, int ch, font_t* font);
 void V_DrawPic(int x, int y, pic_t* pic);
 void V_Bar(int xl, int yl, int width, int height, int color);
