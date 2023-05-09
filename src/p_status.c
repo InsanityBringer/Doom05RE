@@ -38,7 +38,6 @@ void P_DrawWeapon(void)
     wep = playerobjs[viewplayer].readyweapon;
     num = W_GetNumForName("I_WBAYON");
     V_DrawPic(4, 172, (pic_t*)W_GetLump(num + wep));
-    return;
 }
 
 void P_DrawAmmo(void)
@@ -73,11 +72,11 @@ void P_DrawAmmo(void)
     }
     num = ammo / 100;
     V_DrawPic(56, 185, (pic_t*)W_GetLump(snumber0 + num));
-    ammo = ammo + num * -100; //probably not 100% accurate decompilation, but the asm doesn't use modulo or the like, so it's accurate to that.
+    ammo -= num * 100;
     num = ammo / 10;
     V_DrawPic(68, 185, (pic_t*)W_GetLump(snumber0 + num));
-    V_DrawPic(80, 185, (pic_t*)W_GetLump(snumber0 + ammo + num * -10));
-    return;
+    ammo -= num * 10;
+    V_DrawPic(80, 185, (pic_t*)W_GetLump(snumber0 + ammo));
 }
 
 void P_DrawHealth(void)
@@ -85,14 +84,10 @@ void P_DrawHealth(void)
     int i;
     
     for (i = 0; i < player->health; i++)
-    {
         V_DrawPic(i * 4 + 140, 171, healthbar);
-    }
+    
     for (; i < MAXBODY; i++) 
-    {
         V_DrawPic(i * 4 + 140, 171, blankbar);
-    }
-    return;
 }
 
 void P_DrawArmor(void)
@@ -100,14 +95,10 @@ void P_DrawArmor(void)
     int i;
     
     for (i = 0; i < player->armor; i++)
-    {
         V_DrawPic(i * 4 + 140, 181, armorbar);
-    }
+    
     for (; i < MAXARMOR; i++) 
-    {
         V_DrawPic(i * 4 + 140, 181, blankbar);
-    }
-    return;
 }
 
 void P_DrawTime(void)
@@ -115,14 +106,10 @@ void P_DrawTime(void)
     int i;
 
     for (i = 0; i < player->itemtime; i++)
-    {
         V_DrawPic(i * 4 + 140, 191, timebar);
-    }
+    
     for (; i < 15; i++)
-    {
         V_DrawPic(i * 4 + 140, 191, blankbar);
-    }
-    return;
 }
 
 void P_DrawCards(void)
@@ -132,11 +119,8 @@ void P_DrawCards(void)
     for (i = 0; i < 3; i++)
     {
         if (player->items[i] != 0) 
-        {
             V_DrawPic(204, i * 8 + 172, (pic_t*)W_GetLump(cardnumber + 1 + i));
-        }
     }
-    return;
 }
 
 void P_DrawPlayScreen(void)
@@ -151,13 +135,11 @@ void P_DrawPlayScreen(void)
     P_DrawHealth();
     P_DrawArmor();
     P_DrawCards();
-    return;
 }
 
 void P_GiveWeapon(weapontype_t weapon)
 {
     player->weaponowned[weapon] = 1;
-    return;
 }
 
 void P_GiveAmmo(ammotype_t ammo, int num)
@@ -167,73 +149,60 @@ void P_GiveAmmo(ammotype_t ammo, int num)
     {
     case am_clip:
         if (MAXCLIP < player->ammo[ammo]) 
-        {
             player->ammo[ammo] = MAXCLIP;
-        }
+        
         if (((player->readyweapon == wp_rifle) || (player->readyweapon == wp_auto)) && (&playerobjs[sd->consoleplayer] == player)) 
-        {
             P_DrawAmmo();
-        }
+        
         break;
     case am_shell:
         if (MAXSHELL < player->ammo[ammo]) 
-        {
             player->ammo[ammo] = MAXSHELL;
-        }
+        
         if ((player->readyweapon == wp_shotgun) && (&playerobjs[sd->consoleplayer] == player)) 
-        {
             P_DrawAmmo();
-        }
+        
         break;
     case am_cell:
         if (MAXCELL < player->ammo[ammo]) 
-        {
             player->ammo[ammo] = MAXCELL;
-        }
+        
         if ((player->readyweapon == wp_bfg) && (&playerobjs[sd->consoleplayer] == player)) 
-        {
             P_DrawAmmo();
-        }
+        
         break;
     case am_soul:
         if (MAXSOUL < player->ammo[ammo])
-        {
             player->ammo[ammo] = MAXSOUL;
-        }
+        
         if ((player->readyweapon == wp_claw) && (&playerobjs[sd->consoleplayer] == player)) 
-        {
             P_DrawAmmo();
-        }
+        
         break;
     case am_misl:
         if (MAXMISL < player->ammo[ammo])
-        {
             player->ammo[ammo] = MAXMISL;
-        }
+        
         if ((player->readyweapon == wp_missile) && (&playerobjs[sd->consoleplayer] == player))
-        {
             P_DrawAmmo();
-        }
+
+        break;
     }
-    return;
 }
 
 void P_GiveBody(int num)
 {
     player->health += num;
     if (player->health > MAXBODY)
-    {
         player->health = MAXBODY;
-    }
+    
     P_DrawHealth();
-    return;
 }
 
 void P_GiveArmor(int num)
 {
     player->armor = num;
     P_DrawArmor();
-    return;
 }
 
 void P_GivePoints(int points)
@@ -241,7 +210,6 @@ void P_GivePoints(int points)
 #if 0 //[ISB]
     player->score += points;
 #endif
-    return;
 }
 
 void P_GiveCard(item_t item)
@@ -253,12 +221,10 @@ void P_GiveCard(item_t item)
         {
             P_DrawCards();
             if (commpresent != 0)
-            {
                 goldshift = goldshift + 6;
-            }
+            
         }
     }
-    return;
 }
 
 void P_GetThingAt(uint8_t* spot)
@@ -270,88 +236,117 @@ void P_GetThingAt(uint8_t* spot)
 
     check = actor.next;
     while (check != &actor && check->maporigin != spot && check->maporigin != spot2 && check->maporigin != spot3 && check->maporigin != spot4)
-    {
         check = check->next;
-    }
+    
     if (check == &actor) 
-    {
         IO_Error("P_GetThingAt: actor not located\n");
-    }
 
     switch (check->r->sprite)
     {
     case SPR_SHOT:
         if ((player->weaponowned[wp_shotgun] != 0) && (player->ammo[am_shell] == MAXSHELL)) 
-        {
             return;
-        }
+        
         P_GiveWeapon(wp_shotgun);
         P_GiveAmmo(am_shell, 4);
         break;
     case SPR_MGUN:
         if ((player->weaponowned[wp_auto] != 0) && (player->ammo[am_clip] == MAXCLIP)) 
-        {
             return;
-        }
+        
         P_GiveWeapon(wp_auto);
         P_GiveAmmo(am_clip, 4);
         break;
     case SPR_LAUN:
         if ((player->weaponowned[wp_missile] != 0) && (player->ammo[am_misl] == MAXMISL)) 
-        {
             return;
-        }
+        
         P_GiveWeapon(wp_missile);
         P_GiveAmmo(am_misl, 2);
         break;
     case SPR_CSAW:
         if (player->weaponowned[wp_chainsaw] != 0) 
-        {
             return;
-        }
+        
         P_GiveWeapon(wp_chainsaw);
         break;
     case SPR_CLIP:
         if (player->ammo[am_clip] == MAXCLIP) 
-        {
             return;
-        }
+        
         P_GiveAmmo(am_clip, 8);
+        break;
+    case SPR_MBUL:
+        if (player->ammo[am_clip] == MAXCLIP)
+            return;
+
+        P_GiveAmmo(am_clip, 25);
         break;
     case SPR_SHEL:
         if (player->ammo[am_shell] == MAXSHELL)
-        {
             return;
-        }
+        
         P_GiveAmmo(am_shell, 6);
+        break;
+    case SPR_MSHE:
+        if (player->ammo[am_shell] == MAXSHELL)
+            return;
+
+        P_GiveAmmo(am_shell, 20);
         break;
     case SPR_MISL:
         if (player->ammo[am_misl] == MAXMISL)
-        {
             return;
-        }
+        
         P_GiveAmmo(am_misl, 1);
+        break;
+    case SPR_MMIS:
+        if (player->ammo[am_misl] == MAXMISL)
+            return;
+
+        P_GiveAmmo(am_misl, 4);
+        break;
+    case SPR_SOUL:
+        if (player->ammo[am_soul] == MAXSOUL)
+            return;
+
+        P_GiveAmmo(am_soul, 8);
         break;
     case SPR_STIM:
         if (player->health == 100) //[ISB] heh
-        {
             return;
-        }
+        
         P_GiveBody(10);
         break;
     case SPR_MEDI:
         if (player->health == 100) 
-        {
             return;
-        }
+        
         P_GiveBody(25);
         break;
-    case SPR_SOUL:
-        if (player->ammo[am_soul] == MAXSOUL) 
-        {
+    case SPR_GKEY:
+        P_GiveCard(it_bluecard);
+        if (commpresent != 0)
             return;
-        }
-        P_GiveAmmo(am_soul, 8);
+        break;
+    case SPR_SKEY:
+        P_GiveCard(it_yellowcard);
+        if (commpresent != 0)
+            return;
+        break;
+    case SPR_BKEY:
+        P_GiveCard(it_redcard);
+        if (commpresent != 0)
+            return;
+        break;
+    case SPR_ARM1:
+        if (6 < player->armor)
+            return;
+
+        P_GiveArmor(7);
+        break;
+    case SPR_ARM2:
+        P_GiveArmor(15);
         break;
     case SPR_BON1:
         P_GivePoints(100);
@@ -365,16 +360,6 @@ void P_GetThingAt(uint8_t* spot)
     case SPR_BON4:
         P_GivePoints(10000);
         break;
-    case SPR_ARM1:
-        if (6 < player->armor)
-        {
-            return;
-        }
-        P_GiveArmor(7);
-        break;
-    case SPR_ARM2:
-        P_GiveArmor(15);
-        break;
     case SPR_POW1:
         break;
     case SPR_POW2:
@@ -387,59 +372,15 @@ void P_GetThingAt(uint8_t* spot)
         break;
     case SPR_IGOG:
         break;
-    case SPR_MMIS:
-        if (player->ammo[am_misl] == MAXMISL) 
-        {
-            return;
-        }
-        P_GiveAmmo(am_misl, 4);
-        break;
-    case SPR_MBUL:
-        if (player->ammo[am_clip] == MAXCLIP) 
-        {
-            return;
-        }
-        P_GiveAmmo(am_clip, 25);
-        break;
-    case SPR_MSHE:
-        if (player->ammo[am_shell] == MAXSHELL) 
-        {
-            return;
-        }
-        P_GiveAmmo(am_shell, 20);
-        break;
-    case SPR_GKEY:
-        P_GiveCard(it_bluecard);
-        if (commpresent != 0)
-        {
-            return;
-        }
-        break;
-    case SPR_SKEY:
-        P_GiveCard(it_yellowcard);
-        if (commpresent != 0)
-        {
-            return;
-        }
-        break;
-    case SPR_BKEY:
-        P_GiveCard(it_redcard);
-        if (commpresent != 0)
-        {
-            return;
-        }
-        break;
     default:
         IO_Error("P_GetThing: Unknown gettable thing\n");
         break;
     }
     P_RemoveGetMarks(check->r);
     P_RemoveActor(check);
+
     if (playernum == sd->consoleplayer) 
-    {
         goldshift += 6;
-    }
-    return;
 }
 
 void P_PlayerDied(int playernum)
@@ -449,36 +390,27 @@ void P_PlayerDied(int playernum)
     player = &playerobjs[playernum];
     P_RemoveBlockMarks(player->r);
     player->health = 0;
-    return;
 }
 
 void P_DamagePlayer(int player, int damage)
 {
     if (player == sd->consoleplayer) 
-    {
         redshift += damage * 4;
-    }
+    
     playerobjs[player].health -= damage;
 
     //[ISB] eh? No wonder you die when you get shot with 10 hp left. Heh. 
     if (playerobjs[player].health <= damage) 
-    {
         P_PlayerDied(player);
-    }
+    
     if (player == sd->consoleplayer) 
-    {
         P_DrawHealth();
-    }
-    return;
 }
 
 void P_AMapPlot(int x, int y, int color)
 {
     if ((((-1 < x) && (x < 320)) && (-1 < y)) && (y < 200))
-    {
         *(collumnpointer[x] + planewidthlookup[y]) = (uint8_t)color;
-    }
-    return;
 }
 
 void P_DrawPlayerMarker(player_t* player)
@@ -486,8 +418,8 @@ void P_DrawPlayerMarker(player_t* player)
     int x;
     int y;
 
-    x = player->r->x - amaporgx >> 0x14;
-    y = amaporgy - player->r->y >> 0x14;
+    x = player->r->x - amaporgx >> 20;
+    y = amaporgy - player->r->y >> 20;
     P_AMapPlot(x, y, 0xb4);
     switch ((int)(player->r->angle + 0x200U & 0x1fff) >> 10)
     {
@@ -523,7 +455,6 @@ void P_DrawPlayerMarker(player_t* player)
         P_AMapPlot(x + 1, y + 1, 0xb0);
         P_AMapPlot(x + -1, y + -1, 0xb8);
     }
-    return;
 }
 
 void P_DrawAMap(int x1, int y1, int x2, int y2, int mapx, int mapy)
@@ -532,33 +463,32 @@ void P_DrawAMap(int x1, int y1, int x2, int y2, int mapx, int mapy)
     int mx;
     int y;
     int x;
-    uint8_t mxl;
+    int mx1;
+    int source;
+    byte pixel;
 
-    my = mapy - maporiginy >> 0x14;
-    mapx = mapx - maporiginx;
+    my = mapy - maporiginy >> 20;
+    mx1 = mapx - maporiginx >> 20;
     
-    for (y = y1; y <= y2; y++)
+    for (y = y1; y <= y2; y++, my--)
     {
-        mx = mapx >> 0x14;
+        mx = mx1;
         
-        for (x = x1; x <= x2; x++)
+        for (x = x1; x <= x2; x++, mx++)
         {
-            if ((my < mapheight) && (mx < mapwidth) && my >= 0 && mx >= 0) 
+            if ((my < mapheight) && (mx < mapwidth) && my >= 0 && mx >= 0)
             {
-                mxl = amapcolor[blockmap[mx + my * mapwidth]];
+                source = my * mapwidth + mx;
+                pixel = amapcolor[blockmap[source]];
             }
+            
             else
-            {
-                mxl = 0xcd;
-            }
-            *(collumnpointer[x] + planewidthlookup[y]) = mxl;
-            mx = mx + 1;
+                pixel = 0xcd;
+            
+            *(collumnpointer[x] + planewidthlookup[y]) = pixel;
         }
-        
-        my = my - 1;
     }
     V_MarkUpdateBlock(x1, y1, x2, y2);
-    return;
 }
 
 
@@ -577,7 +507,6 @@ void P_EnterAutoMap()
         ignorekeyboard++;
         P_DrawPlayScreen();
     }
-    return;
 }
 
 void P_ExitAutoMap(void)
@@ -585,7 +514,6 @@ void P_ExitAutoMap(void)
     automapup = 0;
     ignorekeyboard--;
     R_SetViewSize(config.viewsize, config.hdetail, 1);
-    return;
 }
 
 void P_RunAutoMap(char ch)
@@ -594,5 +522,4 @@ void P_RunAutoMap(char ch)
     {
         P_ExitAutoMap();
     }
-    return;
 }
