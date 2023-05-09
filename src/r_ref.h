@@ -132,14 +132,22 @@ typedef struct
 
 typedef enum
 {
-	ls_horziontal,
+	bottom,
+	left,
+	top,
+	right
+} bbox_t;
+
+typedef enum
+{
+	ls_horizontal,
 	ls_vertical,
 	ls_slope
 } lineslope_t;
 
 typedef struct
 {
-	short p1; // Symbol table implies they're shorts, not ptrs like final. Verify
+	short p1;
 	short p2;
 	short flags;
 	short length;

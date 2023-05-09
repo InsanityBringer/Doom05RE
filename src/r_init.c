@@ -43,13 +43,13 @@ fixed_t vscalelight;
 
 //ScalePost details
 int sp_x, sp_y1, sp_y2;
-uint8_t* sp_source;
+byte* sp_source;
 int sp_colormap;
 fixed_t sp_frac, sp_fracstep;
 
 //MapRow details
 int mr_x1, mr_x2, mr_y;
-uint8_t* mr_picture;
+byte* mr_picture;
 int mr_colormap;
 fixed_t mr_xfrac, mr_yfrac, mr_xstep, mr_ystep;
 

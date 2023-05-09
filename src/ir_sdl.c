@@ -34,8 +34,8 @@ int novideo;
 uint8_t* colormaps;
 uint16_t* wordcolormaps;
 
-uint8_t* lowcollumntable[320];
-uint8_t* highcollumntable[320];
+byte* lowcollumntable[320];
+byte* highcollumntable[320];
 
 uint8_t* hiresbuffer;
 int noplayblit;

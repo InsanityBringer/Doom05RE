@@ -18,6 +18,8 @@
 
 #include "r_ref.h"
 
+#define MAXPROCLINES 256
+
 typedef struct procline_s
 {
 	struct procline_s* prev;
@@ -36,6 +38,8 @@ typedef struct procline_s
 	int seg;
 	int sector;
 } procline_t;
+
+#define MAXFSEGS 128
 
 typedef struct
 {
@@ -75,7 +79,7 @@ typedef struct
 {
 	boolean rotate;
 	short lump[8];
-	uint8_t flip[8];
+	byte flip[8];
 } spriteframe_t;
 
 typedef struct
@@ -87,8 +91,8 @@ typedef struct
 #define MINZ (FRACUNIT*4)
 
 //ir_
-extern uint8_t* lowcollumntable[320];
-extern uint8_t* highcollumntable[320];
+extern byte* lowcollumntable[320];
+extern byte* highcollumntable[320];
 
 extern int windowx, windowy;
 extern int windoworg;
@@ -132,12 +136,12 @@ extern subsector_t* vissec;
 //r_init
 extern int viewheight, viewwidth;
 extern int sp_x, sp_y1, sp_y2;
-extern uint8_t* sp_source;
+extern byte* sp_source;
 extern int sp_colormap;
 extern fixed_t sp_frac, sp_fracstep;
 
 extern int mr_x1, mr_x2, mr_y;
-extern uint8_t* mr_picture;
+extern byte* mr_picture;
 extern int mr_colormap;
 extern fixed_t mr_xfrac, mr_yfrac, mr_xstep, mr_ystep;
 

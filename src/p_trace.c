@@ -37,7 +37,7 @@ int P_PointOnLineSide(int x, int y, line_t* line)
 
     switch (line->slopetype)
     {
-    case ls_horziontal:
+    case ls_horizontal:
 
         if (y == line->bbox[2])
         {
