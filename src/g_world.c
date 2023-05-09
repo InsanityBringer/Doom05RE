@@ -53,21 +53,23 @@ mappt_t mappts[16] =
 void G_WorldMap()
 {
     char* mapname;
+
     V_DrawPic(0, 0, (pic_t*)W_GetName("WORLD1"));
     IO_UpdateScreen();
     D_FadeIn(W_GetName("PLAYPAL"));
     IO_Ack();
+
     if (gameaction == ga_completed) 
     {
         do 
         {
-            if (gamestate.mappoint++ == 15) 
+            gamestate.mappoint++;
+            if (gamestate.mappoint == 15) 
             {
                 gameaction = ga_victory;
                 return;
             }
-            mapname = mappts[gamestate.mappoint].mapname;
-        } while (mapname == NULL);
+        } while (mappts[gamestate.mappoint].mapname == NULL);
     }
     G_WarpToMap(mappts[gamestate.mappoint].mapname);
     gameaction = ga_runmap;
