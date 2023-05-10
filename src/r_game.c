@@ -54,9 +54,6 @@ uint8_t** flatlookup;
 int numflats;
 int numpatches;
 
-procline_t proclines[256];
-forwardseg_t forwardsegs[128];
-
 int nummappatches;
 mappatch_t* mappatches;
 patch_t** patchlookup;
@@ -72,6 +69,75 @@ int* flattranslation;
 
 byte amapcolor[256];
 
+double round_(double value)
+{
+	int x;
+	x = floor(value + 0.5);
+	return (double)x;
+}
+
+void R_InitWorld(void)
+{
+	R_InitWorldTextures();
+}
+
+void R_InitTables(void)
+{
+	int i;
+	int intval;
+	double tang, value;
+	int j;
+	int level, startmap;
+
+	for (i = 0; i < 2048; i++)
+	{
+		tang = (((double)i + 0.5) * 3.14159265) / 4096.0;
+		value = sin(tang);
+
+		intval = (int)floor(round_(value * (double)FRACUNIT)); //Dunno why there's two calls into floor here, but it seems that way in the disassembly
+		sines[i] = intval;
+		sines[i + 8192] = intval;
+		sines[4095 - i] = intval;
+		sines[i + 4096] = -intval;
+		sines[8191 - i] = -intval;
+	}
+
+	cosines = &sines[2048];
+	cos45 = sines[3072];
+
+	for (i = 0; i < 832; i++)
+	{
+		startspans[i] = &spanlists[i * 16];
+	}
+
+	for (i = 0; i < 1152; i++)
+	{
+		viewfrontscale[i] = 0x7fffffff;
+		viewbackscale[i] = 0;
+	}
+	memset(forwardsegs, 0, sizeof(forwardsegs));
+	memset(proclines, 0, sizeof(proclines));
+
+	for (i = 0; i < 16; i++)
+	{
+		level = (15 - i) * 64;
+		for (j = 0; j < 48; j++)
+		{
+			startmap = level / 16 - j / 2;
+			if (startmap < 0)
+			{
+				startmap = 0;
+			}
+			if (startmap > 31)
+			{
+				startmap = 31;
+			}
+			scalelight[i * 48 + j] = startmap;
+		}
+	}
+
+}
+
 void R_InitLumps(void)
 {
 	int iVar1;
@@ -79,8 +145,7 @@ void R_InitLumps(void)
 	flatstartlump = W_GetNumForName("F_START");
 	numflats = W_GetNumForName("F_END");
 	numflats -= flatstartlump;
-	flatlookup = (uint8_t**)malloc(numflats * sizeof(uint8_t*));
-	//[ISB]
+	flatlookup = (byte**)malloc(numflats * sizeof(byte*));
 #ifdef ISB_LINT
 	if (flatlookup == NULL)
 	{
@@ -267,62 +332,6 @@ void R_LoadMapSectors(int maplump)
 	return;
 }
 
-void R_InitTables(void)
-{
-	int level;
-	int startmap;
-	float value;
-	fixed_t intval;
-	int i, j;
-
-	for (i = 0; i < 2048; i++)
-	{
-		value = sin((((double)i + 0.5) * 3.14159265) / 4096.0);
-
-		//[ISB] round is c99, needs replacement if backporting
-		intval = (int)round(value * 65536.0);
-		sines[i] = intval;
-		sines[i + 8192] = intval;
-		sines[4095 - i] = intval;
-		sines[i + 4096] = -intval;
-		sines[8191 - i] = -intval;
-	}
-	cosines = &sines[2048];
-	cos45 = sines[3072];
-	
-	for (i = 0; i < 832; i++)
-	{
-		startspans[i] = &spanlists[i * 16];
-	}
-	
-	for (i = 0; i < 1152; i++)
-	{
-		viewfrontscale[i] = 0x7fffffff;
-		viewbackscale[i] = 0;
-	}
-	memset((char*)forwardsegs, 0, sizeof(forwardsegs));
-	memset((char*)proclines, 0, sizeof(proclines));
-	for (i = 0; i < 16; i++)
-	{
-		level = (15 - i) * 64;
-		for (j = 0; j < 48; j++)
-		{
-			startmap = level / 16 - j / 2;
-			if (startmap < 0)
-			{
-				startmap = 0;
-			}
-			if (startmap > 31)
-			{
-				startmap = 31;
-			}
-			scalelight[i * 48 + j] = startmap;
-		}
-	}
-	return;
-}
-
-
 void R_InitBlockMap(void)
 {
 	int iVar1;
@@ -499,10 +508,5 @@ void R_LoadMap(char* name)
 	maploaded = 1;
 	extralight = 0;
 	return;
-}
-
-void R_InitWorld(void)
-{
-	R_InitWorldTextures();
 }
 

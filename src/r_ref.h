@@ -248,7 +248,7 @@ extern int spanlists[];
 extern fixed_t sines[];
 extern fixed_t* cosines;
 
-extern uint8_t** flatlookup;
+extern byte** flatlookup;
 
 extern fixed_t scalelight[];
 
@@ -305,3 +305,4 @@ void R_SizeDown();
 void R_StartInstanceDrawing();
 int R_ClearBuffer();
 
+void R_InitWorldTextures(void);

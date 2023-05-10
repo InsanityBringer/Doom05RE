@@ -45,7 +45,7 @@ void R_MapRowHigh(void)
 
 	local_8 = mr_x1;
 	iVar1 = &colormaps[mr_colormap * 256];
-	local_14 = screenbuffer + (int)(planewidthlookup[mr_y + windowy] + (mr_x1 + windowx >> 2));
+	local_14 = screenbuffer + planewidthlookup[mr_y + windowy] + (mr_x1 + windowx >> 2);
 	local_10 = ((mr_x1 + windowx) & 3U) * 16000;
 
 	do

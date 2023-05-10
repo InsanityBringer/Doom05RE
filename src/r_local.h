@@ -39,6 +39,8 @@ typedef struct procline_s
 	int sector;
 } procline_t;
 
+extern procline_t proclines[MAXPROCLINES];
+
 #define MAXFSEGS 128
 
 typedef struct
@@ -59,6 +61,8 @@ typedef struct
 	maptexture_t* texture;
 	int bottomtexture;
 } forwardseg_t;
+
+extern forwardseg_t forwardsegs[MAXFSEGS];
 
 typedef struct
 {
