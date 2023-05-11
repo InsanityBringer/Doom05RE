@@ -50,6 +50,7 @@ typedef struct
 	short special;
 	short tag;
 	short linecount;
+	short lines[1];
 } mapsector_t;
 
 typedef struct
@@ -229,6 +230,10 @@ extern fixed_t maporiginx, maporiginy;
 extern int mapwidth, mapheight;
 extern byte* blockmap;
 
+#define MAPBLOCKUNITS 16
+#define MAPBLOCKSIZE (MAPBLOCKUNITS*FRACUNIT)
+#define MAPBLOCKSHIFT 20
+
 #define BMF_CHECKLINES				1 //Check lines of the thing's sector for collisions in this cell
 #define BMF_SOLID					2 //This cell is solid
 #define BMF_GETTABLE				4 //This cell contains a gettable item
@@ -304,5 +309,3 @@ void R_SizeUp();
 void R_SizeDown();
 void R_StartInstanceDrawing();
 int R_ClearBuffer();
-
-void R_InitWorldTextures(void);

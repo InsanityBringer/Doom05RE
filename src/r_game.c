@@ -49,7 +49,7 @@ fixed_t maporiginx, maporiginy;
 int mapwidth, mapheight;
 byte* blockmap;
 
-uint8_t** flatlookup;
+byte** flatlookup;
 
 int numflats;
 int numpatches;
@@ -72,8 +72,74 @@ byte amapcolor[256];
 double round_(double value)
 {
 	int x;
-	x = floor(value + 0.5);
+	//TODO: This is reliant on int typecasts being a floor operation. It seems this is the case in most compilers.
+	//It isn't spec guaranteed, but using floor here would add an additional floor operation in Watcom, since it returns double. 
+	x = (int)(value + 0.5);
 	return (double)x;
+}
+
+int R_AddTexture(maptexture_t* texture)
+{
+	if (numtextures == texturelookupsize)
+	{
+		texturelookupsize = texturelookupsize + 64;
+		texturelookup = (maptexture_t**)realloc(texturelookup, texturelookupsize * sizeof(maptexture_t*));
+#ifdef ISB_LINT
+		if (texturelookup == NULL)
+		{
+			IO_Error("R_AddTexture: can't expand texture lookups");
+			return;
+		}
+#endif
+	}
+	texturelookup[numtextures] = texture;
+	return numtextures++;
+}
+
+void R_InitWorldTextures(void)
+{
+	maptexture_t* texture;
+	patch_t* patch;
+	int i, j;
+	int* maptex;
+	char name[9];
+	char* names;
+
+	name[8] = '\0';
+	names = (char*)W_GetName("PNAMES");
+	nummappatches = *(int*)names;
+	((int*)names)++;
+	patchlookup = (mappatch_t**)malloc(nummappatches * sizeof(mappatch_t*));
+#ifdef ISB_LINT
+	if (patchlookup == NULL)
+	{
+		IO_Error("R_InitWorldTextures: can't allocate patchlookup\n");
+		return;
+	}
+#endif
+	for (i = 0; i < nummappatches; i++)
+	{
+		strncpy(name, names + i * 8, 8);
+		patchlookup[i] = W_GetName(name);
+	}
+	maptex = (int*)W_GetName("TEXTURES");
+	basetextures = *maptex;
+	numtextures = 0;
+	texturelookupsize = basetextures + 64;
+	texturelookup = (maptexture_t**)malloc(texturelookupsize * sizeof(maptexture_t*));
+#ifdef ISB_LINT
+	if (texturelookup == NULL)
+	{
+		IO_Error("R_InitWorldTextures: can't allocate texturelookup\n");
+		return;
+	}
+#endif
+	for (i = 0; i < basetextures; i++)
+	{
+		texture = (maptexture_t*)(((char*)maptex) + maptex[i + 1]);
+		R_AddTexture(texture);
+	}
+	return;
 }
 
 void R_InitWorld(void)
@@ -94,7 +160,7 @@ void R_InitTables(void)
 		tang = (((double)i + 0.5) * 3.14159265) / 4096.0;
 		value = sin(tang);
 
-		intval = (int)floor(round_(value * (double)FRACUNIT)); //Dunno why there's two calls into floor here, but it seems that way in the disassembly
+		intval = (int)round_(value * (double)FRACUNIT);
 		sines[i] = intval;
 		sines[i + 8192] = intval;
 		sines[4095 - i] = intval;
@@ -140,11 +206,10 @@ void R_InitTables(void)
 
 void R_InitLumps(void)
 {
-	int iVar1;
+	int i;
 
 	flatstartlump = W_GetNumForName("F_START");
-	numflats = W_GetNumForName("F_END");
-	numflats -= flatstartlump;
+	numflats = W_GetNumForName("F_END") - flatstartlump;
 	flatlookup = (byte**)malloc(numflats * sizeof(byte*));
 #ifdef ISB_LINT
 	if (flatlookup == NULL)
@@ -153,65 +218,56 @@ void R_InitLumps(void)
 		return;
 	}
 #endif
-	for (iVar1 = 0; iVar1 < numflats; iVar1++)
+	for (i = 0; i < numflats; i++)
 	{
-		flatlookup[iVar1] = (uint8_t*)lumpinfo[flatstartlump + iVar1].position;
+		flatlookup[i] = (byte*)lumpinfo[flatstartlump + i].position;
 	}
 	patchstartlump = W_GetNumForName("P_START");
-	iVar1 = W_GetNumForName("P_END");
-	numpatches = iVar1 - patchstartlump;
-	return;
+	numpatches = W_GetNumForName("P_END") - patchstartlump;
 }
 
-void R_LoadMapPlanes(int lump)
+void R_LoadMapPlanes(int maplump)
 {
-	int iVar1;
-	int* local_20;
-	int iVar2;
-	char buf[8];
-
-	local_20 = (int*)W_GetLump(lump + 1);
-	nummapflats = *local_20;
-	local_20 = local_20 + 1;
-	flattranslation = Z_Malloc(playzone, nummapflats * sizeof(int*));
-	iVar2 = 0;
-	while (iVar2 < nummapflats) 
-	{
-		strncpy(&buf[0], (char*)(local_20 + iVar2 * 2), 8);
-		iVar1 = W_GetNumForName(buf);
-		flattranslation[iVar2] = iVar1 - flatstartlump;
-		iVar2 = iVar2 + 1;
-	}
-	return;
-}
-
-
-void R_LoadMapThings(int lump)
-{
-	int* mapthings;
-	int numthings;
-	mapthing_t* mapthing;
+	int* names;
+	char name[9];
 	int i;
 
-	mapthings = (int*)W_GetLump(lump + 5);
-	numthings = *mapthings;
-	mapthing = (mapthing_t*)(mapthings + 1);
-	for (i = 0; i < numthings; i++)
+	name[8] = '\0';
+	names = (int*)W_GetLump(maplump + 1);
+	nummapflats = *names++;
+
+	flattranslation = Z_Malloc(playzone, nummapflats * sizeof(int*));
+	
+	for (i = 0; i < nummapflats; i++)
+	{
+		strncpy(&name[0], (char*)(names + i * 2), 8);
+		flattranslation[i] = W_GetNumForName(name) - flatstartlump;
+	}
+}
+
+void R_LoadMapThings(int maplump)
+{
+	int i;
+	int* mapthings;
+	mapthing_t* mapthing;
+	int numthings;
+
+	mapthings = (int*)W_GetLump(maplump + 5);
+	numthings = *mapthings++;
+
+	for (mapthing = (mapthing_t*)mapthings, i = 0; i < numthings; i++, mapthing++)
 	{
 		P_InitThing(mapthing);
-		//[ISB] TODO: Alignment safe some of this code. Or just disable alignment...
-		mapthing++;
 	}
-	return;
 }
 
 void R_LoadMapPoints(int maplump)
 {
+	int i;
 	mapvertex_t* mp;
 	point_t* pt;
-	int i;
 
-	mp = (int32_t*)W_GetLump(maplump + 2);
+	mp = (mapvertex_t*)W_GetLump(maplump + 2);
 	numpoints = *(int*)mp;
 	((int*)mp)++;
 	points = (point_t*)Z_Malloc(playzone, numpoints * sizeof(point_t));
@@ -223,244 +279,137 @@ void R_LoadMapPoints(int maplump)
 		pt++;
 		mp++;
 	}
-	return;
 }
 
 void R_LoadMapLines(int maplump)
 {
-	int* piVar1;
-	side_t* psVar2;
-	unsigned int local_3c;
-	side_t* local_34;
-	line_t* local_2c;
-	mapline_t* local_24;
-	int local_20;
-	int iStack28;
+	int i, s;
+	mapline_t* ml;
+	mapline_t* maplines;
+	line_t* li;
+	mapside_t* ms;
+	side_t* si;
 
-	piVar1 = (int*)W_GetLump(maplump + 3);
-	numlines = *piVar1;
+	maplines = (mapline_t*)W_GetLump(maplump + 3);
+	numlines = *(int*)maplines;
+	((int*)maplines)++;
 	numsides = 0;
-	iStack28 = 0;
-	local_24 = (mapline_t*)(piVar1 + 1);
-	while (iStack28 < numlines) 
+
+	for (ml = maplines, i = 0; i < numlines; i++, ml++)
 	{
-		if (!(local_24->flags & 4)) 
-		{
-			numsides += 1;
-		}
-		else 
-		{
+		if (ml->flags & ML_TWOSIDED)
 			numsides += 2;
-		}
-		iStack28 = iStack28 + 1;
-		local_24 = local_24 + 1;
+		else
+			numsides++;
 	}
+
 	lines = (line_t*)Z_Malloc(playzone, numlines * sizeof(line_t));
 	sides = (side_t*)Z_Malloc(playzone, numsides * sizeof(side_t));
-	local_2c = lines;
-	iStack28 = 0;
-	local_34 = sides;
-	local_24 = (mapline_t*)(piVar1 + 1);
-	while (iStack28 < numlines) 
+
+	ml = maplines;
+	li = lines;
+	si = sides;
+	for (i = 0; i < numlines; i++)
 	{
-		local_2c->p1 = local_24->p1;
-		local_2c->p2 = local_24->p2;
-		local_2c->special = local_24->special;
-		local_2c->tag = local_24->tag;
-		local_2c->flags = local_24->flags;
-		local_2c->length = local_24->length;
-		R_SetLineTypeAndBox(iStack28);
-		local_20 = 0;
-		while (local_3c = ((local_2c->flags & 4U) != 0), local_20 <= (int)local_3c) 
+		li->p1 = ml->p1;
+		li->p2 = ml->p2;
+		li->special = ml->special;
+		li->tag = ml->tag;
+		li->flags = ml->flags;
+		li->length = ml->length;
+		R_SetLineTypeAndBox(i);
+		for (s = 0; s <= ((ml->flags & ML_TWOSIDED) ? 1 : 0); s++, si++)
 		{
-			local_2c->side[local_20] = (int)(local_34 - sides);
-			psVar2 = local_24->side + local_20;
-			local_34->sector = psVar2->firstcollumn;
-			local_34->firstcollumn = psVar2->texturetop;
-			local_34->midtexture = psVar2->midtexture;
-			local_34->toptexture = psVar2->toptexture;
-			local_34->bottomtexture = psVar2->bottomtexture;
-			local_20 = local_20 + 1;
-			local_34 = local_34 + 1;
+			li->side[s] = (int)(si - sides);
+			ms = &ml->side[s];
+			si->sector = ms->firstcollumn;
+			si->firstcollumn = ms->texturetop;
+			si->midtexture = ms->midtexture;
+			si->toptexture = ms->toptexture;
+			si->bottomtexture = ms->bottomtexture;
 		}
-		local_24 = local_24 + 1;
-		local_2c = local_2c + 1;
-		iStack28 = iStack28 + 1;
+		ml++;
+		li++;
 	}
-	return;
 }
 
 void R_LoadMapSectors(int maplump)
 {
-	int* piVar1;
-	sector_t* local_2c;
-	short* local_28;
-	int* local_24;
-	int local_20;
-	int iVar2;
+	int i, j;
+	int* mapsectors;
+	mapsector_t* me;
+	sector_t* en;
 
-	local_24 = (int*)W_GetLump(maplump + 4);
-	numsectors = *local_24;
+	mapsectors = (int*)W_GetLump(maplump + 4);
+	numsectors = *mapsectors;
 	sectors = (sector_t*)Z_Malloc(playzone, numsectors * sizeof(sector_t));
-	iVar2 = 0;
-	local_2c = sectors;
-	//[ISB] I'll clean this hideous mess up later, since the variable data length structures make this a very Fun task.
-	while (iVar2 < numsectors) 
+
+	en = sectors;
+	for (i = 0; i < numsectors; i++)
 	{
-		local_28 = (short*)((int)local_24 + local_24[iVar2 + 1]);
-		local_2c->floorheight = (int)* local_28 << FRACBITS;
-		local_2c->ceilingheight = (int)local_28[1] << FRACBITS;
-		local_2c->floortexture = (short)flattranslation[(int)local_28[2]];
-		local_2c->ceilingtexture = (short)flattranslation[(int)local_28[3]];
-		local_2c->lightlevel = local_28[4];
-		local_2c->special = local_28[5];
-		local_2c->tag = local_28[6];
-		local_2c->linecount = (int)local_28[7];
-		piVar1 = (int*)Z_Malloc(playzone, local_2c->linecount * sizeof(line_t*));
-		local_2c->lines = piVar1;
-		local_2c->things = (thing_t*)NULL;
-		local_2c->specialdata = 0;
-		local_20 = 0;
-		while (local_20 < local_2c->linecount) 
-		{
-			local_2c->lines[local_20] = (int)local_28[local_20 + 8];
-			local_20 = local_20 + 1;
-		}
-		local_2c++;
-		iVar2++;
+		me = (mapsector_t*)(((char*)mapsectors) + mapsectors[i + 1]);
+		en->floorheight = me->floorheight << FRACBITS;
+		en->ceilingheight = me->ceilingheight << FRACBITS;
+		en->floortexture = flattranslation[me->floortexture];
+		en->ceilingtexture = flattranslation[me->ceilingtexture];
+		en->lightlevel = me->lightlevel;
+		en->special = me->special;
+		en->tag = me->tag;
+		en->linecount = me->linecount;
+		en->lines = Z_Malloc(playzone, en->linecount * sizeof(int));
+		en->things = NULL;
+		en->specialdata = NULL;
+		for (j = 0; j < en->linecount; j++)
+			en->lines[j] = (int)me->lines[j];
+
+		en++;
 	}
-	return;
 }
 
 void R_InitBlockMap(void)
 {
-	int iVar1;
-	int iVar2;
-	int local_34;
-	int local_30;
-	int local_2c;
-	int local_28;
-	int linenum;
-	unsigned int uVar3;
+	int i, x, y;
+	int left, right, top, bottom;
 
-	local_28 = INT_MAX;
-	local_2c = INT_MIN;
-	local_30 = INT_MIN;
-	local_34 = INT_MAX;
-	linenum = 0;
-	while (linenum < numpoints) 
+	left = INT_MAX;
+	right = INT_MIN;
+	top = INT_MIN;
+	bottom = INT_MAX;
+	
+	for (i = 0; i < numpoints; i++)
 	{
-		iVar1 = points[linenum].x;
-		iVar2 = points[linenum].y;
-		if (iVar1 < local_28) 
-		{
-			local_28 = iVar1;
-		}
-		if (local_2c < iVar1) 
-		{
-			local_2c = iVar1;
-		}
-		if (iVar2 < local_34) 
-		{
-			local_34 = iVar2;
-		}
-		if (local_30 < iVar2) 
-		{
-			local_30 = iVar2;
-		}
-		linenum = linenum + 1;
+		x = points[i].x;
+		y = points[i].y;
+		if (x < left) 
+			left = x;
+		
+		if (x > right) 
+			right = x;
+		
+		if (y < bottom) 
+			bottom = y;
+		
+		if (y > top) 
+			top = y;
 	}
-	maporiginx = (local_28 >> 0x14) * 0x100000;
-	maporiginy = (local_34 >> 0x14) * 0x100000;
-	mapwidth = ((local_2c >> 0x14) * 0x100000 + (local_28 >> 0x14) * -0x100000 >> 0x14) + 1;
-	mapheight = ((local_30 >> 0x14) * 0x100000 + (local_34 >> 0x14) * -0x100000 >> 0x14) + 1;
+
+	maporiginx = (left >> MAPBLOCKSHIFT) * MAPBLOCKSIZE;
+	maporiginy = (bottom >> MAPBLOCKSHIFT) * MAPBLOCKSIZE;
+	mapwidth = ((right >> MAPBLOCKSHIFT) * MAPBLOCKSIZE + (left >> MAPBLOCKSHIFT) * -MAPBLOCKSIZE >> MAPBLOCKSHIFT) + 1;
+	mapheight = ((top >> MAPBLOCKSHIFT) * MAPBLOCKSIZE + (bottom >> MAPBLOCKSHIFT) * -MAPBLOCKSIZE >> MAPBLOCKSHIFT) + 1;
 	blockmap = Z_Malloc(playzone, mapwidth * mapheight);
-	memset((char*)blockmap, 0, mapwidth * mapheight);
-	uVar3 = 0;
-	while ((int)uVar3 < 0xff) 
+	memset(blockmap, 0, mapwidth * mapheight);
+
+	for (i = 0; i < 255; i++)
 	{
-		if ((uVar3 & BMF_MAPPED) == 0) 
-		{
-			amapcolor[uVar3] = 205;
-		}
+		if ((i & BMF_MAPPED) == 0) 
+			amapcolor[i] = 205;
 		else 
-		{
-			amapcolor[uVar3] = 200;
-		}
-		uVar3++;
+			amapcolor[i] = 200;
 	}
-	linenum = 0;
-	while (linenum < numlines)
-	{
-		R_DrawBlockLine(linenum, BMF_CHECKLINES);
-		linenum++;
-	}
-	return;
-}
 
-void R_AddTexture(maptexture_t* texture)
-{
-	maptexture_t** newtexturelookup;
-
-	if (numtextures == texturelookupsize) 
-	{
-		texturelookupsize = texturelookupsize + 64;
-		newtexturelookup = (maptexture_t**)realloc(texturelookup, texturelookupsize * sizeof(maptexture_t*));
-#ifdef ISB_LINT
-		if (newtexturelookup == NULL)
-		{
-			IO_Error("R_AddTexture: can't expand texture lookups");
-			return;
-		}
-#endif
-		texturelookup = newtexturelookup;
-	}
-	texturelookup[numtextures] = texture;
-	numtextures++;
-}
-
-void R_InitWorldTextures(void)
-{
-	patch_t* patch;
-	char* names;
-	int i;
-	char name[8];
-	int* textures;
-
-	names = (char*)W_GetName("PNAMES");
-	nummappatches = *(int*)names;
-	((int*)names)++;
-	patchlookup = (mappatch_t * *)malloc(nummappatches * sizeof(mappatch_t*));
-#ifdef ISB_LINT
-	if (patchlookup == NULL)
-	{
-		IO_Error("R_InitWorldTextures: can't allocate patchlookup\n");
-		return;
-	}
-#endif
-	for (i = 0; i < nummappatches; i++)
-	{
-		strncpy(name, (char*)(names + i * 8), 8);
-		patch = (patch_t*)W_GetName(name);
-		patchlookup[i] = patch;
-	}
-	textures = (int*)W_GetName("TEXTURES");
-	basetextures = *textures;
-	numtextures = 0;
-	texturelookupsize = basetextures + 64;
-	texturelookup = (maptexture_t * *)malloc(texturelookupsize * sizeof(maptexture_t*));
-#ifdef ISB_LINT
-	if (texturelookup == NULL)
-	{
-		IO_Error("R_InitWorldTextures: can't allocate texturelookup\n");
-		return;
-	}
-#endif
-	for (i = 0; i < basetextures; i++) 
-	{
-		R_AddTexture((maptexture_t*)(((char*)textures) + textures[i + 1]));
-	}
-	return;
+	for (i = 0; i < numlines; i++)
+		R_DrawBlockLine(i, BMF_CHECKLINES);
 }
 
 void R_UnloadMap()
