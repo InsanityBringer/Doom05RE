@@ -61,11 +61,6 @@ fixed_t xproject, yproject;
 vissprite_t pshape8;
 fixed_t pshapexscale;
 
-int DAT_00069b94[640];
-int DAT_0006ad14[640];
-
-fixed_t yslope[832];
-
 void(*R_MapRow)();
 void(*R_RawScale)();
 
@@ -78,90 +73,117 @@ void R_Startup()
 	R_InitVideoDevice();
 }
 
-void R_TransformVertex(point_t* source, vertex_t* destination)
-{
-	//longlong lVar1;
-	//longlong lVar2;
-	int iVar3;
-	int iVar4;
-
-	iVar3 = source->x - viewx;
-	iVar4 = source->y - viewy;
-
-	destination->tx = -FixedMul(iVar4, viewcos) + FixedMul(iVar3, viewsin);
-	destination->tz = (FixedMul(iVar3, viewcos) + FixedMul(iVar4, viewsin));
-
-	destination->flags = 0;
-	if (destination->tz < destination->tx)
-	{
-		destination->flags = 1;
-	}
-	if (-destination->tz != destination->tx && destination->tz <= -destination->tx)
-	{
-		destination->flags |= 2;
-	}
-	return;
-}
-
 void R_ChangeWindow(int width, int height, fixed_t vertscale)
 {
-	int uVar1;
-	int iVar2;
+	int i;
 
 	centerx = width / 2;
 	centery = (height * 2) / 5;
 	centerxfrac = centerx << FRACBITS;
 	centeryfrac = centery << FRACBITS;
-	
-	yproject = FixedMul(centerxfrac, vertscale);
-	vscalelight = FixedDiv(0xa00000, yproject);
-	pshape8.iscale = FixedDiv(0x1400000, width * vertscale);
-	pshape8.scale = FixedDiv(width * vertscale, 0x1400000);
-	pshape8.fracstep = FixedDiv(0x1400000, width << FRACBITS);
-	pshapexscale = FixedDiv(width << FRACBITS, 0x1400000);
 
-	iVar2 = 0;
+	yproject = FixedMul(centerxfrac, vertscale);
+	vscalelight = FixedDiv((SCREENWIDTH / 2) * FRACUNIT, yproject);
+	pshape8.iscale = FixedDiv(SCREENWIDTH * FRACUNIT, width * vertscale);
+	pshape8.scale = FixedDiv(width * vertscale, SCREENWIDTH * FRACUNIT);
+	pshape8.fracstep = FixedDiv(SCREENWIDTH * FRACUNIT, width << FRACBITS);
+	pshapexscale = FixedDiv(width << FRACBITS, SCREENWIDTH * FRACUNIT);
+
 	viewheight = height;
 	viewwidth = width;
 	xproject = centerxfrac;
-	while (iVar2 < (int)viewwidth) 
+	for (i = 0; i < viewwidth; i++)
 	{
-		viewfloorpixels[iVar2] = viewheight;
-		viewceilingpixels[iVar2] = -1;//0xffffffff;
-		iVar2++;
+		viewfloorpixels[i] = viewheight;
+		viewceilingpixels[i] = -1;
 	}
 
-	for (iVar2 = 0; iVar2 < viewheight; iVar2++)
-	{
-		uVar1 = ((iVar2 - centery) << FRACBITS) + 0x8000;
-		yslope[iVar2] = FixedDiv(uVar1, yproject);
-	}
+	for (i = 0; i < viewheight; i++)
+		yslope[i] = FixedDiv(((i - centery) << FRACBITS) + 0x8000, yproject);
+}
+
+void R_TransformVertex(point_t* source, vertex_t* dest)
+{
+	fixed_t trx, try; //[ISB] oops, C++ reserved word...
+	fixed_t gxt, gyt;
+
+	trx = source->x - viewx;
+	try = source->y - viewy;
+
+	gxt = -FixedMul(trx, viewsin);
+	gyt = FixedMul(try, viewcos);
+
+	dest->tx = -(gyt + gxt);
+
+	gxt = FixedMul(trx, viewcos);
+	gyt = -FixedMul(try, viewsin);
+	dest->tz = gxt - gyt;
+
+	dest->flags = 0;
+	if (dest->tz < dest->tx)
+		dest->flags = 1;
+	
+	if (-dest->tz != dest->tx && dest->tz <= -dest->tx)
+		dest->flags |= 2;
 }
 
 int R_LightFromVScale(fixed_t scale)
 {
-	int uVar1;
+	int index;
 
-	uVar1 = FixedMul(scale, vscalelight) >> 0xc;
-	if (0x2f < uVar1) 
-	{
-		uVar1 = 0x2f;
-	}
-	return uVar1;
+	index = FixedMul(scale, vscalelight) >> 12;
+	if (index > 47) 
+		index = 47;
+
+	return index;
 }
 
 int R_LightFromZ(fixed_t z)
 {
-	//TODO: This occasionally (if your head pokes in the ceiling) produces an insane value from a negative input
-	//determine if that's accurate.
-	int local_20;
+	//This occasionally (if your head pokes in the ceiling) produces an insane value from a negative input.
+	//This seems to be accurate behavior. 
+	int index;
 
-	local_20 = FixedMul(FixedDiv(yproject, z), vscalelight) >> 0xc;
-	if (0x2f < local_20) 
-	{
-		local_20 = 0x2f;
-	}
-	return local_20;
+	index = FixedMul(FixedDiv(yproject, z), vscalelight) >> 12;
+	if (index > 47) 
+		index = 47;
+	
+	return index;
+}
+
+void R_DrawPlayerShape(int sprite, int frame, int sx, int sy)
+{
+	int x1, x2;
+	patch_t* patch;
+	int lump;
+	spritedef_t* sprdef;
+
+	if (sprite >= numsprites)
+		IO_Error("R_DrawPlayerShape: invalid sprite number %i ", sprite);
+	
+	sprdef = &sprites[sprite];
+	if (sprdef->numframes <= frame)
+		IO_Error("R_DrawPlayerShape: invalid sprite frame %i : %i", sprite, frame);
+	
+	lump = sprdef->spriteframes[frame].lump[0];
+	patch = (patch_t*)lumpinfo[lump].position;
+	pshape8.patch = patch;
+
+	sx -= patch->leftoffs + (SCREENWIDTH / 2);
+	sy -= patch->topoffset + (SCREENHEIGHT / 2);
+
+	x1 = pshape8.x1 = FixedMul(sx, pshapexscale) + centerx;
+	x2 = pshape8.x2 = x1 + FixedMul(pshape8.patch->width, pshapexscale);
+
+	if (x1 < 0)
+		x1 = 0;
+	
+	x2--;
+	if (x2 >= viewwidth)
+		x2 = viewwidth - 1;
+	
+	pshape8.topscreen = centeryfrac + sy * pshape8.scale;
+	R_DrawSprite(x1, x2, &pshape8);
 }
 
 void R_RenderView(int sectornum, fixed_t x, fixed_t y, fixed_t z, int angle)
@@ -196,46 +218,5 @@ void R_RenderView(int sectornum, fixed_t x, fixed_t y, fixed_t z, int angle)
 	inscale = &viewfrontscale[0];
 	outscale = &viewbackscale[0];
 	pshape8.colormap = scalelight[((int)sectors[sectornum].lightlevel >> 4) * 0x30 + 0x2f];
-	return;
-}
-
-void R_DrawPlayerShape(int sprite, int frame, int sx, int sy)
-{
-	int local_14;
-	int local_34;
-	int local_30;
-	int local_28;
-	spritedef_t* local_20;
-	int xclipl;
-
-	local_34 = sprite;
-	local_30 = frame;
-	local_28 = sy;
-	if (numsprites <= sprite) 
-	{
-		IO_Error("R_DrawPlayerShape: invalid sprite number %i\n", sprite);
-	}
-	local_20 = &sprites[local_34];
-	if (local_20->numframes <= frame) 
-	{
-		IO_Error("R_DrawPlayerShape: invalid sprite frame %i : %i", local_34, local_30);
-	}
-
-	pshape8.patch = (patch_t*)lumpinfo[local_20->spriteframes[local_30].lump[0]].position;
-
-	pshape8.x1 = FixedMul(sx - pshape8.patch->leftoffs - 0xa0, pshapexscale) + centerx;
-	pshape8.x2 = pshape8.x1 + FixedMul(pshape8.patch->width, pshapexscale);
-	xclipl = pshape8.x1;
-	if (pshape8.x1 < 0) 
-	{
-		xclipl = 0;
-	}
-	local_14 = pshape8.x2 + -1;
-	if (viewwidth <= local_14) 
-	{
-		local_14 = viewwidth + -1;
-	}
-	pshape8.topscreen = centeryfrac + (local_28 - pshape8.patch->topoffset + -100) * pshape8.scale;
-	R_DrawSprite(xclipl, local_14, &pshape8);
 	return;
 }

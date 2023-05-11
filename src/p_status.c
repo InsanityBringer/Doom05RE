@@ -418,8 +418,8 @@ void P_DrawPlayerMarker(player_t* player)
     int x;
     int y;
 
-    x = player->r->x - amaporgx >> 20;
-    y = amaporgy - player->r->y >> 20;
+    x = player->r->x - amaporgx >> MAPBLOCKSHIFT;
+    y = amaporgy - player->r->y >> MAPBLOCKSHIFT;
     P_AMapPlot(x, y, 0xb4);
     switch ((int)(player->r->angle + 0x200U & 0x1fff) >> 10)
     {
@@ -467,8 +467,8 @@ void P_DrawAMap(int x1, int y1, int x2, int y2, int mapx, int mapy)
     int source;
     byte pixel;
 
-    my = mapy - maporiginy >> 20;
-    mx1 = mapx - maporiginx >> 20;
+    my = mapy - maporiginy >> MAPBLOCKSHIFT;
+    mx1 = mapx - maporiginx >> MAPBLOCKSHIFT;
     
     for (y = y1; y <= y2; y++, my--)
     {

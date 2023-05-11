@@ -22,59 +22,60 @@
 #include <math.h>
 #include <limits.h>
 
-fixed_t sines[10240];
-fixed_t* cosines;
-fixed_t cos45;
-
 int maploaded;
+
+int numsectors;
+sector_t* sectors;
+
+int mapheight;
+
+int numpoints;
+point_t* points;
+
+int numpatches;
+int nummappatches;
+mappatch_t* mappatches;
+
+int flatstartlump;
+int patchstartlump;
+
+fixed_t cos45;
+fixed_t* cosines;
 
 int numlines;
 line_t* lines;
 
-int numsectors;
-sector_t* sectors;
+int basetextures;
+int numtextures;
+
+int numflats;
+int nummapflats;
+int* flattranslation;
+
+fixed_t maporiginy, maporiginx;
+
+byte** flatlookup;
+patch_t** patchlookup;
+maptexture_t** texturelookup;
+
+byte* blockmap;
+
+int texturelookupsize;
+
+int mapwidth;
 
 int numsides;
 side_t* sides;
 
 fixed_t scalelight[768];
-
-int numpoints;
-point_t* points;
-
-int flatstartlump;
-int patchstartlump;
-
-fixed_t maporiginx, maporiginy;
-int mapwidth, mapheight;
-byte* blockmap;
-
-byte** flatlookup;
-
-int numflats;
-int numpatches;
-
-int nummappatches;
-mappatch_t* mappatches;
-patch_t** patchlookup;
-
-int basetextures;
-int numtextures;
-
-int texturelookupsize;
-maptexture_t** texturelookup;
-
-int nummapflats;
-int* flattranslation;
+fixed_t sines[10240];
+fixed_t yslope[832];
 
 byte amapcolor[256];
 
 double round_(double value)
 {
-	int x;
-	//TODO: This is reliant on int typecasts being a floor operation. It seems this is the case in most compilers.
-	//It isn't spec guaranteed, but using floor here would add an additional floor operation in Watcom, since it returns double. 
-	x = (int)(value + 0.5);
+	int x = (int)(value + 0.5);
 	return (double)x;
 }
 
@@ -414,16 +415,14 @@ void R_InitBlockMap(void)
 
 void R_UnloadMap()
 {
-	int iVar1;
+	int i;
+	maptexture_t* tex;
 
-	iVar1 = basetextures;
-	while (iVar1 < numtextures) 
+	for (i = basetextures; i < numtextures; i++)
 	{
-		if (texturelookup[iVar1]->collumndirectory != (void**)0x0) 
-		{
-			Z_CacheFree(texturelookup[iVar1]);
-		}
-		iVar1 = iVar1 + 1;
+		tex = texturelookup[i];
+		if (tex->collumndirectory != NULL) 
+			Z_CacheFree(tex);
 	}
 	maploaded = 0;
 	numsectors = 0;
@@ -432,21 +431,17 @@ void R_UnloadMap()
 	numtextures = basetextures;
 	nummapflats = 0;
 	numsides = 0;
-
-	return;
 }
 
 void R_LoadMap(char* name)
 {
 	int maplump;
-	char* mapname;
 
-	mapname = name;
 	if (maploaded != 0) 
 	{
 		R_UnloadMap();
 	}
-	maplump = W_GetNumForName(mapname);
+	maplump = W_GetNumForName(name);
 	R_LoadMapPlanes(maplump);
 	R_LoadMapPoints(maplump);
 	R_LoadMapLines(maplump);
@@ -456,6 +451,5 @@ void R_LoadMap(char* name)
 	P_SpawnSpecialSectors();
 	maploaded = 1;
 	extralight = 0;
-	return;
 }
 

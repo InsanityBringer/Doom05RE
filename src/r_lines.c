@@ -770,8 +770,8 @@ void R_DrawBlockLine(int linenum, byte bits)
 
         for (i = 0; i < line->length; i++)
         {
-            x = (pt.x - maporiginx) >> 20;
-            y = (pt.y - maporiginy) >> 20;
+            x = (pt.x - maporiginx) >> MAPBLOCKSHIFT;
+            y = (pt.y - maporiginy) >> MAPBLOCKSHIFT;
 
             blockmap[y * mapwidth + x] |= bits;
 
