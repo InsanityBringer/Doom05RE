@@ -32,137 +32,148 @@ int newvissprite;
 
 void R_DrawSprite(int xclipl, int xcliph, vissprite_t* spr)
 {
-	int frac;
+	byte* collumn;
 	int texturecollumn;
-	uint8_t* collumn;
+	fixed_t frac;
+	fixed_t topscreen, bottomscreen;
 
-	if (spr->x1 < xclipl) 
+	if (spr->x1 < xclipl)
 	{
 		frac = spr->fracstep * (xclipl - spr->x1);
-		sp_x = xclipl;
 		if (spr->fracstep < 0)
-		{
-			frac = frac + spr->patch->width * FRACUNIT + -1;
-		}
+			frac = frac + spr->patch->width * FRACUNIT - 1;
 	}
-	else 
+	else
 	{
-		sp_x = spr->x1;
-		if (spr->fracstep < 0) 
-		{
-			frac = spr->patch->width * FRACUNIT + -1;
-		}
-		else 
-		{
+		xclipl = spr->x1;
+		if (spr->fracstep < 0)
+			frac = spr->patch->width * FRACUNIT - 1;
+		else
 			frac = 0;
-		}
 	}
 
-	if (spr->x2 < xcliph)
-	{
+	if (xcliph > spr->x2)
 		xcliph = spr->x2;
-	}
+
 	sp_colormap = spr->colormap;
 	sp_fracstep = spr->iscale;
+	sp_x = xclipl;
 
 	while (sp_x <= xcliph)
 	{
 		if ((spr->scale < inscale[sp_x]) && (outscale[sp_x] <= spr->scale))
 		{
 			texturecollumn = frac >> FRACBITS;
-			if ((texturecollumn < 0) || (spr->patch->width <= texturecollumn)) 
+			if ((texturecollumn < 0) || (texturecollumn >= spr->patch->width))
 			{
 				IO_Error("R_DrawSprite: bad texturecollumn");
+#ifdef ISB_LINT
 				return;
+#endif
 			}
 
 			collumn = &spr->patch->width + spr->patch->coloffsets[texturecollumn];
 			while (*collumn != 0xff)
 			{
-				texturecollumn = spr->topscreen + *collumn * spr->scale;
-				sp_y1 = texturecollumn + 0xffff >> FRACBITS;
-				sp_y2 = (int)(texturecollumn + collumn[1] * spr->scale + -1) >> FRACBITS;
-				if (floorpixel[sp_x] <= sp_y2) 
-				{
-					sp_y2 = floorpixel[sp_x] + -1;
-				}
-				if (sp_y1 <= ceilingpixel[sp_x]) 
-				{
+				topscreen = spr->topscreen + *collumn * spr->scale;
+				bottomscreen = topscreen + collumn[1] * spr->scale;
+				sp_y1 = topscreen + (FRACUNIT - 1) >> FRACBITS;
+				sp_y2 = (bottomscreen - 1) >> FRACBITS;
+
+				if (sp_y2 >= floorpixel[sp_x])
+					sp_y2 = floorpixel[sp_x] - 1;
+
+				if (sp_y1 <= ceilingpixel[sp_x])
 					sp_y1 = ceilingpixel[sp_x] + 1;
-				}
+
 				if (sp_y1 <= sp_y2)
 				{
 					sp_source = collumn + 2;
 
-					sp_frac = FixedMul(sp_y1 * FRACUNIT - texturecollumn, sp_fracstep);
+					sp_frac = FixedMul(sp_y1 * FRACUNIT - topscreen, sp_fracstep);
 					((void(*)())R_RawScale)();
 				}
 				collumn = collumn + collumn[1] + 2;
 			}
 		}
 		sp_x++;
-		frac = frac + spr->fracstep;
+		frac += spr->fracstep;
 	}
-	return;
 }
 
 void R_TestDrawSprite(int x, int y, int sprite, int frame, int rotation)
 {
-	int iVar1;
-	int local_84;
-	int local_80;
-	vissprite_t local_7c;
+	int tx;
+	fixed_t xscale, yscale, iscale;
+	patch_t* patch;
+	int x1, x2;
+	spritedef_t* sprdef;
+	spriteframe_t* sprframe;
+	int lump;
+	int flip;
+	vissprite_t* vis;
+	vissprite_t visspr;
+	fixed_t centerxfrac, centeryfrac;
+	int xclipl, xcliph;
 
-	local_7c.patch =
-		(patch_t*)lumpinfo[sprites[sprite].spriteframes[frame].lump[rotation]].position;
-	iVar1 = local_7c.patch->leftoffs * -FRACUNIT;
+	sprdef = &sprites[sprite];
+	sprframe = &sprdef->spriteframes[frame];
+	lump = sprframe->lump[rotation];
+	flip = sprframe->flip[rotation];
+	patch = (patch_t*)lumpinfo[lump].position;
 
-	local_7c.x1 = (FixedMul(iVar1, FRACUNIT) + (x * FRACUNIT)) >> FRACBITS;
+	centerxfrac = x << FRACBITS;
+	centeryfrac = y << FRACBITS;
 
-	local_80 = (FixedMul(iVar1 + local_7c.patch->width * FRACUNIT, FRACUNIT) + (x * FRACUNIT)) >> FRACBITS;
+	xscale = yscale = FRACUNIT;
+	tx = -patch->leftoffs * FRACUNIT;
+	x1 = (FixedMul(tx, xscale) + centerxfrac) >> FRACBITS;
 
-	if (local_7c.x1 <= viewwidth && 0 < local_80)
-	{
-		local_7c.x2 = local_80 - 1;
-		local_7c.fracstep = 0x10000;
-		if (sprites[sprite].spriteframes[frame].flip[rotation] != 0)
-		{
-			local_7c.fracstep = -0x10000;
-		}
-		local_7c.scale = 0x10000;
-		local_7c.iscale = 0x10000;
-		local_7c.topscreen = (y * FRACUNIT) + FixedMul(local_7c.patch->topoffset << FRACBITS, FRACUNIT) * -1;
-		local_7c.colormap = 0;
-		local_84 = local_7c.x1;
-		if (local_7c.x1 < 0)
-		{
-			local_84 = 0;
-		}
-		if (viewwidth <= local_80) 
-		{
-			local_80 = viewwidth - 1;
-		}
-		R_DrawSprite(local_84, local_80, &local_7c);
-	}
-	return;
+	if (x1 > viewwidth)
+		return;
+
+	tx += (patch->width << FRACBITS);
+	x2 = (FixedMul(tx, xscale) + centerxfrac) >> FRACBITS;
+
+	if (x2 <= 0)
+		return;
+
+	vis = &visspr;
+	iscale = FixedDiv(FRACUNIT, yscale);
+
+	vis->x1 = x1;
+	vis->x2 = x2 - 1;
+	vis->fracstep = FixedDiv(FRACUNIT, xscale);
+	if (flip)
+		vis->fracstep = -vis->fracstep;
+
+	vis->scale = yscale;
+	vis->iscale = iscale;
+	vis->patch = patch;
+	vis->topscreen = centeryfrac - FixedMul(patch->topoffset << FRACBITS, yscale);
+	vis->colormap = 0;
+
+	xclipl = x1 < 0 ? 0 : x1;
+	xcliph = x2 >= viewwidth ? viewwidth - 1 : x2;
+
+	R_DrawSprite(xclipl, xcliph, vis);
 }
 
 void R_TestSprites(void)
 {
-	spritedef_t* sprdef;
-	int frame;
 	int sprite;
-
-	uint8_t emptyout[4480];
+	int frame;
+	fixed_t emptyout[1120];
+	spritedef_t* sprdef;
 
 	sprite = 0;
 	frame = 0;
-	memset(&emptyout, 0, 0x1180);
+	memset(&emptyout, 0, sizeof(emptyout));
 	floorpixel = viewfloorpixels;
 	ceilingpixel = viewceilingpixels;
 	inscale = viewfrontscale;
 
-	outscale = (fixed_t*)&emptyout[0];
+	outscale = &emptyout[0];
 	do 
 	{
 		sprdef = &sprites[sprite];
@@ -181,7 +192,9 @@ void R_TestSprites(void)
 		while (lastscan == 0) 
 		{
 			IO_NewFrame();
+#ifndef __WATCOMC__
 			IO_DoEvents(); //[ISB] ugh
+#endif
 		}
 		if ((lastscan == KEY_UP) && (sprite < numsprites - 1)) 
 		{
@@ -204,7 +217,6 @@ void R_TestSprites(void)
 	} while (lastscan != KEY_ESC);
 	lastscan = 0;
 	D_Synchronize();
-	return;
 }
 
 /*

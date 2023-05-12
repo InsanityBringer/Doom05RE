@@ -188,9 +188,9 @@ void R_DrawPlayerShape(int sprite, int frame, int sx, int sy)
 
 void R_RenderView(int sectornum, fixed_t x, fixed_t y, fixed_t z, int angle)
 {
-	framepos_t* pfVar1;
+	framepos_t* fp;
 
-	validcheck = validcheck + 1;
+	validcheck++;
 	viewangle = angle;
 	viewcos = cosines[angle];
 	viewsin = sines[angle];
@@ -199,12 +199,12 @@ void R_RenderView(int sectornum, fixed_t x, fixed_t y, fixed_t z, int angle)
 	viewy = y;
 	viewx = x;
 	sd->lastframe ^= 1;
-	pfVar1 = &sd->framepos[sd->lastframe];
-	pfVar1->sector = viewsector;
-	pfVar1->x = viewx;
-	pfVar1->y = viewy;
-	pfVar1->z = viewz;
-	pfVar1->angle = viewangle;
+	fp = &sd->framepos[sd->lastframe];
+	fp->sector = viewsector;
+	fp->x = viewx;
+	fp->y = viewy;
+	fp->z = viewz;
+	fp->angle = viewangle;
 
 	R_PrepPlanes();
 	R_ClearFsegs();
@@ -217,6 +217,5 @@ void R_RenderView(int sectornum, fixed_t x, fixed_t y, fixed_t z, int angle)
 	playscreenupdateneeded = 2;
 	inscale = &viewfrontscale[0];
 	outscale = &viewbackscale[0];
-	pshape8.colormap = scalelight[((int)sectors[sectornum].lightlevel >> 4) * 0x30 + 0x2f];
-	return;
+	pshape8.colormap = scalelight[((int)sectors[sectornum].lightlevel >> 4) * 48 + 47];
 }
