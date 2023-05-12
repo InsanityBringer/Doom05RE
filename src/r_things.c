@@ -456,8 +456,7 @@ vissprite_t* R_NewVisSprite(void)
 		IO_Error("R_NewVisSprite: no free spots\n");
 	}
 
-	newvissprite++;
-	return &vissprites[newvissprite-1];
+	return &vissprites[newvissprite++];
 }
 
 /*

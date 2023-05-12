@@ -46,47 +46,31 @@ procline_t activehead;
 
 void Merge(void)
 {
-    int iVar1;
-    int* piVar2;
-    int* piVar3;
-
-    //TODO: Eliminate the "goto" if possible
-    if (*esrc2 < *esrc1) goto LAB_00028de7;
+    //In retrospect the goto may be intentional (carmack used plenty of gotos)
+    //but this function could probably still be cleaned up further. 
+    if (*esrc2 < *esrc1) 
+        goto LAB_00028de7;
     do {
         do {
-            piVar3 = esrc1;
-            piVar2 = edest;
-            esrc1++;
-            edest++;
-            *piVar2 = *piVar3;
+            *edest++ = *esrc1++;
             size1--;
             if (size1 == 0)
             {
-                while (piVar3 = esrc2, piVar2 = edest, iVar1 = size2, size2 = size2 + -1, iVar1 != 0) 
-                {
-                    esrc2++;
-                    edest++;
-                    *piVar2 = *piVar3;
-                }
+                while (size2-- != 0)
+                    *edest++ = *esrc2++;
+                
                 return;
             }
         } while (*esrc1 < *esrc2);
     LAB_00028de7:
         do {
-            piVar3 = esrc2;
-            piVar2 = edest;
-            esrc2++;
-            edest++;
-            *piVar2 = *piVar3;
+            *edest++ = *esrc2++;
             size2--;
             if (size2 == 0) 
             {
-                while (piVar3 = esrc1, piVar2 = edest, iVar1 = size1, size1 = size1 + -1, iVar1 != 0) 
-                {
-                    esrc1++;
-                    edest++;
-                    *piVar2 = *piVar3;
-                }
+                while (size1-- != 0)
+                    *edest++ = *esrc1++;
+                
                 return;
             }
         } while (*esrc2 <= *esrc1);
@@ -95,55 +79,54 @@ void Merge(void)
 
 int* MergeSort(int* source, int* spare, int count)
 {
-    int* piVar1;
-    int start;
-    int size;
+    int size, start, sort;
+    int* sorted, * unsorted, * temp;
     int* arrays[2];
-    int* sorted, unsorted;
-    int* temp;
-    int sort;
 
-    if (count < 2) 
-    {
+    if (count < 2)
         return source;
-    }
-    sort = 0;
-    arrays[0] = source;
-    arrays[1] = spare;
-    temp = source;
-    sorted = spare;
+
     size = 1;
-    piVar1 = sorted;
-    do 
+    sort = 0;
+
+    arrays[sort] = source;
+    arrays[sort == 0 ? 1 : 0] = spare;
+
+    sorted = arrays[sort];
+    unsorted = arrays[sort == 0 ? 1 : 0];
+
+    do
     {
-        sorted = piVar1;
         start = 0;
-        edest = sorted;
-        do 
+        edest = unsorted;
+
+        do
         {
-            esrc1 = temp + start;
-            esrc2 = esrc1 + size;
-            size2 = count - (start + size);
-            if (size < size2) 
-            {
-                size2 = size;
-            }
-            start = start + size + size2;
+            esrc1 = sorted + start;
             size1 = size;
+            esrc2 = esrc1 + size;
+            start += size;
+            size2 = count - start;
+            if (size2 > size)
+                size2 = size;
+
+            start += size2;
             Merge();
-        } while (size < count - start);
-        while (piVar1 = edest, count != start) 
+        } while ((count - start) > size);
+
+        while (start != count)
         {
-            edest = edest + 1;
-            *piVar1 = arrays[sort][start];
-            start = start + 1;
+            *edest++ = arrays[sort][start];
+            start++;
         }
-        sort = sort ^ 1;
-        unsorted = temp;
+
+        sort ^= 1;
         temp = sorted;
+        sorted = unsorted;
+        unsorted = temp;
         size <<= 1;
-        piVar1 = unsorted;
     } while (size < count);
+
     return sorted;
 }
 
