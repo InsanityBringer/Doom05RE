@@ -414,6 +414,7 @@ void R_DrawSector(int sectornum, int xl, int xh, int* floorclip, int* ceilingcli
     if (xl < 0 || xh >= viewwidth || xh < xl)
         IO_Error("R_DrawSector: bad bounds");
 
+    sectornumber = sectornum;
     sector = &sectors[sectornum];
     sectorxl = xl;
     sectorxh = xh;
