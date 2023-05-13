@@ -297,7 +297,7 @@ void R_ProcessXEvents(void)
             {
                 vissec->xh = x - 1;
                 vissec = (subsector_t*)(((byte*)vissec) + (vissec->numproclines - 1) * sizeof(procline_t*) + sizeof(subsector_t));
-                if (vissec >= &subsectors[sizeof(subsectors) - sizeof(subsector_t) - 32])
+                if (vissec >= &subsectors[sizeof(subsectors) - sizeof(subsector_t) - 12])
                     IO_Error("R_ProcessXEvents: vissec overflow");
             }
 
@@ -350,7 +350,7 @@ void R_ProcessXEvents(void)
                 {
                     vissec->xh = x - 1;
                     vissec = (subsector_t*)(((byte*)vissec) + (vissec->numproclines - 1) * sizeof(procline_t*) + sizeof(subsector_t));
-                    if (vissec >= &subsectors[sizeof(subsectors) - sizeof(subsector_t) - 32])
+                    if (vissec >= &subsectors[sizeof(subsectors) - sizeof(subsector_t) - 12])
                         IO_Error("R_ProcessXEvents: vissec overflow");
 
                     vissec->sectornum = -1;
@@ -362,7 +362,7 @@ void R_ProcessXEvents(void)
                 {
                     vissec->xh = x - 1;
                     vissec = (subsector_t*)(((byte*)vissec) + (vissec->numproclines - 1) * sizeof(procline_t*) + sizeof(subsector_t));
-                    if (vissec >= &subsectors[sizeof(subsectors) - sizeof(subsector_t) - 32])
+                    if (vissec >= &subsectors[sizeof(subsectors) - sizeof(subsector_t) - 12])
                         IO_Error("R_ProcessXEvents: vissec overflow");
                 }
 
@@ -378,130 +378,100 @@ void R_ProcessXEvents(void)
 
 void R_DrawAdjacentSectors(subsector_t* start)
 {
-    subsector_t* local_2c;
-    int local_28;
-    fixed_t* local_24;
-    int* local_20;
-    int* floorclip;
+    int* floor, * ceiling;
+    fixed_t* scale;
+    int i;
 
-    local_2c = start;
-    local_24 = outscale;
-    local_20 = passceiling;
-    floorclip = passfloor;
-    while (local_2c < vissec) 
+    floor = passfloor;
+    ceiling = passceiling;
+    scale = outscale;
+
+    while (start < vissec)
     {
-        local_28 = 0;
-        while (local_28 < local_2c->numproclines)
-        {
-            local_2c->proclines[local_28]->chained = 1;
-            local_28 = local_28 + 1;
-        }
-        R_DrawSector(local_2c->sectornum, local_2c->xl, local_2c->xh, floorclip, local_20, local_24);
-        local_28 = 0;
-        while (local_28 < local_2c->numproclines) 
-        {
-            local_2c->proclines[local_28]->chained = 0;
-            local_28 = local_28 + 1;
-        }
-        local_2c = (subsector_t*)(&local_2c[1].sectornum + local_2c->numproclines + -1);
+        for (i = 0; i < start->numproclines; i++)
+            start->proclines[i]->chained = 1;
+
+        R_DrawSector(start->sectornum, start->xl, start->xh, floor, ceiling, scale);
+
+        for (i = 0; i < start->numproclines; i++)
+            start->proclines[i]->chained = 0;
+
+        start = (subsector_t*)(((byte*)start) + (start->numproclines - 1) * sizeof(procline_t*) + sizeof(subsector_t));
     }
-    return;
 }
 
 void R_DrawSector(int sectornum, int xl, int xh, int* floorclip, int* ceilingclip, int* scaleclip)
 {
-    int local_20;
-    int* uVar1;
-    int local_14;
-    int local_2c;
-    int local_24;
-    int local_1c;
-    int iVar3;
+    int i;
+    int width;
+    int light, light2, light3;
+    subsector_t* start;
+    int* cliptables;
 
-    subsector_t* oldvissec;
+    if (sectornum >= numsectors)
+        IO_Error("R_DrawSector: sectornum >= numsectors");
 
-    if (numsectors <= sectornum) 
-    {
-        IO_Error("R_DrawSector: sectornum >= numsectors\n");
-    }
-    if (((xl < 0) || (viewwidth <= xh)) || (xh < xl))
-    {
+    if (xl < 0 || xh >= viewwidth || xh < xl)
         IO_Error("R_DrawSector: bad bounds\n");
-    }
-    sectorxh = xh;
+
+    sector = &sectors[sectornum];
     sectorxl = xl;
-    sectornumber = sectornum;
-    sector = &sectors[sectornumber];
-    local_14 = extralight + ((int)sector->lightlevel >> 4);
-    local_1c = local_14 + -1;
-    local_20 = local_14 + 1;
-    if (0xf < local_14) 
-    {
-        local_14 = 0xf;
-    }
-    if (local_14 < 0)
-    {
-        local_14 = 0;
-    }
-    if (0xf < local_1c) 
-    {
-        local_1c = 0xf;
-    }
-    if (local_1c < 0) 
-    {
-        local_1c = 0;
-    }
-    if (0xf < local_20) 
-    {
-        local_20 = 0xf;
-    }
-    if (local_20 < 0) 
-    {
-        local_20 = 0;
-    }
-    esectorscalelight = &scalelight[local_14 * 0x30];
-    esectorscalelight2 = &scalelight[local_1c * 0x30];
-    esectorscalelight3 = &scalelight[local_20 * 0x30];
-    local_14 = (sectorxh - sectorxl) + 1;
-    local_1c = sectorxl;
-    local_20 = sectorxh;
-    uVar1 = alloca(local_14 * 5 * sizeof(int));
+    sectorxh = xh;
+    light = extralight + (sector->lightlevel >> 4);
+    light2 = light + -1;
+    light3 = light + 1;
+    if (light > 15)
+        light = 15;
+
+    if (light < 0)
+        light = 0;
+
+    if (light2 > 15)
+        light2 = 15;
+
+    if (light2 < 0)
+        light2 = 0;
+
+    if (light3 > 15)
+        light3 = 15;
+
+    if (light3 < 0)
+        light3 = 0;
+
+    esectorscalelight = &scalelight[light * 48];
+    esectorscalelight2 = &scalelight[light2 * 48];
+    esectorscalelight3 = &scalelight[light3 * 48];
+    width = (xh - xl) + 1;
+    cliptables = alloca(width * 5 * sizeof(int));
 
     floorpixel = floorclip;
     ceilingpixel = ceilingclip;
     inscale = scaleclip;
 
-    newfloor = &uVar1[-local_1c];
-    newceiling = newfloor + local_14;
-    passfloor = newceiling + local_14;
-    passceiling = passfloor + local_14;
-    outscale = passceiling + local_14;
+    newfloor = &cliptables[-xl];
+    newceiling = newfloor + width;
+    passfloor = newceiling + width;
+    passceiling = passfloor + width;
+    outscale = passceiling + width;
 
     R_ClearXEvents();
-    iVar3 = 0;
-    //floorpixel = local_2c;
-    while (iVar3 < sector->linecount)
-    {
-        local_24 = sector->lines[iVar3];
-        R_AddLineXEvents(local_24);
-        iVar3++;
-    }
+
+    for (i = 0; i < sector->linecount; i++)
+        R_AddLineXEvents(sector->lines[i]);
 
     R_SortXEvents();
-    oldvissec = vissec;
+    start = vissec;
     R_ProcessXEvents();
     R_GenerateSpans();
     R_DrawPlanes();
 
-    R_DrawAdjacentSectors(oldvissec);
-    vissec = oldvissec;
+    R_DrawAdjacentSectors(start);
+    vissec = start;
 
+    floorpixel = floorclip;
     ceilingpixel = ceilingclip;
     inscale = scaleclip;
-    floorpixel = floorclip;
+    outscale = &cliptables[-xl] + width * 4;
 
-    outscale = &uVar1[-local_1c] + local_14 * 4;
-
-    R_DrawSectorThings(&sectors[sectornum], local_1c, local_20);
-    return;
+    R_DrawSectorThings(&sectors[sectornum], xl, xh);
 }
