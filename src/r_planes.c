@@ -31,191 +31,192 @@ int spanlists[13312];
 
 void R_PostSpans(int oldtop, int oldbottom, int newtop, int newbottom, int x)
 {
-    int* piVar1;
-    int local_1c;
-    int local_18;
-    int iVar2;
+    if (oldtop < -1 || newtop < -1 || oldbottom > viewheight || newbottom > viewheight)
+        IO_Error("R_PostSpans: bad range");
 
-    local_1c = oldtop;
-    local_18 = oldbottom;
-    iVar2 = newbottom;
-    if ((((oldtop < -1) || (newtop < -1)) || (viewheight < oldbottom)) || (viewheight < newtop))
+    if (oldbottom - oldtop <= 1)
     {
-        IO_Error("R_PostSpans: bad range\n");
-    }
-    if (local_18 - local_1c < 2) 
-    {
-        while (newtop = newtop + 1, newtop < iVar2) 
+        while (1)
         {
-            piVar1 = spans[newtop];
-            spans[newtop] = spans[newtop] + 1;
-            *piVar1 = x;
+            newtop++;
+            if (newtop >= newbottom)
+                break;
+
+            *spans[newtop]++ = x;
         }
     }
-    else 
+    else
     {
-        if (iVar2 - newtop < 2) 
+        if (newbottom - newtop <= 1)
         {
-            while (local_1c = local_1c + 1, local_1c < local_18) 
+            while (1)
             {
-                piVar1 = spans[local_1c];
-                spans[local_1c] = spans[local_1c] + 1;
-                *piVar1 = x;
+                oldtop++;
+                if (oldtop >= oldbottom)
+                    break;
+
+                *spans[oldtop]++ = x;
             }
         }
-        else 
+        else
         {
-            if (local_1c == newtop) 
+            if (oldtop == newtop)
             {
-                if (local_18 < iVar2) 
+                if (oldbottom < newbottom)
                 {
-                    do 
+                    do
                     {
-                        iVar2 = iVar2 + -1;
-                        piVar1 = spans[iVar2];
-                        spans[iVar2] = spans[iVar2] + 1;
-                        *piVar1 = x;
-                    } while (local_18 < iVar2);
+                        newbottom--;
+                        *spans[newbottom]++ = x;
+                    } while (newbottom > oldbottom);
                 }
-                else 
+                else
                 {
-                    while (iVar2 < local_18)
+                    while (oldbottom > newbottom)
                     {
-                        local_18 = local_18 + -1;
-                        piVar1 = spans[local_18];
-                        spans[local_18] = spans[local_18] + 1;
-                        *piVar1 = x;
+                        oldbottom--;
+                        *spans[oldbottom]++ = x;
                     }
                 }
             }
-            else 
+            else
             {
-                if (local_18 == iVar2) 
+                if (oldbottom == newbottom)
                 {
-                    if (newtop < local_1c) 
+                    if (oldtop > newtop)
                     {
-                        do 
+                        do
                         {
-                            local_18 = local_1c + -1;
-                            piVar1 = spans[local_1c];
-                            spans[local_1c] = spans[local_1c] + 1;
-                            *piVar1 = x;
-                            local_1c = local_18;
-                        } while (newtop < local_18);
+                            *spans[oldtop--]++ = x;
+                        } while (oldtop > newtop);
                     }
                     else
                     {
-                        do 
+                        do
                         {
-                            local_18 = newtop + -1;
-                            piVar1 = spans[newtop];
-                            spans[newtop] = spans[newtop] + 1;
-                            *piVar1 = x;
-                            newtop = local_18;
-                        } while (local_1c < local_18);
+                            *spans[newtop--]++ = x;
+                        } while (newtop > oldtop);
                     }
                 }
-                else 
+                else
                 {
-                    if (newtop < local_1c) 
+                    if (oldtop > newtop)
                     {
-                        if (local_1c < iVar2) 
+                        if (newbottom <= oldtop)
                         {
-                            if (iVar2 < local_18) 
+                            while (1)
                             {
-                                while (newtop = newtop + 1, newtop <= local_1c) 
-                                {
-                                    piVar1 = spans[newtop];
-                                    spans[newtop] = spans[newtop] + 1;
-                                    *piVar1 = x;
-                                }
-                                while (local_18 = local_18 + -1, iVar2 <= local_18) 
-                                {
-                                    piVar1 = spans[local_18];
-                                    spans[local_18] = spans[local_18] + 1;
-                                    *piVar1 = x;
-                                }
+                                newtop++;
+                                if (newtop >= newbottom)
+                                    break;
+                                *spans[newtop]++ = x;
                             }
-                            else 
+
+                            while (1)
                             {
-                                while (newtop = newtop + 1, newtop <= local_1c)
-                                {
-                                    piVar1 = spans[newtop];
-                                    spans[newtop] = spans[newtop] + 1;
-                                    *piVar1 = x;
-                                }
-                                while (iVar2 = iVar2 + -1, local_18 <= iVar2) 
-                                {
-                                    piVar1 = spans[iVar2];
-                                    spans[iVar2] = spans[iVar2] + 1;
-                                    *piVar1 = x;
-                                }
+                                oldtop++;
+                                if (oldtop >= oldbottom)
+                                    break;
+                                *spans[oldtop]++ = x;
                             }
                         }
                         else
                         {
-                            while (newtop = newtop + 1, newtop < iVar2) 
+                            if (newbottom < oldbottom)
                             {
-                                piVar1 = spans[newtop];
-                                spans[newtop] = spans[newtop] + 1;
-                                *piVar1 = x;
+                                while (1)
+                                {
+                                    newtop++;
+                                    if (newtop > oldtop)
+                                        break;
+                                    *spans[newtop]++ = x;
+                                }
+
+                                while (1)
+                                {
+                                    oldbottom--;
+                                    if (oldbottom < newbottom)
+                                        break;
+                                    *spans[oldbottom]++ = x;
+                                }
                             }
-                            while (local_1c = local_1c + 1, local_1c < local_18) 
+                            else
                             {
-                                piVar1 = spans[local_1c];
-                                spans[local_1c] = spans[local_1c] + 1;
-                                *piVar1 = x;
+                                while (1)
+                                {
+                                    newtop++;
+                                    if (newtop > oldtop)
+                                        break;
+                                    *spans[newtop]++ = x;
+                                }
+
+                                while (1)
+                                {
+                                    newbottom--;
+                                    if (newbottom < oldbottom)
+                                        break;
+                                    *spans[newbottom]++ = x;
+                                }
                             }
                         }
                     }
-                    else 
+                    else
                     {
-                        if (newtop < local_18)
+                        if (newtop >= oldbottom)
                         {
-                            if (local_18 < iVar2)
+                            while (1)
                             {
-                                while (local_1c = local_1c + 1, local_1c <= newtop) 
-                                {
-                                    piVar1 = spans[local_1c];
-                                    spans[local_1c] = spans[local_1c] + 1;
-                                    *piVar1 = x;
-                                }
-                                while (iVar2 = iVar2 + -1, local_18 <= iVar2) 
-                                {
-                                    piVar1 = spans[iVar2];
-                                    spans[iVar2] = spans[iVar2] + 1;
-                                    *piVar1 = x;
-                                }
+                                oldtop++;
+                                if (oldtop >= oldbottom)
+                                    break;
+                                *spans[oldtop]++ = x;
                             }
-                            else 
+
+                            while (1)
                             {
-                                while (local_1c = local_1c + 1, local_1c <= newtop) 
-                                {
-                                    piVar1 = spans[local_1c];
-                                    spans[local_1c] = spans[local_1c] + 1;
-                                    *piVar1 = x;
-                                }
-                                while (local_18 = local_18 + -1, iVar2 <= local_18)
-                                {
-                                    piVar1 = spans[local_18];
-                                    spans[local_18] = spans[local_18] + 1;
-                                    *piVar1 = x;
-                                }
+                                newtop++;
+                                if (newtop >= newbottom)
+                                    break;
+                                *spans[newtop]++ = x;
                             }
                         }
-                        else 
+                        else
                         {
-                            while (local_1c = local_1c + 1, local_1c < local_18)
+                            if (newbottom > oldbottom)
                             {
-                                piVar1 = spans[local_1c];
-                                spans[local_1c] = spans[local_1c] + 1;
-                                *piVar1 = x;
+                                while (1)
+                                {
+                                    oldtop++;
+                                    if (oldtop > newtop)
+                                        break;
+                                    *spans[oldtop]++ = x;
+                                }
+
+                                while (1)
+                                {
+                                    newbottom--;
+                                    if (newbottom < oldbottom)
+                                        break;
+                                    *spans[newbottom]++ = x;
+                                }
                             }
-                            while (newtop = newtop + 1, newtop < iVar2)
+                            else
                             {
-                                piVar1 = spans[newtop];
-                                spans[newtop] = spans[newtop] + 1;
-                                *piVar1 = x;
+                                while (1)
+                                {
+                                    oldtop++;
+                                    if (oldtop > newtop)
+                                        break;
+                                    *spans[oldtop]++ = x;
+                                }
+
+                                while (1)
+                                {
+                                    oldbottom--;
+                                    if (oldbottom < newbottom)
+                                        break;
+                                    *spans[oldbottom]++ = x;
+                                }
                             }
                         }
                     }
@@ -223,31 +224,26 @@ void R_PostSpans(int oldtop, int oldbottom, int newtop, int newbottom, int x)
             }
         }
     }
-    return;
 }
 
 void R_GenerateSpans(void)
 {
     int x;
-    int x_00;
 
     memcpy(spans, startspans, sizeof(int) * 832);
     x = sectorxl;
-    R_PostSpans(-1, 0, ceilingpixel[sectorxl], newceiling[sectorxl], sectorxl);
+    R_PostSpans(-1, 0, ceilingpixel[x], newceiling[x], x);
     R_PostSpans(-1, 0, newfloor[x], floorpixel[x], x);
-    while (x_00 = x + 1, x_00 <= sectorxh)
+    while (++x <= sectorxh)
     {
-        if (x_00 == 0x7c) 
-        {
-            x_00 = 0x7c;
-        }
-        R_PostSpans(ceilingpixel[x_00 + -1], newceiling[x_00 + -1], ceilingpixel[x_00], newceiling[x_00], x_00);
-        R_PostSpans(newfloor[x_00 + -1], floorpixel[x_00 + -1], newfloor[x_00], floorpixel[x_00], x_00);
-        x = x_00;
+        if (x == 124) 
+            x = 124;
+        
+        R_PostSpans(ceilingpixel[x - 1], newceiling[x - 1], ceilingpixel[x], newceiling[x], x);
+        R_PostSpans(newfloor[x - 1], floorpixel[x - 1], newfloor[x], floorpixel[x], x);
     }
-    R_PostSpans(ceilingpixel[x], newceiling[x], -1, 0, x_00);
-    R_PostSpans(newfloor[x_00 + -1], floorpixel[x_00 + -1], -1, 0, x_00);
-    return;
+    R_PostSpans(ceilingpixel[x - 1], newceiling[x - 1], -1, 0, x);
+    R_PostSpans(newfloor[x - 1], floorpixel[x - 1], -1, 0, x);
 }
 
 
