@@ -26,7 +26,7 @@ int sectornumber;
 sector_t* sector;
 int sectorxl, sectorxh;
 
-subsector_t subsectors[204];
+byte subsectors[SUBSECTORBUFFERSIZE];
 subsector_t* vissec;
 
 int* floorpixel, *ceilingpixel;
@@ -35,7 +35,14 @@ int* passfloor, *passceiling;
 
 int *esectorscalelight, *esectorscalelight2, *esectorscalelight3;
 
-int xevents[400];
+#define MAXXEVENTS 200
+#define XEVENTPROCNUMBITS 12
+#define XEVENTPROCNUMMASK ((1 << XEVENTPROCNUMBITS) - 1)
+#define STARTSEGEVENT (1 << XEVENTPROCNUMBITS)
+#define ENDEVENT 8192
+#define XVALUESHIFT 13
+
+int xevents[MAXXEVENTS * 2];
 int* sortedxevents;
 int* newxevent;
 
@@ -132,25 +139,25 @@ int* MergeSort(int* source, int* spare, int count)
 
 void R_AddActiveSeg(int procnum)
 {
-    procline_t* ppVar1;
-    procline_t* local_20;
+    procline_t* proc, * scan;
+    fixed_t pscale;
 
-    if (newprocline <= procnum) 
-    {
-        IO_Error("R_AddActiveseg: bad procline num\n");
-    }
-    ppVar1 = &proclines[procnum];
+    if (procnum >= newprocline)
+        IO_Error("R_AddActiveseg: bad procline number");
 
-    local_20 = activehead.next;
-    while ((local_20 != &activehead && (proclines[procnum].scale + proclines[procnum].scalestep <= local_20->scale + local_20->scalestep))) 
-    {
-        local_20 = local_20->next;
+    proc = &proclines[procnum];
+
+    pscale = proc->scale + proc->scalestep;
+
+    for (scan = activehead.next; (scan != &activehead
+        && (pscale <= (scan->scale + proc->scalestep)));
+        scan = scan->next) {
     }
-    ppVar1->prev = local_20->prev;
-    ppVar1->prev->next = ppVar1;
-    local_20->prev = ppVar1;
-    proclines[procnum].next = local_20;
-    return;
+
+    proc->prev = scan->prev;
+    proc->prev->next = proc;
+    scan->prev = proc;
+    proclines[procnum].next = scan;
 }
 
 void R_ClearXEvents(void)
@@ -159,225 +166,214 @@ void R_ClearXEvents(void)
     activehead.prev = &activehead;
     activehead.next = &activehead;
     activehead.line = -1;
-    return;
 }
 
 void R_AddLineXEvents(int linenum)
 {
-    int* piVar1;
-    unsigned int local_28;
-    procline_t* local_24;
-    line_t* local_20;
+    int procnum;
+    line_t* line;
+    procline_t* proc;
 
-    if (numlines <= linenum) 
-    {
-        IO_Error("R_TryAddLine: line >= numlines\n");
-    }
-    local_20 = &lines[linenum];
-    if (local_20->validcheck != validcheck) 
-    {
+    if (numlines <= linenum)
+        IO_Error("R_TryAddLine: line >= numlines");
+
+    line = &lines[linenum];
+    if (line->validcheck != validcheck)
         R_MakeProcline(linenum);
-    }
-    if (local_20->procline != -1) 
+
+    if (line->procline == -1)
+        return;
+
+    procnum = line->procline;
+    if (procnum >= newprocline)
+        IO_Error("R_TryAddLine: procnum >= newprocline");
+
+    proc = &proclines[procnum];
+
+    if (proc->ipx2 <= sectorxl)
+        return;
+
+    if (proc->ipx1 > sectorxh)
+        return;
+
+    if (proc->sector != -1)
     {
-        local_28 = local_20->procline;
-        if (newprocline <= local_28)
-        {
-            IO_Error("R_TryAddLine: procnum >= newprocline\n");
-        }
-        piVar1 = newxevent;
-        local_24 = proclines + local_28;
-        if (((sectorxl < proclines[local_28].ipx2) &&
-            (proclines[local_28].ipx1 <= sectorxh)) &&
-            ((proclines[local_28].sector == -1 ||
-                ((proclines[local_28].sector != sectornumber &&
-                    (proclines[local_28].chained == 0)))))) 
-        {
-            if (proclines[local_28].ipx1 < sectorxl) 
-            {
-                proclines[local_28].scale =
-                    proclines[local_28].scale1 +
-                    (sectorxl - proclines[local_28].ipx1) *
-                    proclines[local_28].scalestep;
-                R_AddActiveSeg(local_20->procline);
-            }
-            else 
-            {
-                newxevent++;
-                *piVar1 = local_28 | 0x1000 | proclines[local_28].ipx1 << 0xd;
-            }
-            piVar1 = newxevent;
-            if (local_24->ipx2 <= sectorxh) 
-            {
-                newxevent++;
-                *piVar1 = local_24->ipx2 << 0xd | local_28;
-            }
-            if (&xevents[199] < newxevent)
-            {
-                IO_Error("R_AddLineXEvents: xevent overflow");
-            }
-        }
+        if (proc->sector == sectornumber)
+            return;
+
+        if (proc->chained)
+            return;
     }
-    return;
+
+    if (proc->ipx1 < sectorxl)
+    {
+        proc->scale =
+            proc->scale1 +
+            (sectorxl - proc->ipx1) *
+            proc->scalestep;
+
+        R_AddActiveSeg(line->procline);
+    }
+    else
+        *newxevent++ = procnum | STARTSEGEVENT | proc->ipx1 << XVALUESHIFT;
+
+    if (proc->ipx2 <= sectorxh)
+        *newxevent++ = procnum | proc->ipx2 << XVALUESHIFT;
+
+    if (newxevent > &xevents[MAXXEVENTS - 1])
+        IO_Error("R_AddLineXEvents: xevent overflow");
 }
+
 
 void R_SortXEvents(void)
 {
-    int count;
+    int numxevents;
 
-    count = (newxevent - &xevents[0]);
-    if (count == 0)
-    {
+    numxevents = (newxevent - &xevents[0]);
+    if (numxevents == 0)
         sortedxevents = &xevents[0];
-    }
     else 
-    {
-        sortedxevents = MergeSort(xevents, xevents + 200, count);
-    }
-    sortedxevents[count] = (sectorxh + 1) * 0x2000;
-
-    return;
+        sortedxevents = MergeSort(xevents, xevents + MAXXEVENTS, numxevents);
+    
+    sortedxevents[numxevents] = (sectorxh + 1) * ENDEVENT;
 }
 
 void R_ProcessXEvents(void)
 {
-    int* piVar1;
-    subsector_t* psVar2;
-    int iVar3;
-    unsigned int uVar4;
-    int local_28;
-    procline_t* local_24;
+    unsigned int event;
+    int procnum;
+    procline_t* proc;
+    int x;
+    int line;
 
-    local_28 = sectorxl;
-    piVar1 = sortedxevents;
-    sortedxevents++;
-    uVar4 = *piVar1;
-    local_24 = activehead.next;
-    if ((int)uVar4 >> 0xd == sectorxl)
+    event = *sortedxevents++;
+    x = sectorxl;
+
+    //Find the active seg at the leftmost bounds
+    if ((event >> XVALUESHIFT) == x)
     {
-        while (local_24 != &activehead) 
+        for (proc = activehead.next; proc != &activehead; proc = proc->next)
+            proc->scale = proc->scale1 + (x - proc->ipx1) * proc->scalestep;
+
+        do
         {
-            local_24->scale = local_24->scale1 + (local_28 - local_24->ipx1) * local_24->scalestep;
-            local_24 = local_24->next;
-        }
-        do 
-        {
-            if (newprocline <= (int)(uVar4 & 0xfff))
-            {
-                IO_Error("R_ProcessXEvents: bad procline number\n");
-            }
-            proclines[uVar4 & 0xfff].scale = proclines[uVar4 & 0xfff].scale1;
-            R_AddActiveSeg(uVar4 & 0xfff);
-            piVar1 = sortedxevents;
-            sortedxevents++;
-            uVar4 = *piVar1;
-        } while ((int)uVar4 >> 0xd == local_28);
+            if (event == 0 && false) //no idea
+                IO_Error("R_ProcessXEvents: remove event at first pixel");
+
+            if ((event & XEVENTPROCNUMMASK) >= newprocline)
+                IO_Error("R_ProcessXEvents: bad procline number");
+
+            proclines[event & XEVENTPROCNUMMASK].scale =
+                proclines[event & XEVENTPROCNUMMASK].scale1;
+            R_AddActiveSeg(event & XEVENTPROCNUMMASK);
+            event = *sortedxevents++;
+        } while (event >> XVALUESHIFT == x);
     }
-    local_24 = activehead.next;
-    if (activehead.next == &activehead) 
-    {
-        IO_Error("R_ProcessXEvents: no activeseg at first collumn\n");
-    }
-    psVar2 = vissec;
-    local_28 = local_24->line;
+
+    proc = activehead.next;
+    if (proc == &activehead)
+        IO_Error("R_ProcessXEvents: no activeseg at first collumn");
+
+    line = vwalldrange.number = proc->line;
     vwalldrange.xl = sectorxl;
-    vwalldrange.number = local_28;
-    vissec->sectornum = local_24->sector;
-    if (psVar2->sectornum != -1) 
+    vissec->sectornum = proc->sector;
+    if (vissec->sectornum != -1)
     {
         vissec->xl = sectorxl;
-        vissec->proclines = local_24;
+        vissec->proclines[0] = proc;
         vissec->numproclines = 1;
     }
-    while (iVar3 = (int)uVar4 >> 0xd, sectorxh + 1 != iVar3) 
-    {
-        while (((uVar4 & 0x1000) == 0 && ((int)uVar4 >> 0xd == iVar3))) 
-        {
-            uVar4 = uVar4 & 0xfff;
-            (proclines[uVar4].next)->prev = proclines[uVar4].prev;
-            (proclines[uVar4].prev)->next = proclines[uVar4].next;
-            piVar1 = sortedxevents;
-            sortedxevents++;
-            uVar4 = *piVar1;
-        }
-        local_24 = activehead.next;
-        if ((int)uVar4 >> 0xd == iVar3) 
-        {
-            while (local_24 != &activehead) 
-            {
-                local_24->scale = local_24->scale1 + (iVar3 - local_24->ipx1) * local_24->scalestep;
-                local_24 = local_24->next;
-            }
-            do 
-            {
-                if (newprocline <= (int)(uVar4 & 0xfff)) 
-                {
-                    IO_Error("R_ProcessXEvents: bad procline number\n");
-                }
-                proclines[uVar4 & 0xfff].scale = proclines[uVar4 & 0xfff].scale1;
-                R_AddActiveSeg(uVar4 & 0xfff);
-                piVar1 = sortedxevents;
-                sortedxevents++;
-                uVar4 = *piVar1;
-            } while ((int)uVar4 >> 0xd == iVar3);
-        }
-        local_24 = activehead.next;
-        if (activehead.next == &activehead)
-        {
-            IO_Error("R_ProcessXEvents: no visible collumn\n");
-        }
-        if (local_24->line != vwalldrange.number) 
-        {
-            vwalldrange.xh = iVar3 + -1;
-            R_DrawLineDrange();
-            vwalldrange.number = local_24->line;
-            vwalldrange.xl = iVar3;
-            if (local_24->sector == -1) 
-            {
-                if (vissec->sectornum != -1) 
-                {
-                    vissec->xh = iVar3 + -1;
-                    vissec = (subsector_t*)(&vissec[1].sectornum + vissec->numproclines - 1);
 
-                    if ((subsector_t*)((int)&subsectors[0xcb].sectornum + 3U) < vissec)
-                    {
+    while (1)
+    {
+        x = event >> XVALUESHIFT;
+        //Reached the right clipping bound of the current sector window, so draw the last seg. 
+        if (sectorxh + 1 == x)
+        {
+            vwalldrange.xh = x - 1;
+            R_DrawLineDrange();
+
+            if (vissec->sectornum != -1)
+            {
+                vissec->xh = x - 1;
+                vissec = (subsector_t*)(((byte*)vissec) + (vissec->numproclines - 1) * sizeof(procline_t*) + sizeof(subsector_t));
+                if (vissec >= &subsectors[sizeof(subsectors) - sizeof(subsector_t) - 32])
+                    IO_Error("R_ProcessXEvents: vissec overflow");
+            }
+
+            return;
+        }
+
+        //Handle remove events for this X coordinate
+        while ((event & STARTSEGEVENT) == 0 && (event >> XVALUESHIFT) == x)
+        {
+            procnum = event & XEVENTPROCNUMMASK;
+            proc = &proclines[procnum];
+            proc->next->prev = proc->prev;
+            proc->prev->next = proc->next;
+            event = *sortedxevents++;
+        }
+
+        //Now handle add events
+        if ((event >> XVALUESHIFT) == x)
+        {
+            for (proc = activehead.next; proc != &activehead; proc = proc->next)
+                proc->scale = proc->scale1 + (x - proc->ipx1) * proc->scalestep;
+
+            do
+            {
+                if ((event & XEVENTPROCNUMMASK) >= newprocline)
+                    IO_Error("R_ProcessXEvents: bad procline number");
+
+                proc = &proclines[event & XEVENTPROCNUMMASK];
+                proc->scale = proc->scale1;
+                R_AddActiveSeg(event & XEVENTPROCNUMMASK);
+                event = *sortedxevents++;
+            } while ((event >> XVALUESHIFT) == x);
+        }
+
+        proc = activehead.next;
+        if (proc == &activehead)
+            IO_Error("R_ProcessXEvents: no visible collumn");
+
+        //Draw any active segs that were added
+        if (proc->line != vwalldrange.number)
+        {
+            vwalldrange.xh = x - 1;
+            R_DrawLineDrange();
+            vwalldrange.number = proc->line;
+            vwalldrange.xl = x;
+
+            if (proc->sector == -1)
+            {
+                if (vissec->sectornum != -1)
+                {
+                    vissec->xh = x - 1;
+                    vissec = (subsector_t*)(((byte*)vissec) + (vissec->numproclines - 1) * sizeof(procline_t*) + sizeof(subsector_t));
+                    if (vissec >= &subsectors[sizeof(subsectors) - sizeof(subsector_t) - 32])
                         IO_Error("R_ProcessXEvents: vissec overflow");
-                    }
+
                     vissec->sectornum = -1;
                 }
             }
-            else 
+            else
             {
-                if (vissec->sectornum != -1) 
+                if (vissec->sectornum != -1)
                 {
-                    vissec->xh = iVar3 + -1;
-                    vissec = (subsector_t*)(&vissec[1].sectornum + vissec->numproclines + -1);
-                    if ((subsector_t*)((int)&subsectors[0xcb].sectornum + 3U) < vissec) 
-                    {
+                    vissec->xh = x - 1;
+                    vissec = (subsector_t*)(((byte*)vissec) + (vissec->numproclines - 1) * sizeof(procline_t*) + sizeof(subsector_t));
+                    if (vissec >= &subsectors[sizeof(subsectors) - sizeof(subsector_t) - 32])
                         IO_Error("R_ProcessXEvents: vissec overflow");
-                    }
                 }
-                vissec->sectornum = local_24->sector;
-                vissec->xl = iVar3;
+
+                vissec->sectornum = proc->sector;
+                vissec->xl = x;
                 vissec->numproclines = 0;
-                (&vissec->proclines)[vissec->numproclines] = local_24;
-                vissec->numproclines = vissec->numproclines + 1;
+                vissec->proclines[vissec->numproclines] = proc;
+                vissec->numproclines++;
             }
         }
     }
-    vwalldrange.xh = iVar3 + -1;
-    R_DrawLineDrange();
-    if (vissec->sectornum != -1) 
-    {
-        vissec->xh = iVar3 + -1;
-        vissec =
-            (subsector_t*)(&vissec[1].sectornum + vissec->numproclines + -1);
-        if ((subsector_t*)((int)&subsectors[0xcb].sectornum + 3U) < vissec) 
-        {
-            IO_Error("R_ProcessXEvents: vissec overflow");
-        }
-    }
-    return;
 }
 
 void R_DrawAdjacentSectors(subsector_t* start)
@@ -397,14 +393,14 @@ void R_DrawAdjacentSectors(subsector_t* start)
         local_28 = 0;
         while (local_28 < local_2c->numproclines)
         {
-            (&local_2c->proclines)[local_28]->chained = 1;
+            local_2c->proclines[local_28]->chained = 1;
             local_28 = local_28 + 1;
         }
         R_DrawSector(local_2c->sectornum, local_2c->xl, local_2c->xh, floorclip, local_20, local_24);
         local_28 = 0;
         while (local_28 < local_2c->numproclines) 
         {
-            (&local_2c->proclines)[local_28]->chained = 0;
+            local_2c->proclines[local_28]->chained = 0;
             local_28 = local_28 + 1;
         }
         local_2c = (subsector_t*)(&local_2c[1].sectornum + local_2c->numproclines + -1);

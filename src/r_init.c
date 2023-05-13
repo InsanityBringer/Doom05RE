@@ -211,7 +211,7 @@ void R_RenderView(int sectornum, fixed_t x, fixed_t y, fixed_t z, int angle)
 	R_ClearProclines();
 	R_ClearVisSprites();
 
-	vissec = &subsectors[0];
+	vissec = (subsector_t*)&subsectors[0];
 	R_DrawSector(sectornum, 0, viewwidth - 1, viewfloorpixels, viewceilingpixels, viewfrontscale);
 	
 	playscreenupdateneeded = 2;

@@ -70,7 +70,7 @@ typedef struct
 	int xl;
 	int xh;
 	int numproclines;
-	procline_t* proclines;
+	procline_t* proclines[1];
 } subsector_t;
 
 typedef struct
@@ -134,7 +134,9 @@ extern drange_t vwalldrange;
 extern procline_t proclines[];
 extern forwardseg_t fsegs[];
 
-extern subsector_t subsectors[];
+//in bytes
+#define SUBSECTORBUFFERSIZE 4096
+extern byte subsectors[SUBSECTORBUFFERSIZE];
 extern subsector_t* vissec;
 
 //r_init
