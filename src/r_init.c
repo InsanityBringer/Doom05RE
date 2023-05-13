@@ -147,6 +147,10 @@ int R_LightFromZ(fixed_t z)
 	index = FixedMul(FixedDiv(yproject, z), vscalelight) >> 12;
 	if (index > 47) 
 		index = 47;
+#ifdef _MSC_VER
+	if (index < 0)
+		index = 0;
+#endif
 	
 	return index;
 }

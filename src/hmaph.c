@@ -48,13 +48,16 @@ void R_MapRowHigh(void)
 	local_14 = screenbuffer + planewidthlookup[mr_y + windowy] + (mr_x1 + windowx >> 2);
 	local_10 = ((mr_x1 + windowx) & 3U) * 16000;
 
+	//feed the pipeline early. This is needed to replicate a bug where the first pixel per span is duplicated
+	yp = (pos >> 4) & 0xFC0U;
+	xp = (pos >> 26) & 63;
+
 	do
 	{
+		local_14[local_10] = iVar1[mr_picture[(xp + yp)]];
+
 		yp = (pos >> 4) & 0xFC0U;
 		xp = (pos >> 26) & 63;
-
-		local_14[local_10] = iVar1[mr_picture[(xp + yp)]];
-		
 		pos += step;
 
 		if (local_10 == 48000)
@@ -90,13 +93,15 @@ void R_MapRowMed(void)
 	local_14 = screenbuffer + (int)(planewidthlookup[mr_y + windowy] + (mr_x1 * 2 + windowx >> 2));
 	local_10 = ((mr_x1 * 2 + windowx) & 3U) * 16000;
 
+	yp = (pos >> 4) & 0xFC0U;
+	xp = (pos >> 26) & 63;
+
 	do
 	{
-		yp = (pos >> 4) & 0xFC0U;
-		xp = (pos >> 26) & 63;
-
 		local_14[local_10] = iVar1[mr_picture[(xp + yp)]];
 
+		yp = (pos >> 4) & 0xFC0U;
+		xp = (pos >> 26) & 63;
 		pos += step;
 
 		if (local_10 == 32000)
@@ -131,14 +136,16 @@ void R_MapRowLow(void)
 	iVar1 = &colormaps[mr_colormap * 256];
 	local_14 = screenbuffer + (int)(planewidthlookup[mr_y * 2 + windowy] + (mr_x1 * 2 + windowx >> 2));
 	local_10 = ((mr_x1 * 2 + windowx) & 3U) * 16000;
+	yp = (pos >> 4) & 0xFC0U;
+	xp = (pos >> 26) & 63;
 
 	do
 	{
-		yp = (pos >> 4) & 0xFC0U;
-		xp = (pos >> 26) & 63;
 
 		local_14[local_10] = iVar1[mr_picture[(xp + yp)]];
 
+		yp = (pos >> 4) & 0xFC0U;
+		xp = (pos >> 26) & 63;
 		pos += step;
 
 		if (local_10 == 32000)

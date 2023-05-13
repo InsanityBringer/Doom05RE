@@ -419,7 +419,7 @@ void R_DrawSector(int sectornum, int xl, int xh, int* floorclip, int* ceilingcli
     sectorxl = xl;
     sectorxh = xh;
     light = extralight + (sector->lightlevel >> 4);
-    light2 = light + -1;
+    light2 = light - 1;
     light3 = light + 1;
     if (light > 15)
         light = 15;

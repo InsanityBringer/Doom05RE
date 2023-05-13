@@ -249,78 +249,62 @@ void R_GenerateSpans(void)
 
 void R_PrepPlanes(void)
 {
-    unsigned int uVar1;
-
-    uVar1 = viewangle + 0x400U & 0x1fff;
+    int angle = viewangle + 1024 & 8191;
+    zerocosine = cosines[angle];
+    zerosine = sines[angle];
     xscale = FixedDiv(viewsin, xproject) << 10;
     yscale = FixedDiv(viewcos, xproject) << 10;
-    zerocosine = cosines[uVar1];
-    zerosine = sines[uVar1];
-    return;
 }
 
 void R_DrawPlanes(void)
 {
-    int* piVar1;
-    int uVar2;
-    fixed_t local_28;
-    fixed_t local_24;
-    fixed_t local_20;
-    int* local_34;
-    int* local_30;
+    fixed_t deltaheight;
+    fixed_t zerox, zeroy;
+    fixed_t pointz, length;
+    int* span_p, * stop;
 
     mr_picture = flatlookup[sector->ceilingtexture];
-    uVar2 = viewz - sector->ceilingheight;
-    if ((-0x10000 < (int)uVar2) && ((int)uVar2 < 0x10000))
+    deltaheight = viewz - sector->ceilingheight;
+    if (deltaheight > -FRACUNIT && deltaheight < FRACUNIT)
+        deltaheight = FRACUNIT;
+
+    for (mr_y = 0; mr_y < viewheight; mr_y++)
     {
-        uVar2 = 0x10000;
-    }
-    mr_y = 0;
-    while (mr_y < viewheight) 
-    {
-        if (mr_y == centery) 
+        if (mr_y == centery)
         {
             mr_picture = flatlookup[sector->floortexture];
-            uVar2 = viewz - sector->floorheight;
-            if ((-0x10000 < (int)uVar2) && ((int)uVar2 < 0x10000))
-            {
-                uVar2 = 0x10000;
-            }
+            deltaheight = viewz - sector->floorheight;
+            if (deltaheight > -FRACUNIT && deltaheight < FRACUNIT)
+                deltaheight = FRACUNIT;
+
         }
-        local_30 = startspans[mr_y];
-        local_34 = spans[mr_y];
+        span_p = startspans[mr_y];
+        stop = spans[mr_y];
 
-        if (local_30 != local_34)
+        if (span_p != stop)
         {
-            if (((int)((int)local_34 - (int)local_30) >> 2 & 1U) != 0) 
-            {
+            if (((int)(stop - span_p) & 1) != 0)
                 IO_Error("R_DrawSectorPlanes: odd number of spans");
-            }
 
-            local_28 = FixedDiv(uVar2, yslope[mr_y]);
-            local_24 = FixedDiv(local_28, cos45);
-            local_20 = R_LightFromZ(local_28);
-            //[ISB] clamp, since this can error if your head goes in the ceiling. Which happens a lot in the alpha versions.
-            if (local_20 < 0) local_20 = 0;
-            mr_colormap = esectorscalelight[local_20];
+            pointz = FixedDiv(deltaheight, yslope[mr_y]);
+            length = FixedDiv(pointz, cos45);
 
-            mr_xstep = FixedMul(local_28, xscale);
-            mr_ystep = FixedMul(local_28, yscale);
-            local_20 = (FixedMul(local_24, zerocosine) + viewx) << 10;
-            local_24 = -(FixedMul(local_24, zerosine) + viewy) << 10;
+            mr_colormap = esectorscalelight[R_LightFromZ(pointz)];
+
+            mr_xstep = FixedMul(pointz, xscale);
+            mr_ystep = FixedMul(pointz, yscale);
+            zerox = (FixedMul(length, zerocosine) + viewx) << 10;
+            zeroy = -(FixedMul(length, zerosine) + viewy) << 10;
 
             do
             {
-                piVar1 = local_30 + 1;
-                mr_x1 = *local_30;
-                local_30 = local_30 + 2;
-                mr_x2 = *piVar1;
-                mr_xfrac = local_20 + mr_xstep * mr_x1;
-                mr_yfrac = local_24 + mr_ystep * mr_x1;
+                mr_x1 = *span_p++;
+                mr_x2 = *span_p++;
+                mr_xfrac = zerox + mr_xstep * mr_x1;
+                mr_yfrac = zeroy + mr_ystep * mr_x1;
                 R_MapRow();
-            } while (local_30 < local_34);
+            } while (span_p < stop);
         }
-        mr_y++;
     }
-    return;
 }
+
