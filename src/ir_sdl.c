@@ -43,6 +43,58 @@ int updatedone;
 
 byte* bordertile;
 
+void IO_BlitBlocks(void)
+{
+	int iVar1;
+	int iVar2;
+	int puVar3;
+
+	//out(0x3c4, 2);
+	iVar2 = 199;
+	do
+	{
+		while (update[iVar2] == 0)
+		{
+			iVar2 = iVar2 - 1;
+			if (iVar2 < 0)
+			{
+				return;
+			}
+		}
+		update[iVar2]--;
+		iVar1 = ublocksource[iVar2];
+		puVar3 = iVar1 + buffercrtc;
+		//out(0x3c5, 1);
+		int i;
+		//TODO: unroll
+		//TODO: investigate if transfer horizontally (despite the penalty to setting the mapmask) will make this faster.
+		IO_SetMapMask(1);
+		for (i = 0; i < 1600; i += 80)
+		{
+			IO_WriteMungeDWord(*(uint32_t*)(&screenbuffer[iVar1] + (i)), puVar3 + (i));
+		}
+
+		IO_SetMapMask(2);
+		for (i = 0; i < 1600; i += 80)
+		{
+			IO_WriteMungeDWord(*(uint32_t*)(&screenbuffer[iVar1] + 16000 + (i)), puVar3 + (i));
+		}
+
+		IO_SetMapMask(4);
+		for (i = 0; i < 1600; i += 80)
+		{
+			IO_WriteMungeDWord(*(uint32_t*)(&screenbuffer[iVar1] + 32000 + (i)), puVar3 + (i));
+		}
+
+		IO_SetMapMask(8);
+		for (i = 0; i < 1600; i += 80)
+		{
+			IO_WriteMungeDWord(*(uint32_t*)(&screenbuffer[iVar1] + 48000 + (i)), puVar3 + (i));
+		}
+		iVar2 = iVar2 + -1;
+	} while (-1 < iVar2);
+}
+
 void R_MapRowHighC(void)
 {
 	int x, spot, plane;
@@ -244,7 +296,7 @@ void IO_GetPalette(uint8_t* pal)
 
 void IO_SetHighColor(void)
 {
-	if (novideo == 0)
+	if (novideo)
 		return;
 	
 	SDL_GL_SetHighColor(SCREENWIDTH, SCREENHEIGHT);
@@ -389,145 +441,6 @@ void R_SetViewSize(int blocks, detail_t detail, int redrawall)
 	IO_NoPlayBlit();
 }
 
-void IO_BlitBlocks(void)
-{
-	int iVar1;
-	int iVar2;
-	int puVar3;
-
-	//out(0x3c4, 2);
-	iVar2 = 199;
-	do 
-	{
-		while (update[iVar2] == 0)
-		{
-			iVar2 = iVar2 - 1;
-			if (iVar2 < 0) 
-			{
-				return;
-			}
-		}
-		update[iVar2]--;
-		iVar1 = ublocksource[iVar2];
-		puVar3 = iVar1 + buffercrtc;
-		//out(0x3c5, 1);
-		int i;
-		//TODO: unroll
-		//TODO: investigate if transfer horizontally (despite the penalty to setting the mapmask) will make this faster.
-		IO_SetMapMask(1);
-		for (i = 0; i < 1600; i+=80)
-		{
-			IO_WriteMungeDWord(*(uint32_t*)(&screenbuffer[iVar1] + (i)), puVar3 + (i));
-		}
-
-		IO_SetMapMask(2);
-		for (i = 0; i < 1600; i += 80)
-		{
-			IO_WriteMungeDWord(*(uint32_t*)(&screenbuffer[iVar1] + 16000 + (i)), puVar3 + (i));
-		}
-		
-		IO_SetMapMask(4);
-		for (i = 0; i < 1600; i += 80)
-		{
-			IO_WriteMungeDWord(*(uint32_t*)(&screenbuffer[iVar1] + 32000 + (i)), puVar3 + (i));
-		}
-
-		IO_SetMapMask(8);
-		for (i = 0; i < 1600; i += 80)
-		{
-			IO_WriteMungeDWord(*(uint32_t*)(&screenbuffer[iVar1] + 48000 + (i)), puVar3 + (i));
-		}
-		iVar2 = iVar2 + -1;
-	} while (-1 < iVar2);
-	return;
-}
-
-void R_BorderFill(int xl, int yl, int xh, int yh)
-{
-	uint8_t* pbVar1;
-	int local_20;
-	int local_1c;
-	int local_18;
-	uint8_t* local_14;
-
-	local_20 = 0;
-	while (local_1c = yl, local_20 < 4) 
-	{
-		while (pbVar1 = bordertile, (int)local_1c <= yh)
-		{
-			local_18 = xl >> 2;
-			local_14 = screenbuffer + (int)(planewidthlookup[local_1c] + (xl >> 2) + local_20 * 16000);
-			while ((int)local_18 <= xh >> 2)
-			{
-				*local_14 = pbVar1[(local_18 & 0xf) * 4 + local_20 + (local_1c & 0x3f) * 0x40];
-				local_18 = local_18 + 1;
-				local_14 = local_14 + 1;
-			}
-			local_1c++;
-		}
-		local_20++;
-	}
-	return;
-}
-
-void R_DrawViewBorder()
-{
-	if (screenblocks < 10) 
-	{
-		R_BorderFill(0, 0, 0x13f, windowy + -5);
-		R_BorderFill(0, windowy + naturalheight + 4, 0x13f, 0xa7);
-		R_BorderFill(0, windowy + -4, windowx + -5, windowy + naturalheight + 4);
-		R_BorderFill(windowx + naturalwidth + 4, windowy + -4, 0x13f, windowy + naturalheight + 4);
-	}
-}
-
-void R_DrawViewEdge()
-{
-	int local_24;
-	int local_28;
-	pic_t* local_30;
-	pic_t* local_2c;
-	int local_20;
-
-	if (screenblocks < 10)
-	{
-		local_24 = naturalwidth / 4;
-		local_28 = naturalheight / 4;
-
-		local_2c = (pic_t*)W_GetName("WCORNUL");
-		V_DrawPic(windowx + -4, windowy + -4, local_2c);
-
-		local_2c = (pic_t*)W_GetName("WCORNUR");
-		V_DrawPic(windowx + -4, windowy + naturalheight, local_2c);
-
-		local_2c = (pic_t*)W_GetName("WCORNLL");
-		V_DrawPic(windowx + naturalwidth, windowy + -4, local_2c);
-		local_2c = (pic_t*)W_GetName("WCORNLR");
-		V_DrawPic(windowx + naturalwidth, windowy + naturalheight, local_2c);
-		local_2c = (pic_t*)W_GetName("WEDGET");
-		local_30 = (pic_t*)W_GetName("WEDGEB");
-
-		local_20 = 0;
-		while (local_20 < local_24) 
-		{
-			V_DrawPic(local_20 * 4 + windowx, windowy + -4, local_2c);
-			V_DrawPic(local_20 * 4 + windowx, windowy + naturalheight, local_30);
-			local_20 = local_20 + 1;
-		}
-
-		local_2c = (pic_t*)W_GetName("WEDGEL");
-		local_30 = (pic_t*)W_GetName("WEDGER");
-		local_20 = 0;
-		while (local_20 < local_28)
-		{
-			V_DrawPic(windowx + -4, local_20 * 4 + windowy, local_2c);
-			V_DrawPic(windowx + naturalwidth, local_20 * 4 + windowy, local_30);
-			local_20 = local_20 + 1;
-		}
-	}
-	return;
-}
-
 void R_SetDetail(detail_t detail)
 {
 	R_SetViewSize(screenblocks, detail, 0);
@@ -535,20 +448,14 @@ void R_SetDetail(detail_t detail)
 
 void R_SizeUp(void)
 {
-	if (screenblocks < 11) 
-	{
+	if (screenblocks < 11)
 		R_SetViewSize(screenblocks + 1, currentdetail, 0);
-	}
-	return;
 }
 
 void R_SizeDown(void)
 {
-	if (1 < screenblocks) 
-	{
-		R_SetViewSize(screenblocks + -1, currentdetail, 0);
-	}
-	return;
+	if (screenblocks > 1)
+		R_SetViewSize(screenblocks - 1, currentdetail, 0);
 }
 
 void R_SetViewBorder(char* border)
@@ -556,482 +463,456 @@ void R_SetViewBorder(char* border)
 	bordertile = W_GetName(border);
 }
 
-void R_InitVideoDevice(void)
+void R_BorderFill(int xl, int yl, int xh, int yh)
 {
-	int iVar1;
-	void* pvVar2;
-	int* puVar3;
-	int puVar4;
+	byte* source, * dest;
+	int x, y, p;
 
-	R_SetViewBorder("FLOOR5_1");
-	screenblocks = 10;
-	currentdetail = 0;
-	buffercrtc = 0;
-	iVar1 = W_GetNumForName("COLORMAP");
-	colormaps = (uint8_t*)malloc(8448);
-#ifdef ISB_LINT
-	if (colormaps == NULL)
+	xl /= 4; xh /= 4;
+
+	for (p = 0; p < 4; p++)
 	{
-		IO_Error("R_InitVideoDevice: cannot allocate colormaps");
-		return;
+		for (y = yl; y <= yh; y++)
+		{
+			dest = screenbuffer + planewidthlookup[y] + p * 16000 + xl;
+			source = bordertile + ((y & 63) << 6) + p;
+
+			for (x = xl; x <= xh; x++)
+			{
+				*dest++ = source[((x & 15) << 2)];
+			}
+		}
 	}
-	if (lumpinfo[iVar1].size > 8448)
+}
+
+void R_DrawViewBorder()
+{
+	if (screenblocks < 10)
 	{
-		IO_Error("R_InitVideoDevice: bad colormap size");
-		return;
+		R_BorderFill(0, 0, SCREENWIDTH - 1, windowy - 5);
+		R_BorderFill(0, windowy + naturalheight + 4, SCREENWIDTH - 1, SCREENHEIGHT - SBARHEIGHT - 1);
+		R_BorderFill(0, windowy - 4, windowx - 5, windowy + naturalheight + 4);
+		R_BorderFill(windowx + naturalwidth + 4, windowy - 4, SCREENWIDTH - 1, windowy + naturalheight + 4);
 	}
-#endif
-	memcpy(colormaps, (void*)lumpinfo[iVar1].position, lumpinfo[iVar1].size);
-	iVar1 = W_GetNumForName("COLORS15");
-	wordcolormaps = (uint16_t*)malloc(16896);
-#ifdef ISB_LINT
-	if (wordcolormaps == NULL)
+}
+
+void R_DrawViewEdge()
+{
+	int x, y, w, h;
+	patch_t* p1, * p2;
+
+	if (screenblocks < 10)
 	{
-		IO_Error("R_InitVideoDevice: cannot allocate wordcolormaps");
-		return;
+		w = naturalwidth / 4;
+		h = naturalheight / 4;
+
+		V_DrawPic(windowx - 4, windowy - 4, (pic_t*)W_GetName("WCORNUL"));
+		V_DrawPic(windowx - 4, windowy + naturalheight, (pic_t*)W_GetName("WCORNUR"));
+		V_DrawPic(windowx + naturalwidth, windowy - 4, (pic_t*)W_GetName("WCORNLL"));
+		V_DrawPic(windowx + naturalwidth, windowy + naturalheight, (pic_t*)W_GetName("WCORNLR"));
+
+		p1 = (pic_t*)W_GetName("WEDGET");
+		p2 = (pic_t*)W_GetName("WEDGEB");
+
+		for (x = 0; x < w; x++)
+		{
+			V_DrawPic(x * 4 + windowx, windowy - 4, p1);
+			V_DrawPic(x * 4 + windowx, windowy + naturalheight, p2);
+		}
+
+		p1 = (pic_t*)W_GetName("WEDGEL");
+		p2 = (pic_t*)W_GetName("WEDGER");
+		
+		for (y = 0; y < h; y++)
+		{
+			V_DrawPic(windowx - 4, y * 4 + windowy, p1);
+			V_DrawPic(windowx + naturalwidth, y * 4 + windowy, p2);
+		}
 	}
-	if (lumpinfo[iVar1].size > 16896)
-	{
-		IO_Error("R_InitVideoDevice: bad wordcolormap size");
-		return;
-	}
-#endif
-	puVar3 = memcpy(wordcolormaps, (void*)lumpinfo[iVar1].position, lumpinfo[iVar1].size);
-	puVar4 = 0;
-	while ((int)puVar4 < 320)
-	{
-		highcollumntable[puVar4] = &screenbuffer[0] + ((int)puVar4 >> 2) + ((uint32_t)puVar4 & 3) * 16000;
-		puVar3 = puVar4;
-		puVar4++;
-	}
-	puVar4 = 0;
-	while ((int)puVar4 < 160)
-	{
-		lowcollumntable[puVar4] = screenbuffer + ((int)puVar4 >> 1) + ((uint32_t)puVar4 & 1) * 32000;
-		puVar3 = puVar4;
-		puVar4++;
-	}
-	return;
 }
 
 void IO_BlitPlayScreen(void)
 {
-	size_t local_24;
-	uint8_t* local_28;
-	int local_2c;
-	int local_20;
-	int iVar1;
+	int y, p, len;
+	byte* source, * dest;
 
-	int c;
+	if (novideo)
+		return;
 
-	if (novideo == 0) 
+	//outp(SC_INDEX, SC_MAPMASK);
+	switch (currentdetail)
 	{
-		//watcom_outp(0x3c4, 2);
-		//IO_SetMapMask(2);
-		if (currentdetail < 5)
+	case dt_high:
+	case dt_highcolor:
+	case dt_hires:
+		len = viewwidth / 4;
+		if (currentdetail == dt_highcolor)
+			len *= 2;
+		
+		for (p = 0; p < 4; p++)
 		{
-			local_24 = viewwidth >> 1;
-			switch (currentdetail) 
+			//outp(SC_INDEX+1, 1 << p);
+			IO_SetMapMask(1 << p);
+			source = screenbuffer + p * 16000 + windoworg;
+			dest = windoworg + buffercrtc;
+			
+			for (y = 0; y < viewheight; y++)
 			{
-			default:
-				local_24 = viewwidth >> 2;
-				if (currentdetail == 3) 
-				{
-					local_24 = local_24 << 1;
-				}
-				local_20 = 0;
-				while (local_20 < 4)
-				{
-					//watcom_outp(0x3c5, (byte)(1 << ((byte)start & 0x1f)));
-					IO_SetMapMask(1 << (local_20 & 0x1f));
-					local_28 = screenbuffer + windoworg + local_20 * 16000;
-					local_2c = windoworg + buffercrtc;
-					iVar1 = 0;
-					while (iVar1 < viewheight) 
-					{
-						//memcpy(local_2c, local_28, local_24);
-						for (c = 0; c < local_24 >> 2; c++)
-						{
-							IO_WriteMungeDWord(((int*)local_28)[c], local_2c + (c << 2));
-						}
-						local_2c = local_2c + 80;
-						local_28 = local_28 + 80;
-						iVar1++;
-					}
-					local_20++;
-				}
-				break;
-			case 1:
-				local_20 = 0;
-				while (local_20 < 3)
-				{
-					//watcom_outp(0x3c5, (byte)(3 << ((byte)start & 0x1f)));
-					IO_SetMapMask(3 << (local_20 & 0x1f));
-					local_28 = screenbuffer + windoworg + local_20 * 16000;
-					local_2c = windoworg + buffercrtc;
-					iVar1 = 0;
-					while (iVar1 < viewheight)
-					{
-						//watcom_memcpy(local_2c, local_28, local_24);
-						for (c = 0; c < local_24 >> 2; c++)
-						{
-							IO_WriteMungeDWord(((int*)local_28)[c], local_2c + (c << 2));
-						}
-						local_2c = local_2c + 80;
-						local_28 = local_28 + 80;
-						iVar1++;
-					}
-					local_20 += 2;
-				}
-				break;
-				
-			case 2:
-				local_20 = 0;
-				while (local_20 < 3) 
-				{
-					//watcom_outp(0x3c5, (byte)(3 << ((byte)start & 0x1f)));
-					IO_SetMapMask(3 << (local_20 & 0x1f));
-					local_28 = screenbuffer + windoworg + local_20 * 16000;
-					local_2c = windoworg + buffercrtc;
-					iVar1 = 0;
-					while (iVar1 < viewheight) 
-					{
-						//watcom_memcpy(local_2c, local_28, local_24);
-						//watcom_memcpy((void*)((int)local_2c + 0x50), local_28, local_24);
+				//memcpy(dest, source, length);
+				for (int c = 0; c < len >> 2; c++)
+					IO_WriteMungeDWord(((int*)source)[c], dest + (c << 2));
 
-						for (c = 0; c < local_24 >> 2; c++)
-						{
-							IO_WriteMungeDWord(((int*)local_28)[c], local_2c + (c << 2));
-						}
-
-						for (c = 0; c < local_24 >> 2; c++)
-						{
-							IO_WriteMungeDWord(((int*)local_28)[c], (local_2c + 80) + (c << 2));
-						}
-
-						local_2c = local_2c + 160;
-						local_28 = local_28 + 160;
-						iVar1++;
-					}
-					local_20 += 2;
-				}
+				source += SCREENBWIDE;
+				dest += SCREENBWIDE;
 			}
 		}
-		else 
+		break;
+	case dt_medium:
+		len = viewwidth / 2;
+		for (p = 0; p < 4; p += 2)
 		{
-			IO_Error("IO_BlitPlayScreen: unknown detail level\n");
+			//outp(SC_INDEX+1, 3 << p);
+			IO_SetMapMask(3 << p);
+			source = screenbuffer + p * 16000 + windoworg;
+			dest = windoworg + buffercrtc;
+			
+			for (y = 0; y < viewheight; y++)
+			{
+				//memcpy(dest, source, len);
+				for (int c = 0; c < len >> 2; c++)
+					IO_WriteMungeDWord(((int*)source)[c], dest + (c << 2));
+				
+				source += SCREENBWIDE;
+				dest += SCREENBWIDE;
+			}
 		}
+		break;
+	case dt_low:
+		len = viewwidth / 2;
+		
+		for (p = 0; p < 4; p += 2)
+		{
+			//outp(SC_INDEX+1, 3 << p);
+			IO_SetMapMask(3 << p);
+			source = screenbuffer + p * 16000 + windoworg;
+			dest = windoworg + buffercrtc;
+			
+			for (y = 0; y < viewheight; y++)
+			{
+				//memcpy(dest, source, len);
+				//memcpy(dest + SCREENBWIDE, source, len);
+
+				for (int c = 0; c < len >> 2; c++)
+					IO_WriteMungeDWord(((int*)source)[c], dest + (c << 2));
+
+				for (int c = 0; c < len >> 2; c++)
+					IO_WriteMungeDWord(((int*)source)[c], (dest + SCREENBWIDE) + (c << 2));
+				
+
+				source += SCREENBWIDE * 2;
+				dest += SCREENBWIDE * 2;
+			}
+		}
+		break;
+	default:
+		IO_Error("IO_BlitPlayScreen: unknown detail level");
 	}
-	return;
 }
+
 void IO_DrawTics(void)
 {
+	static int oldtics;
 	int tics;
 	uint32_t dest;
 	int i;
-	static int oldtics;
 
-	if (novideo == 0) 
+	if (novideo)
 	{
-		tics = ticcount - oldtics;
-		oldtics = ticcount;
-		if (20 < tics)
-		{
-			tics = 20;
-		}
-		if (tics < 0)
-		{
-			IO_Error("IO_DrawTics: tics = %i", tics);
-		}
-		IO_SetMapMask(3);
-		i = 0;
-		dest = buffercrtc + 15920;
-		while (i < tics)
-		{
-			//*dest = 0xff;
-			IO_WriteMunge(0xff, dest);
-			i = i + 1;
-			dest = dest + 1;
-		}
-		while (i < 20) 
-		{
-			//*dest = 0;
-			IO_WriteMunge(0, dest);
-			i = i + 1;
-			dest = dest + 1;
-		}
+		return;
 	}
-	return;
+	tics = ticcount - oldtics;
+	oldtics = ticcount;
+	if (tics > 20)
+		tics = 20;
+	
+	if (tics < 0)
+		IO_Error("IO_DrawTics: tics = %i", tics);
+	
+	//outp(SC_INDEX+1, 3);
+	IO_SetMapMask(3);
+	dest = buffercrtc + SCREENBWIDE * (SCREENHEIGHT - 1);
+	
+	for (i = 0; i < tics; i++)
+	{
+		//*dest++ = 0xff;
+		IO_WriteMunge(0xff, dest++);
+	}
+	
+	for (; i < 20; i++)
+	{
+		//*dest++ = 0;
+		IO_WriteMunge(0, dest++);
+	}
 }
 
 void R_FixDetailPlanes(void)
 {
-	uint8_t* src;
-	int local_28;
-	int local_24;
-	size_t local_20;
+	byte* src;
+	int len;
+	int y, p;
 
-	if (currentdetail < 5) 
+	switch (currentdetail)
 	{
-		local_20 = viewwidth >> 1;
-		switch (currentdetail)
+	case dt_high:
+	case dt_highcolor:
+	case dt_hires:
+		break;
+	case 1:
+		len = viewwidth / 2;
+		
+		for (p = 0; p < 3; p += 2)
 		{
-		default:
-			break;
-		case 1:
-			local_28 = 0;
-			while (local_28 < 3)
+			src = &screenbuffer[windoworg + p * 16000];
+			
+			for (y = 0; y < viewheight; y++)
 			{
-				src = &screenbuffer[windoworg + local_28 * 16000];
-				local_24 = 0;
-				while (local_24 < viewheight) 
-				{
-					memcpy(src + 16000, src, local_20);
-					src = src + 0x50;
-					local_24 = local_24 + 1;
-				}
-				local_28 = local_28 + 2;
-			}
-			break;
-		case 2:
-			local_28 = 0;
-			while (local_28 < 3)
-			{
-				src = &screenbuffer[windoworg + local_28 * 16000];
-				local_24 = 0;
-				while (local_24 < viewheight)
-				{
-					memcpy(src + 0x50, src, local_20);
-					memcpy(src + 16000, src, local_20);
-					memcpy(src + 0x3ed0, src, local_20);
-					src = src + 0xa0;
-					local_24 = local_24 + 1;
-				}
-				local_28 = local_28 + 2;
+				memcpy(src + 16000, src, len);
+				src = src + SCREENBWIDE;
 			}
 		}
+		break;
+	case 2:
+		len = viewwidth / 2;
+
+		for (p = 0; p < 3; p += 2)
+		{
+			src = &screenbuffer[windoworg + p * 16000];
+
+			for (y = 0; y < viewheight; y++)
+			{
+				memcpy(src + SCREENBWIDE, src, len);
+				memcpy(src + 16000, src, len);
+				memcpy(src + 16000 + SCREENBWIDE, src, len);
+				src = src + SCREENBWIDE * 2;
+			}
+		}
+		break;
 	}
-	return;
 }
 
 void IO_UpdateOnly(void)
 {
-	if (novideo == 0) 
+	if (novideo)
 	{
-		updatedone = 1;
-		if (noplayblit == 2)
-		{
-			IO_WaitVBL(1);
-		}
-		if (noplayblit != 0) 
-		{
-			R_FixDetailPlanes();
-		}
-		if (blockupdateneeded != 0) 
-		{
-			IO_BlitBlocks();
-		}
-		if ((playscreenupdateneeded != 0) && (noplayblit == 0)) 
-		{
-			IO_BlitPlayScreen();
-		}
-		if (blockupdateneeded != 0) 
-		{
-			blockupdateneeded--;
-		}
-		if (playscreenupdateneeded != 0) 
-		{
-			playscreenupdateneeded--;
-		}
-		if (noplayblit != 0)
-		{
-			noplayblit--;
-		}
+		return;
 	}
-	return;
+
+	updatedone = 1;
+	if (noplayblit == 2)
+	{
+		IO_WaitVBL(1);
+	}
+	if (noplayblit != 0)
+	{
+		R_FixDetailPlanes();
+	}
+	if (blockupdateneeded != 0)
+	{
+		IO_BlitBlocks();
+	}
+	if ((playscreenupdateneeded != 0) && (noplayblit == 0))
+	{
+		IO_BlitPlayScreen();
+	}
+	if (blockupdateneeded != 0)
+	{
+		blockupdateneeded--;
+	}
+	if (playscreenupdateneeded != 0)
+	{
+		playscreenupdateneeded--;
+	}
+	if (noplayblit != 0)
+	{
+		noplayblit--;
+	}
 }
 
 void IO_UpdateScreen(void)
 {
-	if (novideo == 0)
+	if (novideo)
 	{
-		if (updatedone == 0)
-		{
-			IO_UpdateOnly();
-		}
-		updatedone = 0;
-		IO_DrawTics();
-		IO_SetStartAddress(buffercrtc);
-		buffercrtc ^= 0x8000;
+		return;
 	}
-	return;
+
+	if (updatedone == 0)
+		IO_UpdateOnly();
+	
+	updatedone = 0;
+	IO_DrawTics();
+	//outp(CRTC_INDEX, CRTC_STARTHIGH);
+	//outp(CRTC_INDEX+1, buffercrtc >> 8);
+	IO_SetStartAddress(buffercrtc);
+	buffercrtc ^= 0x8000;
 }
 
 void V_DrawPatch(int x, int y, patch_t* patch)
 {
-	uint8_t bVar1;
-	int extraout_EAX = x;
-	uint32_t local_24;
-	uint8_t* local_18;
-	int extraout_EDX = y;
-	int iVar2;
-	int local_34;
-	int local_30;
-	uint8_t* local_28;
-	int local_1c;
-	int iVar3;
+	int col;
+	byte* collumn;
+	int top, bottom;
+	byte* source;
+	int dest;
 
-	local_30 = extraout_EDX - (short)patch->topoffset;
-	local_34 = extraout_EAX - (short)patch->leftoffs;
-	V_MarkUpdateBlock(local_34, local_30, patch->width + local_34 - 1, patch->height + local_30 - 1);
-	iVar3 = 0;
-	//watcom_outp(0x3c4, 2);
-	while (iVar3 < patch->width)
+	y = y - patch->topoffset;
+	x = x - patch->leftoffs;
+	V_MarkUpdateBlock(x, y, x + patch->width - 1, y + patch->height - 1);
+
+	col = 0;
+	//outp(SC_INDEX, SC_MAPMASK);
+	for (; col < patch->width; x++, col++)
 	{
-		local_18 = &patch->width + *(short*)((int)patch->coloffsets + iVar3 * 2);
-		//watcom_outp(0x3c5, (byte)(1 << ((byte)local_34 & 3)));
-		IO_SetMapMask((uint8_t)(1 << (local_34 & 3)));
-		while (*local_18 != 0xff) 
+		collumn = (byte*)patch + patch->coloffsets[col];
+
+		//outp(SC_INDEX + 1, 1 << (x & 3));
+		IO_SetMapMask(1 << (x & 3));
+		while (*collumn != 0xff)
 		{
-			iVar2 = local_30 + *local_18;
-			bVar1 = local_18[1];
-			local_24 = planewidthlookup[iVar2] + buffercrtc + (local_34 >> 2);
-			local_28 = local_18 + 2;
-			local_1c = iVar2;
-			while (local_1c < (iVar2 + bVar1)) 
+			top = y + collumn[0];
+			bottom = top + collumn[1];
+			source = collumn + 2;
+			dest = planewidthlookup[top] + buffercrtc + (x / 4);
+
+			while (top++ < bottom)
 			{
-				//*dest = *local_28;
-				IO_WriteMunge(*local_28, local_24);
-				local_24 = local_24 + 0x50;
-				local_28 = local_28 + 1;
-				local_1c = local_1c + 1;
+				//*dest = *source++;
+				IO_WriteMunge(*source++, dest);
+				dest += SCREENBWIDE;
 			}
-			local_18 = local_18 + local_18[1] + 2;
+			collumn += collumn[1] + 2;
 		}
-		local_34 = local_34 + 1;
-		iVar3 = iVar3 + 1;
 	}
-	return;
 }
 
 void IO_NoPlayBlit(void)
 {
 	V_MarkUpdateBlock(windowx, windowy, windowx + naturalwidth - 1, windowy + naturalheight - 1);
 	noplayblit = 2;
-	return;
 }
 
 void R_StartInstanceDrawing(void)
 {
 	IO_UpdateOnly();
 	IO_NoPlayBlit();
-	return;
 }
 
 int R_ClearBuffer(void)
 {
-	int iVar1;
-	uint8_t* local_28;
-	int local_20;
-	int count;
-	int local_24;
+	int y, p, len;
+	byte* dest;
 
-	iVar1 = viewwidth >> 2;
-	if (currentdetail < 5) 
+	switch (currentdetail) 
 	{
-		local_24 = viewwidth >> 1;
-		switch (currentdetail) 
+	case dt_high:
+	case dt_highcolor:
+	case dt_hires:
+		len = viewwidth / 4;
+		if (currentdetail == 3) 
+			len *= 2;
+		
+		for (p = 0; p < 4; p++)
 		{
-		default:
-			local_24 = iVar1;
-			if (currentdetail == 3) 
+			dest = screenbuffer + windoworg + p * 16000;
+
+			for (y = 0; y < viewheight; y++)
 			{
-				local_24 = iVar1 << 1;
-			}
-			local_20 = 0;
-			while (local_20 < 4) 
-			{
-				local_28 = screenbuffer + windoworg + local_20 * 16000;
-				count = 0;
-				iVar1 = local_20;
-				while (count < viewheight) 
-				{
-					memset((char*)local_28, validcheck, local_24);
-					local_28 = local_28 + 0x50;
-					count = count + 1;
-				}
-				local_20 = iVar1 + 1;
-			}
-			break;
-		case 1:
-			local_20 = 0;
-			count = local_24;
-			while (iVar1 = local_24, local_20 < 3) 
-			{
-				local_28 = screenbuffer + windoworg + local_20 * 16000;
-				local_24 = 0;
-				while (local_24 < viewheight) 
-				{
-					memset((char*)local_28, validcheck, count);
-					local_28 = local_28 + 0x50;
-					local_24 = local_24 + 1;
-				}
-				local_20 = local_20 + 2;
-			}
-			break;
-		case 2:
-			local_20 = 0;
-			count = local_24;
-			while (iVar1 = local_24, local_20 < 3)
-			{
-				local_28 = screenbuffer + windoworg + local_20 * 16000;
-				local_24 = 0;
-				while (local_24 < viewheight) 
-				{
-					memset((char*)local_28, validcheck, count);
-					local_28 = local_28 + 0xa0;
-					local_24 = local_24 + 1;
-				}
-				local_20 = local_20 + 2;
+				memset((char*)dest, validcheck, len);
+				dest += SCREENBWIDE;
 			}
 		}
-	}
-	else 
-	{
+		break;
+	case dt_medium:
+		len = viewwidth / 2;
+
+		for (p = 0; p < 3; p += 2)
+		{
+			dest = screenbuffer + windoworg + p * 16000;
+			
+			for (y = 0; y < viewheight; y++)
+			{
+				memset(dest, validcheck, len);
+				dest += SCREENBWIDE;
+			}
+		}
+		break;
+	case dt_low:
+		len = viewwidth / 2;
+
+		for (p = 0; p < 3; p += 2)
+		{
+			dest = screenbuffer + windoworg + p * 16000;
+
+			for (y = 0; y < viewheight; y++)
+			{
+				memset(dest, validcheck, len);
+				dest += SCREENBWIDE * 2;
+			}
+		}
+		break;
+	default:
 		IO_Error("R_ClearBuffer: unknown detail level");
 	}
 	return;
 }
 
-extern void P_DrawPlayerShapes(int pnum);
-
-void TimeSpin(void)
+void R_InitVideoDevice(void)
 {
-	int start;
+	int lump;
 	int i;
-	int tics;
 
-	start = IO_GetTime();
-	do 
+	R_SetViewBorder("FLOOR5_1");
+	screenblocks = 10;
+	currentdetail = 0;
+	buffercrtc = 0;
+
+	lump = W_GetNumForName("COLORMAP");
+	colormaps = (byte*)malloc(8448);
+#ifdef ISB_LINT
+	if (colormaps == NULL)
 	{
-		IO_DoEvents(); //[ISB] I should use a timer thread....
-		i = IO_GetTime();
-	} while (i == start);
-	start = start + 1;
-	
-	for (i = 0; i < 8192; i += 64)
-	{
-		R_RenderView(viewsector, viewx, viewy, viewz, i);
-		P_DrawPlayerShapes(viewplayer);
-		IO_UpdateScreen();
-		IO_DoEvents();
+		IO_Error("R_InitVideoDevice: cannot allocate colormaps");
+		return;
 	}
-	i = IO_GetTime();
-	tics = i - start;
-	IO_Error("Time:%i  (%f ips)", tics, (double)(8960.0f / (float)tics));
-	return;
-}
+	if (lumpinfo[lump].size > 8448)
+	{
+		IO_Error("R_InitVideoDevice: bad colormap size");
+		return;
+	}
+#endif
+	memcpy(colormaps, (void*)lumpinfo[lump].position, lumpinfo[lump].size);
 
+	lump = W_GetNumForName("COLORS15");
+	wordcolormaps = (unsigned short*)malloc(16896);
+#ifdef ISB_LINT
+	if (wordcolormaps == NULL)
+	{
+		IO_Error("R_InitVideoDevice: cannot allocate wordcolormaps");
+		return;
+	}
+	if (lumpinfo[lump].size > 16896)
+	{
+		IO_Error("R_InitVideoDevice: bad wordcolormap size");
+		return;
+	}
+#endif
+	memcpy(wordcolormaps, (void*)lumpinfo[lump].position, lumpinfo[lump].size);
+	
+	for (i = 0; i < SCREENWIDTH; i++)
+		highcollumntable[i] = screenbuffer + (i >> 2) + (i & 3) * (SCREENBWIDE * SCREENHEIGHT);
+
+	for (i = 0; i < SCREENWIDTH; i++)
+		lowcollumntable[i] = screenbuffer + (i >> 1) + (i & 1) * (SCREENBWIDE * SCREENHEIGHT * 2);
+}
 
 extern void R_GenerateTexture(maptexture_t* texture);
 extern uint8_t* videoMemory;
