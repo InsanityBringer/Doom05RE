@@ -188,3 +188,7 @@ extern fixed_t viewbackscale[];
 
 extern int viewfloorpixels[];
 extern int viewceilingpixels[];
+
+void R_DrawViewBorder();
+void R_DrawViewEdge();
+void IO_NoPlayBlit();

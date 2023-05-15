@@ -31,261 +31,362 @@ int buffercrtc;
 
 int novideo;
 
-uint8_t* colormaps;
-uint16_t* wordcolormaps;
+byte* colormaps;
+unsigned short* wordcolormaps;
 
 byte* lowcollumntable[320];
 byte* highcollumntable[320];
 
-uint8_t* hiresbuffer;
+byte* hiresbuffer;
 int noplayblit;
 int updatedone;
 
-uint8_t* bordertile;
+byte* bordertile;
+
+void R_MapRowHighC(void)
+{
+	int x, spot, plane;
+	byte* dest;
+	byte* colormap;
+
+	if ((((mr_x1 < 0) || (viewwidth + 1 < mr_x2)) || (mr_x2 <= mr_x1)) || (viewheight <= mr_y)) 
+		IO_Error("MapRow: mr_x1 = %i  mr_x2 = %i mr_y = %i", mr_x1, mr_x2, mr_y);
+	
+	if (mr_picture == NULL) 
+		IO_Error("MapRow: NULL picture");
+	
+	x = mr_x1;
+	colormaps = &colormaps[mr_colormap * 256];
+	dest = screenbuffer + (int)(planewidthlookup[mr_y + windowy] + (mr_x1 + windowx >> 2));
+	plane = ((mr_x1 + windowx) & 3U) * 16000;
+	do 
+	{
+		spot = ((mr_yfrac >> 0x14) & 0xfc0U) + ((mr_xfrac >> 0x1a) & 0x3fU);
+		dest[plane] = dest[mr_picture[spot]];
+		
+		mr_xfrac += mr_xstep;
+		mr_yfrac += mr_ystep;
+		if (plane == 48000)
+		{
+			dest++;
+			plane = 0;
+		}
+		else 
+			plane += 16000;
+		
+		x++;
+	} while (x != mr_x2);
+}
+
+void R_MapRowMedC(void)
+{
+	int x, spot, plane;
+	byte* dest;
+	byte* colormap;
+
+	if ((((mr_x1 < 0) || (viewwidth + 1 < mr_x2)) || (mr_x2 <= mr_x1)) || (viewheight <= mr_y))
+		IO_Error("MapRow: mr_x1 = %i  mr_x2 = %i mr_y = %i", mr_x1, mr_x2, mr_y);
+
+	if (mr_picture == NULL)
+		IO_Error("MapRow: NULL picture");
+	
+	x = mr_x1;
+	colormap = &colormaps[mr_colormap * 256];
+	dest = screenbuffer + (int)(planewidthlookup[mr_y + windowy] + (mr_x1 * 2 + windowx >> 2));
+	plane = ((mr_x1 * 2 + windowx) & 3U) * 16000;
+	do
+	{
+		spot = ((mr_yfrac >> 0x14) & 0xfc0U) + ((mr_xfrac >> 0x1a) & 0x3fU);
+		dest[plane] = colormap[mr_picture[spot]];
+		mr_xfrac += mr_xstep;
+		mr_yfrac += mr_ystep;
+		if (plane == 32000)
+		{
+			dest++;
+			plane = 0;
+		}
+		else
+			plane = 32000;
+		
+		x++;
+	} while (x != mr_x2);
+}
+
+void R_MapRowLowC(void)
+{
+	int x, spot, plane;
+	byte* dest;
+	byte* colormap;
+
+	if ((((mr_x1 < 0) || (viewwidth + 1 < mr_x2)) || (mr_x2 <= mr_x1)) || (viewheight <= mr_y))
+		IO_Error("MapRow: mr_x1 = %i  mr_x2 = %i mr_y = %i", mr_x1, mr_x2, mr_y);
+
+	if (mr_picture == NULL)
+		IO_Error("MapRow: NULL picture");
+	
+	x = mr_x1;
+	colormap = &colormaps[mr_colormap * 256];
+	dest = screenbuffer + (int)(planewidthlookup[mr_y * 2 + windowy] + (mr_x1 * 2 + windowx >> 2));
+	plane = ((mr_x1 * 2 + windowx) & 3U) * 16000;
+	do
+	{
+		spot = ((mr_yfrac >> 0x14) & 0xfc0U) + ((mr_xfrac >> 0x1a) & 0x3fU);
+		dest[plane] = colormap[mr_picture[spot]];
+		mr_xfrac += mr_xstep;
+		mr_yfrac += mr_ystep;
+		if (plane == 32000)
+		{
+			dest++;
+			plane = 0;
+		}
+		else
+			plane = 32000;
+
+		x++;
+	} while (x != mr_x2);
+}
 
 void R_RawScaleHighC(void)
 {
-	uint8_t* iVar1;
-	uint8_t* local_c;
-	int local_8;
+	int count;
+	byte* dest;
+	byte* colormap;
 
-	if ((((sp_y1 < 0) || (viewheight <= sp_y2)) || (sp_y2 < sp_y1)) || (viewwidth <= sp_x)) 
-	{
-		IO_Error("R_ScalePost: sp_y1: %i  sp_y2: %i  sp_x: %i\n", sp_y1, sp_y2, sp_x);
-	}
-	if (sp_source == NULL) 
-	{
+	if ((((sp_y1 < 0) || (viewheight <= sp_y2)) || (sp_y2 < sp_y1)) || (viewwidth <= sp_x))
+		IO_Error("R_ScalePost: sp_y1: %i  sp_y2: %i  sp_x: %i", sp_y1, sp_y2, sp_x);
+
+	if (sp_source == NULL)
 		IO_Error("R_ScalePost: NULL pointer\n");
-		return;
-	}
-	iVar1 = &colormaps[sp_colormap * 256];
-	local_c = planewidthlookup[sp_y1 + windowy] + highcollumntable[sp_x + windowx];
-	local_8 = (sp_y2 - sp_y1) + 1;
-	while (local_8 != 0) 
+
+	colormap = &colormaps[sp_colormap * 256];
+	dest = planewidthlookup[sp_y1 + windowy] + highcollumntable[sp_x + windowx];
+	count = (sp_y2 - sp_y1) + 1;
+	while (count-- != 0)
 	{
-		*local_c = iVar1[sp_source[sp_frac >> FRACBITS]];
-		local_c = local_c + 0x50;
+		*dest = colormap[sp_source[sp_frac >> FRACBITS]];
+		dest += SCREENBWIDE;
 		sp_frac += sp_fracstep;
 #ifdef HIRES_FIXES
 		//[ISB] wrap code
 		//todo: optimize
 		sp_frac %= (128 << FRACBITS);
 #endif
-		local_8 = local_8 + -1;
 	}
-	return;
 }
 
 void R_RawScaleMedC(void)
 {
-	uint8_t* iVar1;
-	uint8_t* local_c;
-	int local_8;
+	int count;
+	byte* dest;
+	byte* colormap;
 
-	if ((((sp_y1 < 0) || (viewheight <= sp_y2)) || (sp_y2 < sp_y1)) || (viewwidth <= sp_x)) 
+	if ((((sp_y1 < 0) || (viewheight <= sp_y2)) || (sp_y2 < sp_y1)) || (viewwidth <= sp_x))
+		IO_Error("R_ScalePost: sp_y1: %i  sp_y2: %i  sp_x: %i", sp_y1, sp_y2, sp_x);
+
+	if (sp_source == NULL)
+		IO_Error("R_ScalePost: NULL pointer");
+
+	colormap = &colormaps[sp_colormap * 256];
+	dest = planewidthlookup[sp_y1 + windowy] + highcollumntable[sp_x * 2 + windowx];
+	count = (sp_y2 - sp_y1) + 1;
+	while (count-- != 0)
 	{
-		IO_Error("R_ScalePost: sp_y1: %i  sp_y2: %i  sp_x: %i\n", sp_y1, sp_y2, sp_x);
-		return;
+		*dest = colormap[sp_source[sp_frac >> FRACBITS]];
+		dest += SCREENBWIDE;
+		sp_frac += sp_fracstep;
 	}
-	if (sp_source == NULL) 
-	{
-		IO_Error("R_ScalePost: NULL pointer\n");
-		return;
-	}
-	iVar1 = &colormaps[sp_colormap * 256];
-	local_c = planewidthlookup[sp_y1 + windowy] + highcollumntable[sp_x * 2 + windowx];
-	local_8 = (sp_y2 - sp_y1) + 1;
-	while (local_8 != 0)
-	{
-		*local_c = iVar1[sp_source[sp_frac >> FRACBITS]];
-		local_c = local_c + 0x50;
-		sp_frac = sp_frac + sp_fracstep;
-		local_8 = local_8 + -1;
-	}
-	return;
 }
 
 void R_RawScaleLowC(void)
 {
-	uint8_t* iVar1;
-	uint8_t* local_c;
-	int local_8;
+	int count;
+	byte* dest;
+	byte* colormap;
 
 	if ((((sp_y1 < 0) || (viewheight <= sp_y2)) || (sp_y2 < sp_y1)) || (viewwidth <= sp_x))
-	{
-		IO_Error("R_ScalePost: sp_y1: %i  sp_y2: %i  sp_x: %i\n", sp_y1, sp_y2, sp_x);
-		return;
-	}
+		IO_Error("R_ScalePost: sp_y1: %i  sp_y2: %i  sp_x: %i", sp_y1, sp_y2, sp_x);
+
 	if (sp_source == NULL)
-	{
 		IO_Error("R_ScalePost: NULL pointer\n");
-		return;
-	}
-	iVar1 = &colormaps[sp_colormap * 256];
-	local_c = planewidthlookup[sp_y1 * 2 + windowy] + highcollumntable[sp_x * 2 + windowx];
-	local_8 = (sp_y2 - sp_y1) + 1;
-	while (local_8 != 0)
-	{
-		*local_c = iVar1[sp_source[sp_frac >> FRACBITS]];
-		local_c = local_c + 0xA0;
-		sp_frac = sp_frac + sp_fracstep;
-		local_8 = local_8 + -1;
-	}
-	return;
-}
 
-void R_MapRowHighC(void)
-{
-	uint8_t* iVar1;
-	uint8_t* local_14;
-	int local_10;
-	int local_8;
-
-	if ((((mr_x1 < 0) || (viewwidth + 1 < mr_x2)) || (mr_x2 <= mr_x1)) || (viewheight <= mr_y)) 
+	colormap = &colormaps[sp_colormap * 256];
+	dest = planewidthlookup[sp_y1 * 2 + windowy] + highcollumntable[sp_x * 2 + windowx];
+	count = (sp_y2 - sp_y1) + 1;
+	while (count-- != 0)
 	{
-		IO_Error("MapRow: mr_x1 = %i  mr_x2 = %i mr_y = %i", mr_x1, mr_x2, mr_y);
-		return;
+		*dest = colormap[sp_source[sp_frac >> FRACBITS]];
+		dest += SCREENBWIDE * 2;
+		sp_frac += sp_fracstep;
 	}
-	if (mr_picture == NULL) 
-	{
-		IO_Error("MapRow: NULL picture");
-		return;
-	}
-	local_8 = mr_x1;
-	iVar1 = &colormaps[mr_colormap * 256];
-	local_14 = screenbuffer + (int)(planewidthlookup[mr_y + windowy] + (mr_x1 + windowx >> 2));
-	local_10 = ((mr_x1 + windowx) & 3U) * 16000;
-	do 
-	{
-		//local_14[local_10] = (mr_picture[(mr_yfrac >> 0x14 & 0xfc0U) + (mr_xfrac >> 0x1a & 0x3fU)] + iVar1);
-		local_14[local_10] = iVar1[mr_picture[((mr_yfrac >> 0x14) & 0xfc0U) + ((mr_xfrac >> 0x1a) & 0x3fU)]];
-		//local_14[local_10] = 255;
-		mr_xfrac += mr_xstep;
-		mr_yfrac += mr_ystep;
-		if (local_10 == 48000)
-		{
-			local_14++;
-			local_10 = 0;
-		}
-		else 
-		{
-			local_10 += 16000;
-		}
-		local_8++;
-	} while (local_8 != mr_x2);
-	return;
-}
-
-void R_MapRowMedC(void)
-{
-	uint8_t* iVar1;
-	uint8_t* local_14;
-	int local_10;
-	int local_8;
-
-	if ((((mr_x1 < 0) || (viewwidth + 1 < mr_x2)) || (mr_x2 <= mr_x1)) || (viewheight <= mr_y))
-	{
-		IO_Error("MapRow: mr_x1 = %i  mr_x2 = %i mr_y = %i", mr_x1, mr_x2, mr_y);
-		return;
-	}
-	if (mr_picture == NULL)
-	{
-		IO_Error("MapRow: NULL picture");
-		return;
-	}
-	local_8 = mr_x1;
-	iVar1 = &colormaps[mr_colormap * 256];
-	local_14 = screenbuffer + (int)(planewidthlookup[mr_y + windowy] + (mr_x1 * 2 + windowx >> 2));
-	local_10 = ((mr_x1 * 2 + windowx) & 3U) * 16000;
-	do
-	{
-		//local_14[local_10] = (mr_picture[(mr_yfrac >> 0x14 & 0xfc0U) + (mr_xfrac >> 0x1a & 0x3fU)] + iVar1);
-		local_14[local_10] = iVar1[mr_picture[((mr_yfrac >> 0x14) & 0xfc0U) + ((mr_xfrac >> 0x1a) & 0x3fU)]];
-		//local_14[local_10] = 255;
-		mr_xfrac += mr_xstep;
-		mr_yfrac += mr_ystep;
-		if (local_10 == 32000)
-		{
-			local_14++;
-			local_10 = 0;
-		}
-		else
-		{
-			local_10 = 32000;
-		}
-		local_8++;
-	} while (local_8 != mr_x2);
-	return;
-}
-
-void R_MapRowLowC(void)
-{
-	uint8_t* iVar1;
-	uint8_t* local_14;
-	int local_10;
-	int local_8;
-
-	if ((((mr_x1 < 0) || (viewwidth + 1 < mr_x2)) || (mr_x2 <= mr_x1)) || (viewheight <= mr_y))
-	{
-		IO_Error("MapRow: mr_x1 = %i  mr_x2 = %i mr_y = %i", mr_x1, mr_x2, mr_y);
-		return;
-	}
-	if (mr_picture == NULL)
-	{
-		IO_Error("MapRow: NULL picture");
-		return;
-	}
-	local_8 = mr_x1;
-	iVar1 = &colormaps[mr_colormap * 256];
-	local_14 = screenbuffer + (int)(planewidthlookup[mr_y * 2 + windowy] + (mr_x1 * 2 + windowx >> 2));
-	local_10 = ((mr_x1 * 2 + windowx) & 3U) * 16000;
-	do
-	{
-		//local_14[local_10] = (mr_picture[(mr_yfrac >> 0x14 & 0xfc0U) + (mr_xfrac >> 0x1a & 0x3fU)] + iVar1);
-		local_14[local_10] = iVar1[mr_picture[((mr_yfrac >> 0x14) & 0xfc0U) + ((mr_xfrac >> 0x1a) & 0x3fU)]];
-		//local_14[local_10] = 255;
-		mr_xfrac += mr_xstep;
-		mr_yfrac += mr_ystep;
-		if (local_10 == 32000)
-		{
-			local_14++;
-			local_10 = 0;
-		}
-		else
-		{
-			local_10 = 32000;
-		}
-		local_8++;
-	} while (local_8 != mr_x2);
-	return;
-}
-
-void IO_GetPalette(uint8_t* pal)
-{
-	if (novideo == 0)
-	{
-		IO_GL_GetPalette(pal);
-	}
-}
-
-void IO_SetPalette(uint8_t* pal)
-{
-	uint8_t* local_20;
-	uint8_t* pbVar1;
-	int iVar2;
-
-	if (novideo == 0) 
-	{
-		local_20 = pal;
-		IO_WaitVBL(1);
-		IO_GL_SetPalette(pal);
-	}
-	return;
 }
 
 void IO_WaitVBL(int vbls)
 {
 	//SDL_Delay((1000 / 70) * vbls);
+}
+
+void IO_SetPalette(uint8_t* pal)
+{
+	if (novideo)
+		return;
+
+	IO_WaitVBL(1);
+	IO_GL_SetPalette(pal);
+}
+
+void IO_GetPalette(uint8_t* pal)
+{
+	if (novideo)
+		return;
+
+	IO_GL_GetPalette(pal);
+}
+
+void IO_SetHighColor(void)
+{
+	if (novideo == 0)
+		return;
+	
+	SDL_GL_SetHighColor(SCREENWIDTH, SCREENHEIGHT);
+}
+
+void IO_ClearHighColor(void)
+{
+	if (novideo)
+		return;
+	
+	IO_GL_SetVideoMode(SCREENWIDTH, SCREENHEIGHT, NULL);
+}
+
+void IO_SetHighRes(void)
+{
+	if (hiresbuffer == NULL)
+	{
+		hiresbuffer = (uint8_t*)malloc(0x1f400);
+		if (hiresbuffer == NULL)
+		{
+			IO_Error("IO_SetHighRes: Couldn't malloc buffer\n");
+		}
+	}
+	
+	if (novideo)
+		return;
+}
+
+void IO_ClearHighRes(void)
+{
+	if (novideo)
+		return;
+}
+
+void R_SetViewSize(int blocks, detail_t detail, int redrawall)
+{
+	int yscale;
+	detail_t olddetail;
+	int oldblocks;
+	int width, height;
+
+	olddetail = currentdetail;
+	oldblocks = screenblocks;
+	currentdetail = detail;
+	screenblocks = blocks;
+	config.hdetail = detail;
+	config.viewsize = blocks;
+
+	if (blocks == 11)
+	{
+		naturalwidth = 320;
+		naturalheight = 200;
+		windowx = 0;
+		windowy = 0;
+		windoworg = 0;
+	}
+	else
+	{
+		naturalwidth = blocks * 32;
+		naturalheight = (blocks * (SCREENHEIGHT - SBARHEIGHT) * 32) / SCREENWIDTH & 0xfffffffc;
+		windowx = (blocks * -32 + SCREENWIDTH) / 2;
+		windowy = ((SCREENHEIGHT - SBARHEIGHT) - naturalheight) / 2;
+		windoworg = (windowy * SCREENWIDTH) / 4 + windowx / 4;
+	}
+	width = naturalwidth;
+	height = naturalheight;
+
+	switch (detail)
+	{
+	case dt_high:
+		yscale = FRACUNIT;
+		R_MapRow = &R_MapRowHigh;
+		R_RawScale = &R_RawScaleHigh;
+		break;
+	case dt_medium:
+		width /= 2;
+		yscale = FRACUNIT * 2;
+		R_MapRow = &R_MapRowMed;
+		R_RawScale = &R_RawScaleMed;
+		break;
+	case dt_low:
+		width /= 2;
+		height /= 2;
+		yscale = FRACUNIT;
+		R_MapRow = &R_MapRowLow;
+		R_RawScale = &R_RawScaleLow;
+		break;
+	case dt_highcolor:
+		width /= 2;
+		yscale = FRACUNIT * 2;
+		R_MapRow = &R_MapRowHighColor;
+		R_RawScale = &R_RawScaleHighColor;
+		break;
+	case dt_hires:
+		height *= 2;
+		yscale = FRACUNIT * 2;
+		R_MapRow = &R_MapRowHighC;
+		R_RawScale = &R_RawScaleHighC;
+		break;
+#ifdef ISB_LINT
+	default:
+		IO_Error("R_SetViewSize: Bad detail level\n");
+#endif
+	}
+	R_ChangeWindow(width, height, yscale);
+
+	if (olddetail == dt_highcolor && currentdetail != dt_highcolor)
+		IO_ClearHighColor();
+	else if (olddetail == dt_hires && currentdetail != dt_hires)
+		IO_ClearHighRes();
+
+	if (redrawall)
+	{
+		P_DrawPlayScreen();
+		R_DrawViewBorder();
+		R_DrawViewEdge();
+	}
+	else
+	{
+		if (oldblocks == 11 && screenblocks != 11)
+			P_DrawPlayScreen();
+
+		if (screenblocks < oldblocks)
+			R_DrawViewBorder();
+
+		if (oldblocks != screenblocks && screenblocks < 10)
+			R_DrawViewEdge();
+
+		if (currentdetail == dt_highcolor && olddetail != dt_highcolor)
+		{
+			IO_SetHighColor();
+			P_DrawPlayScreen();
+		}
+		else if (currentdetail == dt_hires && olddetail != dt_hires)
+		{
+			IO_SetHighRes();
+			P_DrawPlayScreen();
+		}
+	}
+
+	V_MarkUpdateBlock(0, 0, SCREENWIDTH - 1, SCREENHEIGHT - SBARHEIGHT - 1);
+	IO_NoPlayBlit();
 }
 
 void IO_BlitBlocks(void)
@@ -338,50 +439,6 @@ void IO_BlitBlocks(void)
 		}
 		iVar2 = iVar2 + -1;
 	} while (-1 < iVar2);
-	return;
-}
-
-void IO_SetHighColor(void)
-{
-	if (novideo == 0) 
-	{
-		SDL_GL_SetHighColor(320, 200);
-	}
-	return;
-}
-
-void IO_ClearHighColor(void)
-{
-	if (novideo == 0)
-	{
-		IO_GL_SetVideoMode(320, 200, NULL);
-	}
-	return;
-}
-
-void IO_SetHighRes(void)
-{
-	if (hiresbuffer == NULL) 
-	{
-		hiresbuffer = (uint8_t*)malloc(0x1f400);
-		if (hiresbuffer == NULL)
-		{
-			IO_Error("IO_SetHighRes: Couldn't malloc buffer\n");
-		}
-	}
-	if (novideo == 0)
-	{
-	}
-	return;
-}
-
-void IO_ClearHighDetail(void)
-{
-	uint8_t* bVar1;
-
-	if (novideo == 0) 
-	{
-	}
 	return;
 }
 
@@ -468,142 +525,6 @@ void R_DrawViewEdge()
 			local_20 = local_20 + 1;
 		}
 	}
-	return;
-}
-
-void R_SetViewSize(int blocks, detail_t detail, int redrawall)
-{
-	unsigned int uVar1;
-	int iVar2;
-	int local_20;
-	unsigned int local_2c;
-	unsigned int local_24;
-	int local_1c;
-	int local_18;
-	fixed_t vertscale;
-
-	if (blocks == 0xb) 
-	{
-		naturalwidth = 320;
-		naturalheight = 200;
-		windowx = 0;
-		windowy = 0;
-		windoworg = 0;
-	}
-	else 
-	{
-		naturalwidth = blocks * 0x20;
-		naturalheight = (blocks * 0x1500) / 0x140 & 0xfffffffc;
-		windowx = (blocks * -0x20 + 0x140) / 2;
-		windowy = (int)(0xa8 - naturalheight) / 2;
-		local_20 = windowy * 0x140 >> 0x1f;
-		windoworg =
-			((int)((windowy * 0x140 + local_20 * -4) - (unsigned int)(local_20 << 1 < 0)) >> 2) +
-			(windowx >> 2);
-	}
-	local_24 = naturalheight;
-	local_20 = naturalwidth;
-
-	if (detail < 5) 
-	{
-		local_20 = naturalwidth >> 1;
-		switch (detail) 
-		{
-		case dt_high:
-			vertscale = FRACUNIT;
-			R_MapRow = &R_MapRowHigh;
-			R_RawScale = &R_RawScaleHigh;
-			local_20 = naturalwidth;
-			break;
-		case dt_medium:
-			vertscale = FRACUNIT * 2;
-			R_MapRow = &R_MapRowMed;
-			R_RawScale = &R_RawScaleMed;
-			break;
-		case dt_low:
-			vertscale = FRACUNIT;
-			R_MapRow = &R_MapRowLow;
-			R_RawScale = &R_RawScaleLow;
-			local_24 = (int)naturalheight >> 1;
-			break;
-		case dt_highcolor:
-			vertscale = FRACUNIT * 2;
-			R_MapRow = &R_MapRowHighColor;
-			R_RawScale = &R_RawScaleHighColor;
-			break;
-		case dt_hires:
-			vertscale = FRACUNIT * 2;
-			R_MapRow = &R_MapRowHighC;
-			R_RawScale = &R_RawScaleHighC;
-			local_24 = naturalheight << 1;
-			local_20 = naturalwidth;
-			break;
-#ifdef ISB_LINT
-		default:
-			IO_Error("R_SetViewSize: Bad detail level\n");
-			return;
-#endif
-		}
-	}
-	uVar1 = detail;
-	iVar2 = blocks;
-	config.hdetail = detail;
-	config.viewsize = blocks;
-	local_2c = detail;
-	local_1c = screenblocks;
-	local_18 = currentdetail;
-	R_ChangeWindow(local_20, local_24, vertscale);
-	screenblocks = iVar2;
-	currentdetail = uVar1;
-	if ((local_18 == 3) && (currentdetail != 3)) 
-	{
-		IO_ClearHighColor();
-	}
-	else 
-	{
-		if ((local_18 == 4) && (currentdetail != 4)) 
-		{
-			IO_ClearHighDetail();
-		}
-	}
-	
-	if (redrawall == 0) 
-	{
-		if ((local_1c == 0xb) && (screenblocks != 0xb))
-		{
-			P_DrawPlayScreen();
-		}
-		if (screenblocks < local_1c) 
-		{
-			R_DrawViewBorder();
-		}
-		if ((local_1c != screenblocks) && (screenblocks < 10)) 
-		{
-			R_DrawViewEdge();
-		}
-		if ((local_2c == 3) && (local_18 != 3)) 
-		{
-			IO_SetHighColor();
-			P_DrawPlayScreen();
-		}
-		else 
-		{
-			if ((local_2c == 4) && (local_18 != 4)) 
-			{
-				IO_SetHighRes();
-				P_DrawPlayScreen();
-			}
-		}
-	}
-	else 
-	{
-		P_DrawPlayScreen();
-		R_DrawViewBorder();
-		R_DrawViewEdge();
-	}
-	
-	V_MarkUpdateBlock(0, 0, SCREENWIDTH-1, SCREENHEIGHT-SBARHEIGHT-1);
-	//IO_NoPlayBlit();
 	return;
 }
 

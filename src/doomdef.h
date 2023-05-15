@@ -163,7 +163,11 @@ void IO_BlitBlocks();
 void IO_UpdateScreen();
 void IO_DoEvents();
 void IO_Quit();
+#ifdef _MSC_VER
+__declspec(noreturn) void IO_Error(char* fmt, ...);
+#else
 void IO_Error(char* fmt, ...);
+#endif
 void TimeSpin();
 
 //demo loop

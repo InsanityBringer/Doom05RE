@@ -310,7 +310,11 @@ void IO_Quit()
 	exit(0);
 }
 
+#ifdef _MSC_VER
+__declspec(noreturn) void IO_Error(char* fmt, ...)
+#else
 void IO_Error(char* fmt, ...)
+#endif
 {
 	fprintf(stderr, "(%i, 0x%x, 0x%x, 0x%x, %i)\n", viewsector, viewx, viewy, viewz, viewangle);
 	va_list arglist;

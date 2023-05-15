@@ -201,8 +201,8 @@ extern int* passfloor, * passceiling;
 extern int* esectorscalelight, * esectorscalelight2, * esectorscalelight3;
 extern sector_t* sector;
 
-extern uint8_t* colormaps;
-extern uint16_t* wordcolormaps;
+extern byte* colormaps;
+extern unsigned short* wordcolormaps;
 
 extern int numlines;
 extern line_t* lines;
