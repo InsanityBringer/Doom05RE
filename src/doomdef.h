@@ -39,6 +39,8 @@ typedef int fixed_t;
 
 #define TICRATE 35
 
+#define MAXPLAYERS 4
+
 //Angles are different from release Doom, only existing as "fine" angles
 #define NUMANGLES 8192
 #define ANGLEMASK (NUMANGLES-1)

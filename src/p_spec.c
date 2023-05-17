@@ -970,7 +970,7 @@ int P_FindTexture(char* string)
             IO_Error("P_InitSwitchList: Couldn't find %s!",string);
                return;
         }
-        if (!strcmp(texturelookup[i], string)) break;
+        if (!strcmp(texturelookup[i]->name, string)) break;
         i++;
     }
     return i;

@@ -113,163 +113,133 @@ void IO_Ack(void)
 
 void IO_PlayerInput()
 {
-	framecmd_t* pfVar1;
+	framecmd_t* cmd;
+	int frame, i;
+	weapontype_t newweapon;
+	int xmove, ymove;
+	int speed;
+	int deltax, deltay;
+
 	ticcount++;
 
-	int local_30;
-	int local_2c;
-	int local_34;
+	frame = sd->playercmdframe[sd->consoleplayer];
+	if (frame == -3)
+		return;
 
-	int local_28;
-	int local_24;
-
-	uint8_t bVar2, bVar3;
-
-	local_2c = sd->playercmdframe[sd->consoleplayer];
-	if (local_2c != -3)
+	if (frame == -2)
 	{
-		if (local_2c == -2)
-		{
-			IO_SendFrame();
-		}
-		else 
-		{
-			sd->playercmdframe[sd->consoleplayer] = local_2c + 1;
-			pfVar1 = &sd->playercmd[sd->consoleplayer * 0x20 + (local_2c + 1U & 0x1f)];
-			pfVar1->keyscan = lastpress;
-			lastpress = 0;
-			pfVar1->buttons = 0x3c;
-			local_30 = 0;
-			local_2c = 0;
-			local_34 = 0x28;
-			if (ignorekeyboard == 0) 
-			{
-				if (keydown[key_speed] == autorun) //[ISB] I had to, sorry.
-				{
-					local_34 = 0x50;
-				}
-				if (keydown[key_right] != 0) 
-				{
-					local_2c = local_34;
-				}
-				if (keydown[key_left] != 0) 
-				{
-					local_2c = local_2c - local_34;
-				}
-				if (keydown[key_up] != 0) 
-				{
-					local_30 = local_34;
-				}
-				if (keydown[key_down] != 0)
-				{
-					local_30 = local_30 - local_34;
-				}
-				pfVar1->buttons = 0;
-				if (keydown[key_fire] != 0) 
-				{
-					pfVar1->buttons = pfVar1->buttons | 2;
-				}
-				if (keydown[key_strafe] != 0) 
-				{
-					pfVar1->buttons = pfVar1->buttons | 1;
-				}
-				local_28 = 0xf;
-				local_24 = 0;
-				while (local_24 < 8)
-				{
-					if (keydown[key_weapon[local_24]] != 0) 
-					{
-						local_28 = local_24;
-					}
-					local_24++;
-				}
-				pfVar1->buttons = pfVar1->buttons | (char)local_28 << 2;
-			}
-			if (sd->mousepresent != 0) 
-			{
-				if ((sd->mousebuttons & 1) != 0) 
-				{
-					pfVar1->buttons = pfVar1->buttons | 2;
-				}
-				if ((sd->mousebuttons & 2) != 0) 
-				{
-					pfVar1->buttons = pfVar1->buttons | 1;
-				}
-				if ((sd->mousebuttons & 4) != 0) 
-				{
-					local_30 = local_30 + local_34;
-				}
-				if ((sd->mousex < 0x5555) && (0xaaaa < sd->oldmousex))
-				{
-					local_34 = sd->mousex + (0x10000 - sd->oldmousex);
-				}
-				else
-				{
-					if ((sd->mousex < 0xaaab) || (0x5554 < sd->oldmousex))
-					{
-						local_34 = sd->mousex - sd->oldmousex;
-					}
-					else
-					{
-						local_34 = -((0x1000 - sd->mousex) + sd->oldmousex);
-					}
-				}
-				if ((sd->mousey < 0x5555) && (0xaaaa < sd->oldmousey)) 
-				{
-					local_24 = sd->mousey + (0x10000 - sd->oldmousey);
-				}
-				else 
-				{
-					if ((sd->mousey < 0xaaab) || (0x5554 < sd->oldmousey))
-					{
-						local_24 = sd->mousey - sd->oldmousey;
-					}
-					else 
-					{
-						local_24 = -((0x1000 - sd->mousey) + sd->oldmousey);
-					}
-				}
-				sd->oldmousex = sd->mousex;
-				sd->oldmousey = sd->mousey;
-				if ((pfVar1->buttons & 1) == 0) 
-				{
-					local_34 = (local_34 << 8) / 300;
-				}
-				else {
-					local_34 = (local_34 << 8) / 0x96;
-				}
-				local_2c = local_2c + local_34;
-				local_30 = local_30 - (local_24 << 8) / 0x96;
-			}
-			bVar2 = local_30;
-			bVar3 = local_2c;
-			if (local_2c < 0x80)
-			{
-				if (local_2c < -0x80) 
-				{
-					bVar3 = 0x80;
-				}
-			}
-			else 
-			{
-				bVar3 = 0x7f;
-			}
-			if (local_30 < 0x80) 
-			{
-				if (local_30 < -0x80) 
-				{
-					bVar2 = 0x80;
-				}
-			}
-			else
-			{
-				bVar2 = 0x7f;
-			}
-			pfVar1->xmove = bVar3;
-			pfVar1->ymove = bVar2;
-			IO_SendFrame();
-		}
+		IO_SendFrame();
+		return;
 	}
+
+	frame++;
+	sd->playercmdframe[sd->consoleplayer] = frame;
+
+
+	cmd = &sd->playercmd[sd->consoleplayer * NUMPLAYERFRAMES + (frame & PLAYERFRAMEMASK)];
+	cmd->keyscan = lastpress;
+	lastpress = 0;
+	cmd->buttons = 0x3c;
+	xmove = ymove = 0;
+	speed = 40;
+
+	if (ignorekeyboard == 0) 
+	{
+		if (keydown[key_speed] == autorun) //[ISB] I had to, sorry.
+			speed = 80;
+		
+		if (keydown[key_right] != 0) 
+			xmove = speed;
+		
+		if (keydown[key_left] != 0) 
+			xmove -= speed;
+		
+		if (keydown[key_up] != 0) 
+			ymove = speed;
+		
+		if (keydown[key_down] != 0)
+			ymove -= speed;
+		
+		cmd->buttons = 0;
+		if (keydown[key_fire] != 0) 
+			cmd->buttons |= 2;
+		
+		if (keydown[key_strafe] != 0) 
+			cmd->buttons |= 1;
+		
+		newweapon = wp_nochange;
+		
+		for (i = 0; i < 8; i++)
+		{
+			if (keydown[key_weapon[i]] != 0) 
+			{
+				newweapon = i;
+			}
+		}
+		cmd->buttons |= newweapon << 2;
+	}
+
+	if (sd->mousepresent != 0) 
+	{
+		if ((sd->mousebuttons & 1) != 0) 
+			cmd->buttons |= 2;
+		
+		if ((sd->mousebuttons & 2) != 0) 
+			cmd->buttons |= 1;
+		
+		if ((sd->mousebuttons & 4) != 0)
+			ymove += speed;
+
+		if (sd->mousex < 0x5555 && sd->oldmousex > 0xAAAA)
+		{
+			deltax = sd->mousex + 0x10000 - sd->oldmousex;
+		}
+		else if (sd->mousex > 0xAAAA && sd->oldmousex < 0x5555)
+		{
+			deltax = -(0x1000 - sd->mousex + sd->oldmousex);
+		}
+		else
+		{
+			deltax = sd->mousex - sd->oldmousex;
+		}
+
+		if (sd->mousey < 0x5555 && sd->oldmousey > 0xAAAA)
+		{
+			deltay = sd->mousey + 0x10000 - sd->oldmousey;
+		}
+		else if (sd->mousey > 0xAAAA && sd->oldmousey < 0x5555)
+		{
+			deltay = -(0x1000 - sd->mousey + sd->oldmousey);
+		}
+		else
+		{
+			deltay = sd->mousey - sd->oldmousey;
+		}
+
+		sd->oldmousex = sd->mousex;
+		sd->oldmousey = sd->mousey;
+
+		if ((cmd->buttons & 1) == 0) 
+			xmove += (deltax << 8) / 300;
+		else
+			xmove += (deltax << 8) / 150;
+		
+		ymove -= (deltay << 8) / 150;
+	}
+
+	if (xmove > 127)
+		xmove = 127;
+	else if (xmove < -128)
+		xmove = -128;
+	
+	if (ymove > 127)
+		ymove = 127;
+	else if (ymove < -128)
+		ymove = -128;
+
+	cmd->xmove = xmove;
+	cmd->ymove = ymove;
+	IO_SendFrame();
 }
 
 void IO_NewFrame()
@@ -316,7 +286,9 @@ __declspec(noreturn) void IO_Error(char* fmt, ...)
 void IO_Error(char* fmt, ...)
 #endif
 {
-	fprintf(stderr, "(%i, 0x%x, 0x%x, 0x%x, %i)\n", viewsector, viewx, viewy, viewz, viewangle);
+	char heh[1024];
+	snprintf(heh, 1024, "(%i, 0x%x, 0x%x, 0x%x, %i)\n", viewsector, viewx, viewy, viewz, viewangle);
+	heh[1023] = '\0';
 	va_list arglist;
 	char buf[1024];
 	va_start(arglist, fmt);
@@ -326,7 +298,7 @@ void IO_Error(char* fmt, ...)
 	fprintf(stderr, buf);
 
 #ifndef _CONSOLE
-	SDL_ShowSimpleMessageBox(0, "IO_Error", buf, window);
+	SDL_ShowSimpleMessageBox(0, heh, buf, window);
 #endif
 
 	//[ISB] this is originally done earlier but this causes SDL crashes

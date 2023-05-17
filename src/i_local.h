@@ -16,9 +16,8 @@
 //-----------------------------------------------------------------------------
 #pragma once
 
-#include <stdint.h>
-
 extern int ticcount;
+extern byte* buffercrtc;
 
 void IO_SetMapMask(uint8_t mask);
 void IO_SetStartAddress(int address);

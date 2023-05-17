@@ -3,6 +3,9 @@
 //The play loop is dependent on the refresh
 #include "r_ref.h"
 
+#define NUMPLAYERFRAMES 32
+#define PLAYERFRAMEMASK (NUMPLAYERFRAMES-1)
+
 typedef struct
 {
 	int8_t xmove;
@@ -26,9 +29,9 @@ typedef struct
 	int startgame;
 	int commint;
 	int consoleplayer;
-	uint8_t playeringame[4];
-	int playercmdframe[4];
-	framecmd_t playercmd[128];
+	uint8_t playeringame[MAXPLAYERS];
+	int playercmdframe[MAXPLAYERS];
+	framecmd_t playercmd[MAXPLAYERS * NUMPLAYERFRAMES];
 	int mousex;
 	int mousey;
 	int mousebuttons;
