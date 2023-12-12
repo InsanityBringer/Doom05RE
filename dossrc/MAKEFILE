@@ -1,0 +1,51 @@
+CC_OPTS = /d2 /zp1 
+STUB_OPTS = -ms
+
+DOOM_SOURCES = &
+hmapl.obj &
+hmaph.obj &
+hmaphc.obj &
+hmapdem.obj &
+vmapl.obj &
+vmaph.obj &
+vmaphc.obj &
+d_ibm_a.obj &
+i_ibm.obj &
+ir_ibm.obj &
+d_main.obj &
+d_demo.obj &
+d_misc.obj &
+z_zone.obj &
+g_game.obj &
+g_world.obj &
+v_munged.obj &
+w_wad.obj &
+m_menu.obj &
+p_play.obj &
+p_user.obj &
+p_things.obj &
+p_trace.obj &
+p_status.obj &
+p_spec.obj &
+p_enemy.obj &
+r_things.obj &
+r_textur.obj &
+r_sector.obj &
+r_plane.obj &
+r_lines.obj &
+r_init.obj &
+r_game.obj &
+states.obj &
+s_sound.obj 
+
+DOOM.EXE: DOOMSTUB.EXE $(DOOM_SOURCES)
+	wlink @doom.lnk
+
+DOOMSTUB.EXE:
+	wcl $(STUB_OPTS) DOOMSTUB.C
+	
+.C.OBJ : .AUTODEPEND
+	wcc386 $(CC_OPTS) $^&
+	
+.ASM.OBJ : .AUTODEPEND
+	tasm /mx $^*
