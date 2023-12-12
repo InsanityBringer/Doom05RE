@@ -41,104 +41,61 @@ ENDM
 
 ;================
 ;
-; R_RawScaleMed_
+; R_RawScaleHighColor
 ;
 ;================
 
-R_RawScaleMed_ PROC
-PUBLIC   R_RawScaleMed_
+R_RawScaleHighColor_ PROC
+PUBLIC   R_RawScaleHighColor_
 	PUSHR
 
 	mov		ebp,[_sp_y2]
-	mov		ebx,ebp
-	add		ebx,[_windowy]
-	mov     edi,[_planewidthlookup+ebx*4]
-	mov		ebx,[_sp_x]
-	shl		ebx,1
-	add		ebx,[_windowx]
-	add     edi,[_highcollumntable + ebx*4]
-
+	mov     edi,[_planewidthlookup+ebp*4]
+	add		edi,[_sp_x]
 	sub		ebp,[_sp_y1]
 
 	mov     edx,[_sp_frac]
-	shl		edx,9							; 7 significant bits, 25 frac
-	
 	mov		ecx,[_sp_fracstep]
-	shl		ecx,9							; 7 significant bits, 25 frac
 
 	mov     esi,[_sp_source]
 
 	mov		eax,[_sp_colormap]
-	shl		eax,8
-	add     eax,[_colormaps]
+	shl		eax,9
+	add     eax,[_wordcolormaps]
 
+	shr		eax,1
 	xor     ebx,ebx
-	shld    ebx,edx,7						; get address of first location
+	shld    ebx,edx,010h						; get address of first location
 	call    [scalecalls+4+ebp*4]
 	
 	POPR
 	ret
 
-;================
-;
-; R_RawScaleHigh_
-;
-;================
-
-R_RawScaleHigh_ PROC
-PUBLIC   R_RawScaleHigh_
-	PUSHR
-
-	mov		ebp,[_sp_y2]
-	mov		ebx,ebp
-	add		ebx,[_windowy]
-	mov     edi,[_planewidthlookup+ebx*4]
-	mov		ebx,[_sp_x]
-	add		ebx,[_windowx]
-	add     edi,[_highcollumntable + ebx*4]
-
-	sub		ebp,[_sp_y1]
-
-	mov     edx,[_sp_frac]
-	shl		edx,9							; 7 significant bits, 25 frac
-	
-	mov		ecx,[_sp_fracstep]
-	shl		ecx,9							; 7 significant bits, 25 frac
-
-	mov     esi,[_sp_source]
-
-	mov		eax,[_sp_colormap]
-	shl		eax,8
-	add     eax,[_colormaps]
-
-	xor     ebx,ebx
-	shld    ebx,edx,7						; get address of first location
-	call    [scalecalls+4+ebp*4]
-	
-	POPR
-	ret
-
-;============ HIGH DETAIL ============
+;============ HIGH COLOR ============
 
 SCALELABEL      MACRO   number
 vscale&number:
 ENDM
 
 LINE    =       SCREENHEIGHT
+INVLINE = 0
 REPT SCREENHEIGHT-1
 	SCALELABEL      %LINE
-	mov     al,[esi+ebx]                    ; get source pixel
-	add     edx,ecx                         ; calculate next location
-	mov     al,[eax]                        ; translate the color
+	mov     al,[esi+ebx]      				; get source pixel
+	mov		ebx,[eax*2]						; translate the color
+	mov     [edi-(LINE-1)*PLANEWIDTH],bl   	; draw a pixel to the buffer
+	mov     [edi+(INVLINE+1)*PLANEWIDTH],bh ; draw a pixel to the buffer
+	add     edx,ecx                         ; calculate next location                    
 	xor     ebx,ebx
-	shld    ebx,edx,7                      ; get address of next location
-	mov     [edi-(LINE-1)*PLANEWIDTH],al   ; draw a pixel to the buffer
+	shld    ebx,edx,010h                      ; get address of next location
 LINE    =       LINE-1
+INVLINE =		INVLINE+1
 ENDM
 vscale1:
 	mov     al,[esi+ebx]
-	mov     al,[eax]
-	mov     [edi],al
+	mov     ebx,[eax*2]
+	mov     [edi],al   	; draw a pixel to the buffer
+	mov     [edi+PLANESIZE],al ; draw a pixel to the buffer
 vscale0:
 	ret
 
