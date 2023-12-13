@@ -161,8 +161,8 @@ extern byte* demoend;
 extern demostate_t demo;
 extern byte* demo_p;
 
-extern int wnumber0;
 extern int snumber0;
+extern int wnumber0;
 extern fixed_t amaporgy;
 extern fixed_t amaporgx;
 extern int cardnumber;

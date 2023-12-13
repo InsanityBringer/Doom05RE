@@ -20,8 +20,8 @@
 #include "p_actor.h"
 #include "r_local.h"
 
-int wnumber0;
 int snumber0;
+int wnumber0;
 fixed_t amaporgy;
 fixed_t amaporgx;
 int cardnumber;
@@ -71,12 +71,12 @@ void P_DrawAmmo(void)
         }
     }
     num = ammo / 100;
-    V_DrawPic(56, 185, (pic_t*)W_GetLump(snumber0 + num));
+    V_DrawPic(56, 185, (pic_t*)W_GetLump(wnumber0 + num));
     ammo -= num * 100;
     num = ammo / 10;
-    V_DrawPic(68, 185, (pic_t*)W_GetLump(snumber0 + num));
+    V_DrawPic(68, 185, (pic_t*)W_GetLump(wnumber0 + num));
     ammo -= num * 10;
-    V_DrawPic(80, 185, (pic_t*)W_GetLump(snumber0 + ammo));
+    V_DrawPic(80, 185, (pic_t*)W_GetLump(wnumber0 + ammo));
 }
 
 void P_DrawHealth(void)

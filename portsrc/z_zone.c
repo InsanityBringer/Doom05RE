@@ -57,16 +57,13 @@ void Z_Free(void* ptr)
 	memblock_t* other;
 
 	if (block->owner == NULL)
-	{
 		IO_Error("Z_Free: freed a freed pointer\n");
-	}
-
+	
 	block->owner = NULL;
-	other = block->prev;
 
-	//merge compatible blocks
+	other = block->prev;
 	if (other->owner == NULL)
-	{
+	{	// merge with previous free block
 		other->size += block->size;
 		other->next = block->next;
 		block = other;
@@ -74,7 +71,7 @@ void Z_Free(void* ptr)
 
 	other = block->next;
 	if (other->owner == NULL)
-	{
+	{	// merge the next free block onto the end
 		other->size += block->size;
 		other->prev = block->prev;
 	}
@@ -164,8 +161,7 @@ void Z_CacheMalloc(memzone_t* zone, int size, void** user)
 
 void Z_CacheFree(void** user)
 {
-	//[BUG?] In the original source, *user is nulled before being Z_Free'd, which obviously isn't okay on modern operating systems.
-	//I need to double check that I'm not missing something. 
+	//[BUG?] In the original source, *user is nulled before being Z_Free'd, which obviously isn't right. This seems to be correct to the alpha. 
 #ifdef __WATCOMC__
 	*user = (void*)NULL;
 	Z_Free(*user);

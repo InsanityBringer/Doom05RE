@@ -310,8 +310,8 @@ void P_Startup()
 	thinkercap.next = &thinkercap;
 	thinkercap.prev = &thinkercap;
 	playpalette = W_GetName("PLAYPAL");
-	wnumber0 = W_GetNumForName("I_SMNUM0");
-	snumber0 = W_GetNumForName("I_LGNUM0");
+	snumber0 = W_GetNumForName("I_SMNUM0");
+	wnumber0 = W_GetNumForName("I_LGNUM0");
 	cardnumber = W_GetNumForName("I_IPIC00");
 	healthbar = (pic_t*)W_GetName("I_HBAR");
 	armorbar = (pic_t*)W_GetName("I_ABAR");

@@ -69,20 +69,15 @@ int P_FindLowestFloorSurrounding(sector_t* sector, int secnum)
     for (i = 0; i < sector->linecount; i++)
     {
         check = &lines[sector->lines[i]];
-        if ((check->flags & ML_TWOSIDED) != 0)
+        if (check->flags & ML_TWOSIDED)
         {
             if (sides[check->side[0]].sector == secnum)
-            {
                 other = sides[check->side[1]].sector;
-            }
             else
-            {
                 other = sides[check->side[0]].sector;
-            }
+
             if (sectors[other].floorheight < floor)
-            {
                 floor = sectors[other].floorheight;
-            }
         }
     }
     return floor;
@@ -95,25 +90,20 @@ int P_FindHighestFloorSurrounding(sector_t* sector, int secnum)
     fixed_t floor;
     int i;
 
-    floor = -0x1f40000;
+    floor = -500 * FRACUNIT;
 
     for (i = 0; i < sector->linecount; i++)
     {
         check = &lines[sector->lines[i]];
-        if ((check->flags & ML_TWOSIDED) != 0)
+        if (check->flags & ML_TWOSIDED)
         {
             if ((int)sides[check->side[0]].sector == secnum)
-            {
                 other = sides[check->side[1]].sector;
-            }
             else
-            {
                 other = sides[check->side[0]].sector;
-            }
-            if (floor < sectors[other].floorheight)
-            {
+
+            if (sectors[other].floorheight > floor)
                 floor = sectors[other].floorheight;
-            }
         }
     }
     return floor;
@@ -1135,7 +1125,7 @@ void P_PlayerUseSpecialLine(line_t* line, int side)
 
 //----------------------------------------------------------------------------
 //
-// PROC P_PlayerShootSpecialLine
+// P_PlayerShootSpecialLine
 //
 // Called when a thing shoots a special line.
 //
@@ -1149,7 +1139,7 @@ void P_PlayerShootSpecialLine(line_t* line)
 
 //----------------------------------------------------------------------------
 //
-// PROC P_PlayerInSpecialSector
+// P_PlayerInSpecialSector
 //
 // Called every tic frame that the player origin is in a special sector.
 //

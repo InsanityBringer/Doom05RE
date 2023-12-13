@@ -19,6 +19,8 @@
 #include "p_actor.h"
 #include "r_local.h"
 
+#define MAXCROSSINGS 32
+
 typedef struct
 {
     int z;
@@ -27,7 +29,7 @@ typedef struct
     int side;
 } crossing_t;
 
-crossing_t crossings[32];
+crossing_t crossings[MAXCROSSINGS];
 crossing_t* crossing_p;
 
 int P_PointOnLineSide(int x, int y, line_t* line)
@@ -88,7 +90,7 @@ void P_TransformVertex(point_t* source, vertex_t* dest)
 void P_CrossSectorThings(sector_t* sector)
 {
     thing_t* thing;
-    point_t p1;
+    point_t p1; 
     vertex_t mv1;
 
     thing = sector->things;
@@ -112,7 +114,7 @@ void P_CrossSectorThings(sector_t* sector)
     }
 }
 
-void P_CrossSectorLines(sector_t* sector, int checkall)
+void P_CrossSectorLines(sector_t* sector, boolean checkall)
 {
     fixed_t midz;
     line_t* line;
@@ -169,27 +171,22 @@ void P_CrossSectorLines(sector_t* sector, int checkall)
 int P_CrossSectorBounds(int sector, fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2)
 {
     fixed_t deltax, deltay;
-    int num;
+    int i, j, num;
+    crossing_t temp, *test, *crossingstart;
     fixed_t distance;
-    crossing_t* crossingstart;
-    crossing_t* test;
-    crossing_t temp;
-
     point_t p1;
     vertex_t mv1;
 
-    int i, j;
-
     if ((x1 == x2) && (y1 == y2))
-    {
         return sector;
-    }
+
+    viewx = x1;
+    viewy = y1;
     deltax = x2 - x1;
     deltay = y2 - y1;
-    viewy = y1;
-    viewx = x1;
-    viewsin = FixedDiv(deltay, abs(deltax) + abs(deltay));
-    viewcos = FixedDiv(deltax, abs(deltax) + abs(deltay));
+    distance = abs(deltax) + abs(deltay);
+    viewsin = FixedDiv(deltay, distance);
+    viewcos = FixedDiv(deltax, distance);
 
     p1.x = x2;
     p1.y = y2;
@@ -197,102 +194,100 @@ int P_CrossSectorBounds(int sector, fixed_t x1, fixed_t y1, fixed_t x2, fixed_t 
     distance = mv1.tz;
 
     validcheck++;
-    crossing_p = &crossings[0];
-    crossingstart = crossings;
-    do
+    crossing_p = crossings;
+    test = crossing_p;
+
+    again:
+    P_CrossSectorLines(&sectors[sector], false);
+    num = crossing_p - test;
+
+    for (i = 0; i < num - 1; i++)
     {
-        P_CrossSectorLines(&sectors[sector], 0);
-        num = crossing_p - crossingstart;
-
-        for (i = 0; i < num - 1; i++)
+        for (j = 0; j < (num - 1) - i; j++)
         {
-
-            for (j = 0; j < (num - 1) - i; j++)
+            if (test[j + 1].z < test[j].z)
             {
-                if (crossingstart[j + 1].z < crossingstart[j].z)
-                {
-                    temp = crossingstart[j];
-                    crossingstart[j] = crossingstart[j + 1];
-                    crossingstart[j + 1] = temp;
-                }
-
+                temp = test[j];
+                test[j] = test[j + 1];
+                test[j + 1] = temp;
             }
         }
-        do
+    }
+
+    //That weird code structure from P_PlayerShoot strikes again.
+    for (; test < crossing_p; )
+    {
+        if (test->z > distance)
         {
-            test = crossingstart;
-            if (crossing_p <= test)
-            {
-                return sector;
-            }
-            if (distance < test->z)
-            {
-                return sector;
-            }
+            return sector;
+        }
+        else
+        {
             sector = sides[test->line->side[test->side ^ 1]].sector;
-            crossingstart = test + 1;
-        } while (sectors[sector].validcheck == validcheck);
-
-        if (test->line->special != 0)
-        {
-            P_PlayerCrossSpecialLine(test->line);
+            test++;
+            if (sectors[sector].validcheck != validcheck)
+            {
+                if (test[-1].line->special) 
+                    P_PlayerCrossSpecialLine(test[-1].line);
+                goto again;
+            }
         }
-    } while (1);
+    }
+
+    return sector;
 }
 
 void P_PlayerShootWall(player_t* player, line_t* line)
 {
     //printf("hit wall %d\n", line - &lines[0]);
-    return;
 }
 
-int P_PlayerShootThing(player_t* player, thing_t* ithing)
+boolean P_PlayerShootThing(player_t* player, thing_t* ithing)
 {
     int damage;
 
-    if (!(ithing->flags & TF_PLAYER))
+    if (ithing->flags & TF_PLAYER)
     {
-        if (player->readyweapon < 8)
-        {
-            switch (player->readyweapon)
-            {
-            case wp_knife:
-                damage = (D_Rnd() & 3) + 1;
-                break;
-            default:
-                damage = (D_Rnd() & 3) * 2 + 2;
-                break;
-            case wp_shotgun:
-            case wp_claw:
-                damage = (D_Rnd() & 3) * 4 + 4;
-                break;
-            case wp_missile:
-                damage = (D_Rnd() & 3) * 8 + 8;
-                break;
-            case wp_bfg:
-                damage = (D_Rnd() & 3) * 32 + 32;
-            }
-        }
-        else
-        {
-            IO_Error("P_PlayerShootThing: bad weapon number");
-        }
-        P_DamageEnemy((actor_t*)ithing->specialdata, damage);
+        P_DamagePlayer((player_t*)ithing->specialdata - playerobjs, 5);
+        return true;
     }
     else
     {
-        P_DamagePlayer((player_t*)ithing->specialdata - playerobjs, 5);
+        switch (player->readyweapon)
+        {
+        case wp_knife:
+            damage = (D_Rnd() & 3) + 1;
+            break;
+        case wp_rifle:
+        case wp_auto:
+        case wp_chainsaw:
+            damage = (D_Rnd() & 3) * 2 + 2;
+            break;
+        case wp_shotgun:
+        case wp_claw:
+            damage = (D_Rnd() & 3) * 4 + 4;
+            break;
+        case wp_missile:
+            damage = (D_Rnd() & 3) * 8 + 8;
+            break;
+        case wp_bfg:
+            damage = (D_Rnd() & 3) * 32 + 32;
+            break;
+        default:
+            IO_Error("P_PlayerShootThing: bad weapon number");
+            break;
+        }
+        P_DamageEnemy((actor_t*)ithing->specialdata, damage);
+
+        return true;
     }
-    return 1;
 }
 
 void P_PlayerShoot(void)
 {
-    crossing_t temp;
-    crossing_t* crossingstart;
+    int i, j, num;
+    crossing_t temp, *test, *crossingstart;
     int sector;
-    int num;
-    int i, j;
 
     viewx = player->r->x;
     viewy = player->r->y;
@@ -300,50 +295,59 @@ void P_PlayerShoot(void)
     viewsin = sines[player->r->angle];
     validcheck++;
     crossing_p = crossings;
-    crossingstart = &crossings[0];
+    test = crossing_p;
     sector = player->r->sector;
 
     do
     {
-        //local_3c.side = (int)crossing_p; //TODO: decompiler mess, try to verify if needed
-        P_CrossSectorLines(&sectors[sector], 1);
-        num = crossing_p - crossingstart;
+        again:
+        crossingstart = crossing_p;
+        P_CrossSectorLines(&sectors[sector], true);
+        num = crossing_p - test;
 
-        //sort crossings
         for (i = 0; i < num - 1; i++)
         {
             for (j = 0; j < (num - 1) - i; j++)
             {
-                if (crossingstart[j + 1].z < crossingstart[j].z)
+                if (test[j + 1].z < test[j].z)
                 {
-                    temp = crossingstart[j];
-                    crossingstart[j] = crossingstart[j + 1];
-                    crossingstart[j + 1] = temp;
+                    temp = test[j];
+                    test[j] = test[j + 1];
+                    test[j + 1] = temp;
                 }
             }
         }
-        do
+
+        //Handle all crossings detected.
+        // I'm not 100% sure on the goto and for loop here, but this matches the unoptimized ASM most closely. 
+        // I need to see how this function gets compiled. 
+        // The for loop is here because the code is structured the way Watcom C compiled unoptimized for loops.
+        // But why is the increment not part of the loop?
+        for ( ; test < crossing_p; ) 
         {
-            while (1)
+            //BUG: since test isn't incremented if P_PlayerShootThing returns false,
+            // this will infinite loop if P_PlayerShootThing returns false, but 
+            // P_PlayerShootThing always returns true so this cannot be observed. 
+            if (test->thing) 
             {
-                if (crossing_p <= crossingstart)
-                {
-                    IO_Error("P_PlayerShoot: ran out of crossings");
-                }
-                if (crossingstart->thing == (thing_t*)NULL) break;
-                if (P_PlayerShootThing(player, crossingstart->thing) != 0)
-                {
+                if (P_PlayerShootThing(player, test->thing))
                     return;
-                }
             }
-            if (!(crossingstart->line->flags & ML_TWOSIDED))
+            else if (!(test->line->flags & ML_TWOSIDED))
             {
-                P_PlayerShootWall(player, crossingstart->line);
+                P_PlayerShootWall(player, test->line);
                 return;
             }
-            sector = (int)sides[crossingstart->line->side[crossingstart->side ^ 1]].sector;
-            crossingstart++;
-        } while (sectors[sector].validcheck == validcheck);
+            else
+            {
+                sector = sides[test->line->side[test->side ^ 1]].sector;
+                test++;
+                if (sectors[sector].validcheck != validcheck)
+                    goto again; 
+            }
+        }
+
+        IO_Error("P_PlayerShoot: ran out of crossings"); //if IO_Error were to return, it would jump to the start of the outer do loop. 
     } while (1);
 }
 
@@ -389,7 +393,7 @@ void P_FixAudareas(void)
             else
             {
                 P_RecursiveAudConnect(sector);
-                numaudareas = numaudareas + 1;
+                numaudareas++;
             }
         }
         sector++;
