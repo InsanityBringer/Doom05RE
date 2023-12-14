@@ -19,6 +19,27 @@
 
 #include <string.h>
 
+/*
+==============================================================================
+
+						ZONE MEMORY ALLOCATION
+
+There is never any space between memblocks, and there will never be two
+contiguous free memblocks.
+
+The rover can be left pointing at a non-empty block
+
+==============================================================================
+*/
+
+/*
+========================
+=
+= Z_AllocateZone
+=
+========================
+*/
+
 memzone_t* Z_AllocateZone(int size)
 {
 	memzone_t* header;
@@ -27,17 +48,29 @@ memzone_t* Z_AllocateZone(int size)
 	if (header == NULL)
 		IO_Error("Z_InitZone: Couldn't malloc %i bytes\n", size);
 
+#ifndef __WATCOMC__
 	//[ISB] make sure zone is completely clean
 	memset(header, 0, size + sizeof(memzone_t));
+#endif
 	header->size = size;
 	Z_ClearZone(header);
 
 	return header;
 }
 
+/*
+========================
+=
+= Z_ClearZone
+=
+========================
+*/
+
 void Z_ClearZone(memzone_t* zone)
 {
-	memblock_t* block;
+	memblock_t *block;
+
+	// set the entire zone to one free block
 
 	block = (memblock_t*)(zone + 1);
 	(zone->blocklist).prev = block;
@@ -51,8 +84,20 @@ void Z_ClearZone(memzone_t* zone)
 	block->size = zone->size - sizeof(memzone_t);
 }
 
+/*
+========================
+=
+= Z_Free
+=
+========================
+*/
+
 void Z_Free(void* ptr)
 {
+	//BUG: This won't update the rover for the zone the pointer was freed from, 
+	// which can cause it to point to an invalid point.
+	//The main artifacts of this are disguised by the play loop clearing the zone on a new level,
+	//but creating a sufficient amount of thinkers during play (which is rare in the alpha) could cause problems. 
 	memblock_t* block = (memblock_t*)ptr - 1;
 	memblock_t* other;
 
@@ -77,12 +122,20 @@ void Z_Free(void* ptr)
 	}
 }
 
+/*
+========================
+=
+= Z_Malloc
+=
+========================
+*/
+
 #define MINFRAGMENT 64
 
 void* Z_Malloc(memzone_t* zone, int size)
 {
 	int extra;
-	memblock_t* start, *rover, *new;
+	memblock_t *start, *rover, *new;
 
 	size += sizeof(memblock_t);
 	start = zone->rover;
@@ -90,7 +143,7 @@ void* Z_Malloc(memzone_t* zone, int size)
 	while ((rover->owner != NULL || (rover->size < size)))
 	{
 		rover = rover->next;
-		if (rover == start)
+		if (rover == start) // scaned all the way around the list
 			IO_Error("Z_Malloc: failed on allocation of %i bytes", size);
 	}
 
@@ -110,10 +163,18 @@ void* Z_Malloc(memzone_t* zone, int size)
 	return (byte*)(rover + 1);
 }
 
+/*
+========================
+=
+= Z_CacheMalloc
+=
+========================
+*/
+
 void Z_CacheMalloc(memzone_t* zone, int size, void** user)
 {
 	int extra;
-	memblock_t* rover, * new, * kill;
+	memblock_t *rover, *new, *kill;
 
 	size += sizeof(memblock_t);
 	if (zone->size - sizeof(memzone_t) < size)
@@ -159,15 +220,26 @@ void Z_CacheMalloc(memzone_t* zone, int size, void** user)
 	*user = (rover + 1);
 }
 
+/*
+========================
+=
+= Z_CacheFree
+=
+========================
+*/
+
 void Z_CacheFree(void** user)
 {
-	//[BUG?] In the original source, *user is nulled before being Z_Free'd, which obviously isn't right. This seems to be correct to the alpha. 
+	//BUG: In the original source, *user is nulled before being Z_Free'd, which obviously isn't right. 
+	// This seems to be correct to the alpha.
 #ifdef __WATCOMC__
 	*user = (void*)NULL;
 	Z_Free(*user);
 #else
-	void** ptr = user;
+	//Okay let's not call Z_Free in the port, it's bugged enough to cause problems. 
+	//This should leave the zone in the same state as on DOS, given that this function is busy trashing the real mode interrupt table on DOS. 
+	/*void** ptr = user;
 	Z_Free(*user);
-	*ptr = (void*)NULL;
+	*ptr = (void*)NULL;*/
 #endif
 }
