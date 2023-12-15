@@ -21,6 +21,8 @@
 //The play loop is dependent on the refresh
 #include "r_local.h"
 
+#define USERANGE (40*FRACUNIT)
+
 #define NUMPLAYERFRAMES 32
 #define PLAYERFRAMEMASK (NUMPLAYERFRAMES-1)
 

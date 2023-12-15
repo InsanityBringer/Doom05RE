@@ -34,6 +34,8 @@ crossing_t* crossing_p;
 
 int P_PointOnLineSide(int x, int y, line_t* line)
 {
+    //I need to dig deeper into this, the function has a lot of stack variables not present in the debug information
+    //I think these are due to terenary operations, but I can't figure out all of them yet. 
     int calcy;
 
     switch (line->slopetype)
@@ -78,14 +80,21 @@ int P_PointOnLineSide(int x, int y, line_t* line)
 
 void P_TransformVertex(point_t* source, vertex_t* dest)
 {
-    fixed_t gxt;
-    fixed_t gyt;
+    fixed_t trx, try, gxt, gyt;
 
-    gxt = source->x - viewx;
-    gyt = source->y - viewy;
-    dest->tx = -FixedMul(gyt, viewcos) + FixedMul(gxt, viewsin);
-    dest->tz = (FixedMul(gxt, viewcos) + FixedMul(gyt, viewsin));
+    trx = source->x - viewx;
+    try = source->y - viewy;
+
+    gxt = -FixedMul(trx, viewsin);
+    gyt = FixedMul(try, viewcos);
+    dest->tx = -(gyt + gxt); 
+
+    gxt = FixedMul(trx, viewcos);
+    gyt = -FixedMul(try, viewsin);
+    dest->tz = (gxt - gyt);
 }
+
+#define THINGRADIUS 20 * FRACUNIT
 
 void P_CrossSectorThings(sector_t* sector)
 {
@@ -93,77 +102,87 @@ void P_CrossSectorThings(sector_t* sector)
     point_t p1; 
     vertex_t mv1;
 
-    thing = sector->things;
-    while (thing != (thing_t*)NULL)
+    for (thing = sector->things; thing; thing = thing->next)
     {
-        if (thing->validcheck != validcheck)
+        if (thing->validcheck == validcheck)
+            continue; 
+
+        thing->validcheck = validcheck;
+
+        p1.x = thing->x;
+        p1.y = thing->y;
+
+        P_TransformVertex(&p1, &mv1);
+
+        if (mv1.tz <= 0)
+            continue; //behind view
+
+        if (mv1.tx > -THINGRADIUS && mv1.tx < THINGRADIUS)
         {
-            thing->validcheck = validcheck;
-            p1.x = thing->x;
-            p1.y = thing->y;
-            P_TransformVertex(&p1, &mv1);
-            if (((0 < mv1.tz) && (-0x140001 < mv1.tx)) && (mv1.tx < 0x140001))
-            {
-                crossing_p->z = mv1.tz;
-                crossing_p->thing = thing;
-                crossing_p->line = (line_t*)NULL;
-                crossing_p++;
-            }
+            crossing_p->z = mv1.tz;
+            crossing_p->thing = thing;
+            crossing_p->line = NULL;
+            crossing_p++;
         }
-        thing = thing->next;
     }
 }
 
 void P_CrossSectorLines(sector_t* sector, boolean checkall)
 {
-    fixed_t midz;
+    int i, side;
     line_t* line;
-    int side;
-    int i;
-
     vertex_t mv1, mv2;
+    fixed_t frac, midz;
 
-    i = validcheck;
-    if (sector->validcheck != validcheck)
+    if (sector->validcheck == validcheck)
+        return; 
+
+    sector->validcheck = validcheck;
+
+    if (checkall)
+        P_CrossSectorThings(sector);
+
+    for (i = 0; i < sector->linecount; i++)
     {
-        sector->validcheck = validcheck;
-        if (checkall != 0)
-        {
-            P_CrossSectorThings(sector);
-        }
+        line = &lines[sector->lines[i]];
 
-        for (i = 0; i < sector->linecount; i++)
+        if (checkall || line->flags & ML_TWOSIDED)
         {
-            line = &lines[sector->lines[i]];
-            if (((checkall != 0) || (line->flags & ML_TWOSIDED)) && (line->validcheck != validcheck))
+            if (line->validcheck == validcheck)
+                continue;
+            
+            line->validcheck = validcheck;
+
+            P_TransformVertex(&points[line->p1], &mv1);
+            P_TransformVertex(&points[line->p2], &mv2);
+
+            //find which side is facing the view,
+            //and the fraction at which the ray down the center hit. 
+            if (mv1.tx <= 0 && mv2.tx > 0)
             {
-                line->validcheck = validcheck;
-                P_TransformVertex(&points[line->p1], &mv1);
-                P_TransformVertex(&points[line->p2], &mv2);
-                if (((int)mv1.tx < 1) && (0 < mv2.tx))
-                {
-                    midz = FixedDiv(-mv1.tx, mv2.tx - mv1.tx);
-                    side = 0;
-                }
-                else
-                {
-                    if (((int)mv1.tx < 1) || ((0 < mv2.tx || (!(line->flags & ML_TWOSIDED)))))
-                        continue;
-
-                    midz = FixedDiv(mv1.tx, mv1.tx - mv2.tx);
-                    side = 1;
-                }
-                midz = mv1.tz + FixedMul(mv2.tz - mv1.tz, midz);
-
-                if (-1 < midz)
-                {
-                    crossing_p->z = midz;
-                    crossing_p->thing = (thing_t*)NULL;
-                    crossing_p->line = line;
-                    crossing_p->side = side;
-                    crossing_p++;
-                }
+                frac = FixedDiv(-mv1.tx, mv2.tx - mv1.tx);
+                side = 0;
             }
+            else if (mv1.tx > 0 && mv2.tx <= 0)
+            {
+                if (!(line->flags & ML_TWOSIDED))
+                    continue;
+
+                frac = FixedDiv(mv1.tx, mv1.tx - mv2.tx);
+                side = 1;
+            }
+            else
+                continue; //line doesn't cross center of screen
+
+            midz = mv1.tz + FixedMul(mv2.tz - mv1.tz, frac);
+            if (midz < 0)
+                continue; //line behind view
+
+            crossing_p->z = midz;
+            crossing_p->thing = NULL;
+            crossing_p->line = line;
+            crossing_p->side = side;
+            crossing_p++;
         }
     }
 }

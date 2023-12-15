@@ -60,7 +60,7 @@ int debugmove;
 
 fixed_t swingx, swingy;
 
-pspdef_t psprites[MAXPLAYERS * NUMPSPRITES];
+pspdef_t psprites[MAXPLAYERS][NUMPSPRITES];
 
 #define FRICTION 0xe800
 #define STOPSPEED 0x3FF
@@ -81,29 +81,31 @@ void P_SetPsprite(psprnum_t position, statenum_t stnum)
     state_t* state;
     pspdef_t* psp;
 
-    psp = &psprites[playernum * NUMPSPRITES + position];
+    psp = &psprites[playernum][position];
+
     do
     {
-        if (stnum == 0)
+        if (!stnum)
         {
-            psp->state = (state_t*)NULL;
-            return;
+            psp->state = NULL;
+            break;		// object removed itself
         }
+
         state = &states[stnum];
         psp->state = state;
-        psp->tics = states[stnum].tics;
-        if (states[stnum].misc1 != 0)
-        {
-            psp->sx = states[stnum].misc1 << FRACBITS;
-            psp->sy = states[stnum].misc2 << FRACBITS;
+        psp->tics = state->tics;  // could be 0
+        if (state->misc1)
+        {   // coordinate set
+            psp->sx = state->misc1 << FRACBITS;
+            psp->sy = state->misc2 << FRACBITS;
         }
-        if (states[stnum].action != NULL)
+        // call action routine
+        if (state->action != NULL)
         {
-            states[stnum].action(psp);
+            state->action(psp);
         }
         stnum = state->nextstate;
-    } while (psp->tics == 0);
-    return;
+    } while (psp->tics == 0);	// an initial state of 0 could cycle through
 }
 
 void P_SetupPSprites(int pnum)
@@ -112,14 +114,13 @@ void P_SetupPSprites(int pnum)
 
     for (i = 0; i < NUMPSPRITES; i++)
     {
-        psprites[pnum * NUMPSPRITES + i].state = NULL;
+        psprites[pnum][i].state = NULL;
     }
 
     player = &playerobjs[pnum];
     playernum = pnum;
     playerobjs[pnum].pendingweapon = playerobjs[pnum].readyweapon;
     P_BringUpWeapon();
-    return;
 }
 
 void P_CalcSwing(void)
@@ -140,31 +141,29 @@ void P_CalcSwing(void)
 
 void P_DrawPlayerShapes(int pnum)
 {
-    pspdef_t* psp;
     int i;
+    pspdef_t* psp;
 
     player = &playerobjs[pnum];
     playernum = pnum;
-    i = pnum;
     P_CalcSwing();
-    psp = &psprites[i * NUMPSPRITES];
-    for (i = 0; i < 3; i++)
+    psp = &psprites[pnum];
+    for (i = 0; i <= ps_weapon; i++)
     {
         if (psp->state != NULL)
-        {
             R_DrawPlayerShape(psp->state->sprite, psp->state->frame, psp->sx + swingx >> FRACBITS, psp->sy + swingy >> FRACBITS);
-        }
+        
         psp++;
     }
+    //BUG: This is done in two steps so that the unused layers wouldn't swing, but i isn't set to ps_shell1 initially
+    //This causes the game to render the weapon psprite layers from the next player. 
     for (i = 0; i < NUMPSPRITES; i++)
     {
         if (psp->state != NULL)
-        {
             R_DrawPlayerShape(psp->state->sprite, psp->state->frame, psp->sx >> FRACBITS, psp->sy >> FRACBITS);
-        }
+        
         psp++;
     }
-    return;
 }
 
 void P_MovePlayerShapes(void)
@@ -203,105 +202,97 @@ void P_MovePlayerShapes(void)
 
 void P_BringUpWeapon(void)
 {
-    statenum_t newpsp;
+    statenum_t new;
 
-    if (player->pendingweapon < 8)
+    switch (player->pendingweapon)
     {
-        switch (player->pendingweapon)
-        {
-        case wp_knife:
-            newpsp = S_BAYONETUP;
-            break;
-        case wp_rifle:
-            newpsp = S_RIFLEUP;
-            break;
-        case wp_shotgun:
-            newpsp = S_SGUNUP;
-            break;
-        case wp_auto:
-            newpsp = S_AUTOUP;
-            break;
-        default:
-            newpsp = S_SGUNUP;
-            break;
-        }
-    }
-    else
-    {
+    case wp_knife:
+        new = S_BAYONETUP;
+        break;
+    case wp_rifle:
+        new = S_RIFLEUP;
+        break;
+    case wp_shotgun:
+        new = S_SGUNUP;
+        break;
+    case wp_auto:
+        new = S_AUTOUP;
+        break;
+    case wp_missile:
+    case wp_chainsaw:
+    case wp_claw:
+    case wp_bfg:
+        new = S_SGUNUP;
+        break;
+    default:
         IO_Error("A_ChangeWeapon: bad weapon number\n");
+        break;
     }
+
     player->pendingweapon = wp_nochange;
-    P_SetPsprite(ps_weapon, newpsp);
-    psprites[playernum * NUMPSPRITES + 2].sy = WEAPONBOTTOM;
+    P_SetPsprite(ps_weapon, new);
+    psprites[playernum][ps_weapon].sy = WEAPONBOTTOM;
 }
 
 void P_FireWeapon(void)
 {
-    statenum_t newpsp;
+    statenum_t new;
 
-    if (player->readyweapon < 8)
+    switch (player->readyweapon)
     {
-        switch (player->readyweapon)
-        {
-        case wp_knife:
-            newpsp = S_BAYONET1;
-            break;
-        case wp_rifle:
-            if (player->ammo[am_clip] < 1)
-            {
-                return;
-            }
-            newpsp = S_RIFLE1;
-            break;
-        case wp_shotgun:
-            if (player->ammo[am_shell] < 1)
-            {
-                return;
-            }
-            newpsp = S_SGUN1;
-            break;
-        case wp_auto:
-            if (player->ammo[am_clip] < 1)
-            {
-                return;
-            }
-            newpsp = S_AUTO1;
-            break;
-        case wp_missile:
-            if (player->ammo[am_misl] < 1)
-            {
-                return;
-            }
-            newpsp = S_SGUN1;
-            break;
-        case wp_chainsaw:
-            newpsp = S_SGUN1;
-            break;
-        case wp_claw:
-            if (player->ammo[am_soul] < 1)
-            {
-                return;
-            }
-            newpsp = S_SGUN1;
-            break;
-        case wp_bfg:
-            if (player->ammo[am_cell] < 1)
-            {
-                return;
-            }
-            newpsp = S_SGUN1;
-        }
-    }
-    else
-    {
+    case wp_knife:
+        new = S_BAYONET1;
+        break;
+    case wp_rifle:
+        if (player->ammo[am_clip] < 1)
+            return;
+        
+        new = S_RIFLE1;
+        break;
+    case wp_shotgun:
+        if (player->ammo[am_shell] < 1)
+            return;
+        
+        new = S_SGUN1;
+        break;
+    case wp_auto:
+        if (player->ammo[am_clip] < 1)
+            return;
+        
+        new = S_AUTO1;
+        break;
+    case wp_missile:
+        if (player->ammo[am_misl] < 1)
+            return;
+        
+        new = S_SGUN1;
+        break;
+    case wp_chainsaw:
+        new = S_SGUN1;
+        break;
+    case wp_claw:
+        if (player->ammo[am_soul] < 1)
+            return;
+        
+        new = S_SGUN1;
+        break;
+    case wp_bfg:
+        if (player->ammo[am_cell] < 1)
+            return;
+        
+        new = S_SGUN1;
+        break;
+    default:
         IO_Error("A_FireWeapon: bad weapon number\n");
+        break;
     }
-    P_SetPsprite(ps_weapon, newpsp);
+
+    P_SetPsprite(ps_weapon, new);
 }
 
 void A_WeaponReady(pspdef_t* psp)
 {
-    statenum_t newpsp;
+    statenum_t new;
 
     if ((player->pendingweapon == wp_nochange) && (player->health != 0))
     {
@@ -312,31 +303,31 @@ void A_WeaponReady(pspdef_t* psp)
     }
     else
     {
-        if (player->readyweapon < 8)
+        switch (player->readyweapon)
         {
-            switch (player->readyweapon)
-            {
-            case wp_knife:
-                newpsp = S_BAYONETDOWN;
-                break;
-            case wp_rifle:
-                newpsp = S_RIFLEDOWN;
-                break;
-            case wp_shotgun:
-                newpsp = S_SGUNDOWN;
-                break;
-            case wp_auto:
-                newpsp = S_AUTODOWN;
-                break;
-            default:
-                newpsp = S_SGUNDOWN;
-            }
-        }
-        else
-        {
+        case wp_knife:
+            new = S_BAYONETDOWN;
+            break;
+        case wp_rifle:
+            new = S_RIFLEDOWN;
+            break;
+        case wp_shotgun:
+            new = S_SGUNDOWN;
+            break;
+        case wp_auto:
+            new = S_AUTODOWN;
+            break;
+        case wp_missile:
+        case wp_chainsaw:
+        case wp_claw:
+        case wp_bfg:
+            new = S_SGUNDOWN;
+            break;
+        default:
             IO_Error("A_ChangeWeapon: bad weapon number\n");
+            break;
         }
-        P_SetPsprite(ps_weapon, newpsp);
+        P_SetPsprite(ps_weapon, new);
     }
 }
 
@@ -350,8 +341,6 @@ void A_Refire(pspdef_t* psp)
 
 void A_Lower(pspdef_t* psp)
 {
-    short* psVar1;
-
     psp->sy += LOWERSPEED;
 
     if (psp->sy < WEAPONBOTTOM)
@@ -375,7 +364,7 @@ void A_Lower(pspdef_t* psp)
 
 void A_Raise(pspdef_t* psp)
 {
-    statenum_t newpsp;
+    statenum_t new;
 
     psp->sy = psp->sy - RAISESPEED;
     if (psp->sy > WEAPONTOP)
@@ -383,82 +372,80 @@ void A_Raise(pspdef_t* psp)
 
     psp->sy = WEAPONTOP;
 
-    if (player->readyweapon < 8)
+    switch (player->readyweapon)
     {
-        switch (player->readyweapon)
-        {
-        case wp_knife:
-            newpsp = S_BAYONET;
-            break;
-        case wp_rifle:
-            newpsp = S_RIFLE;
-            break;
-        case wp_shotgun:
-            newpsp = S_SGUN;
-            break;
-        case wp_auto:
-            newpsp = S_AUTO;
-            break;
-        default:
-            newpsp = S_SGUN;
-        }
-    }
-    else
-    {
+    case wp_knife:
+        new = S_BAYONET;
+        break;
+    case wp_rifle:
+        new = S_RIFLE;
+        break;
+    case wp_shotgun:
+        new = S_SGUN;
+        break;
+    case wp_auto:
+        new = S_AUTO;
+        break;
+    case wp_missile:
+    case wp_chainsaw:
+    case wp_claw:
+    case wp_bfg:
+        new = S_SGUN;
+        break;
+    default:
         IO_Error("A_ChangeWeapon: bad weapon number\n");
+        break;
     }
-    P_SetPsprite(ps_weapon, newpsp);
+
+    P_SetPsprite(ps_weapon, new);
 }
 
 void A_FireGun(pspdef_t* psp)
 {
-    statenum_t newpsp;
+    statenum_t new;
 
-    if (player->readyweapon < 8)
+    switch (player->readyweapon)
     {
-        switch (player->readyweapon)
-        {
-        default:
-            newpsp = S_NULL;
-            break;
-        case wp_rifle:
-            player->ammo[am_clip]--;
-            P_PlayerShoot();
-            newpsp = S_RIFLASH1;
-            break;
-        case wp_shotgun:
-            player->ammo[am_shell]--;
-            P_PlayerShoot();
-            newpsp = S_SGUNFLASH1;
-            break;
-        case wp_auto:
-            player->ammo[am_clip]--;
-            P_PlayerShoot();
-            newpsp = S_AUTOFLASH1;
-            break;
-        case wp_missile:
-            player->ammo[am_misl]--;
-            newpsp = S_SGUNFLASH1;
-            break;
-        case wp_claw:
-            player->ammo[am_soul]--;
-            newpsp = S_SGUNFLASH1;
-            break;
-        case wp_bfg:
-            player->ammo[am_cell]--;
-            newpsp = S_SGUNFLASH1;
-            break;
-        }
-    }
-    else
-    {
+    case wp_knife:
+    case wp_chainsaw:
+        new = S_NULL;
+        break;
+    case wp_rifle:
+        player->ammo[am_clip]--;
+        P_PlayerShoot();
+        new = S_RIFLASH1;
+        break;
+    case wp_shotgun:
+        player->ammo[am_shell]--;
+        P_PlayerShoot();
+        new = S_SGUNFLASH1;
+        break;
+    case wp_auto:
+        player->ammo[am_clip]--;
+        P_PlayerShoot();
+        new = S_AUTOFLASH1;
+        break;
+    case wp_missile:
+        player->ammo[am_misl]--;
+        new = S_SGUNFLASH1;
+        break;
+    case wp_claw:
+        player->ammo[am_soul]--;
+        new = S_SGUNFLASH1;
+        break;
+    case wp_bfg:
+        player->ammo[am_cell]--;
+        new = S_SGUNFLASH1;
+        break;
+    default:
         IO_Error("A_FireGun: bad weapon number");
+        break;
     }
+
     if (playernum == sd->consoleplayer)
-    {
         P_DrawAmmo();
-    }
-    P_SetPsprite(ps_flash, newpsp);
+    
+    P_SetPsprite(ps_flash, new);
 }
 
 void A_Light0(pspdef_t* psp)
@@ -478,69 +465,71 @@ void A_Light2(pspdef_t* psp)
 
 void P_UseFrontLines(sector_t* sector)
 {
-    fixed_t frac;
+    int i, side;
     line_t* line;
-    int side;
-    int i;
-
     vertex_t vv1, vv2;
+    fixed_t frac, midz;
 
-    if (sector->validcheck != validcheck)
+    if (sector->validcheck == validcheck)
+        return;
+
+    sector->validcheck = validcheck;
+
+    for (i = 0; i < sector->linecount; i++)
     {
-        sector->validcheck = validcheck;
-
-        for (i = 0; i < sector->linecount; i++)
+        line = &lines[sector->lines[i]];
+        if (line->flags & ML_TWOSIDED || line->special)
         {
-            line = &lines[sector->lines[i]];
-            if ((line->flags & ML_TWOSIDED) || (line->special != 0))
+            R_TransformVertex(&points[line->p1], &vv1);
+            R_TransformVertex(&points[line->p2], &vv2);
+
+            //find which side is facing the view,
+            //and the fraction at which the ray down the center hit. 
+            if (vv1.tx <= 0 && vv2.tx > 0)
             {
-                R_TransformVertex(&points[line->p1], &vv2);
-                R_TransformVertex(&points[line->p2], &vv1);
-                if (((int)vv2.tx < 0) && (0 < vv1.tx))
-                {
-                    frac = FixedDiv(-vv2.tx, vv1.tx - vv2.tx);
-                    side = 0;
-                }
-                else
-                {
-                    if ((((int)vv2.tx < 1) || (-1 < vv1.tx)) || (!(line->flags & ML_TWOSIDED)))
-                        continue;
-
-                    frac = FixedDiv(vv2.tx, vv2.tx - vv1.tx);
-                    side = 1;
-                }
-
-                frac = vv2.tz + FixedMul(vv1.tz - vv2.tz, frac);
-
-                if ((frac <= 40 * FRACUNIT) && (-1 < frac))
-                {
-                    if (line->special == 0)
-                    {
-                        P_UseFrontLines(sectors + sides[line->side[side ^ 1]].sector);
-                    }
-                    else
-                    {
-                        P_PlayerUseSpecialLine(line, side);
-                    }
-                }
+                frac = FixedDiv(-vv1.tx, vv2.tx - vv1.tx);
+                side = 0;
             }
+            else if (vv1.tx > 0 && vv2.tx <= 0)
+            {
+                if (!(line->flags & ML_TWOSIDED))
+                    continue;
+
+                frac = FixedDiv(vv1.tx, vv1.tx - vv2.tx);
+                side = 1;
+            }
+            else
+                continue; //line doesn't cross center of screen
+
+            midz = vv1.tz + FixedMul(vv2.tz - vv1.tz, frac);
+
+            if (midz > USERANGE || midz < 0)
+                continue;
+
+            if (!line->special)
+                P_UseFrontLines(&sectors[sides[line->side[side ^ 1]].sector]);
+            else
+                P_PlayerUseSpecialLine(line, side);
         }
     }
 }
 
 void P_Use(void)
 {
+    sector_t* sector = &sectors[player->r->sector];
+
     viewx = player->r->x;
     viewy = player->r->y;
     viewsin = sines[player->r->angle];
     viewcos = cosines[player->r->angle];
     validcheck++;
-    P_UseFrontLines(&sectors[player->r->sector]);
+
+    P_UseFrontLines(sector);
 }
 
 void P_Thrust(fixed_t angle, fixed_t speed)
 {
-    angle = angle & 0x1fff;
+    angle &= ANGLEMASK;
     if (debugmove == 0)
     {
         player->momx += FixedMul(speed, cosines[angle]);
@@ -555,7 +544,7 @@ void P_Thrust(fixed_t angle, fixed_t speed)
 
 void P_ChangeWeapon(weapontype_t newweapon)
 {
-    if ((newweapon < 8) && (player->weaponowned[newweapon] != 0))
+    if (newweapon <= wp_bfg && player->weaponowned[newweapon] != 0)
     {
         player->pendingweapon = newweapon;
     }
@@ -762,23 +751,25 @@ void P_MovePlayer(void)
 
 void P_CalcBob(void)
 {
-    if (debugmove == 0)
-    {
-        player->r->z = sectors[player->r->sector].floorheight;
+    int angle;
+    fixed_t bob;
 
-        player->bob = FixedMul(player->momx, player->momx) + FixedMul(player->momy, player->momy);
-        player->bob = player->bob >> 1;
-        if (MAXBOB < player->bob)
-        {
-            player->bob = MAXBOB;
-        }
-
-        player->viewz = player->r->z + VIEWHEIGHT + FixedMul(player->bob / 2, sines[processedframe * 0x75 & 0xfff]);
-    }
-    else
+    if (debugmove)
     {
         player->viewz = player->r->z;
         player->bob = 0;
+    }
+    else
+    {
+        player->r->z = sectors[player->r->sector].floorheight;
+        player->bob = FixedMul(player->momx, player->momx) + FixedMul(player->momy, player->momy);
+        player->bob >>= 1;
+        if (player->bob > MAXBOB)
+            player->bob = MAXBOB;
+
+       angle = processedframe * (NUMANGLES / 70) & (NUMANGLES / 2 - 1);
+       bob = FixedMul(player->bob / 2, sines[angle]);
+       player->viewz = player->r->z + VIEWHEIGHT + bob;
     }
 }
 
