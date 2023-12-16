@@ -51,189 +51,191 @@ int switchlist[MAXSWITCHES];
 anim_t anims[MAXANIMS];
 anim_t* lastAnim;
 
-int P_CheckSingleSectorHeights(int sector, int force, int recurse)
+int P_CheckSingleSectorHeights(sector_t* sector, boolean force, boolean recurse)
 {
     return 1;
 }
 
-int P_CheckSectorHeights(int sector, int force)
+int P_CheckSectorHeights(sector_t* sector, boolean force)
 {
     return 1;
 }
 
-int P_FindLowestFloorSurrounding(sector_t* sector, int secnum)
+//==================================================================
+//
+//	FIND LOWEST FLOOR HEIGHT IN SURROUNDING SECTORS
+//
+//==================================================================
+fixed_t P_FindLowestFloorSurrounding(sector_t* sec, int secnum)
 {
-    short other;
-    line_t* check;
-    fixed_t floor;
     int i;
-
-    floor = INT_MAX;
-
-    for (i = 0; i < sector->linecount; i++)
-    {
-        check = &lines[sector->lines[i]];
-        if (check->flags & ML_TWOSIDED)
-        {
-            if (sides[check->side[0]].sector == secnum)
-                other = sides[check->side[1]].sector;
-            else
-                other = sides[check->side[0]].sector;
-
-            if (sectors[other].floorheight < floor)
-                floor = sectors[other].floorheight;
-        }
-    }
-    return floor;
-}
-
-int P_FindHighestFloorSurrounding(sector_t* sector, int secnum)
-{
-    short other;
     line_t* check;
-    fixed_t floor;
-    int i;
-
-    floor = -500 * FRACUNIT;
-
-    for (i = 0; i < sector->linecount; i++)
-    {
-        check = &lines[sector->lines[i]];
-        if (check->flags & ML_TWOSIDED)
-        {
-            if ((int)sides[check->side[0]].sector == secnum)
-                other = sides[check->side[1]].sector;
-            else
-                other = sides[check->side[0]].sector;
-
-            if (sectors[other].floorheight > floor)
-                floor = sectors[other].floorheight;
-        }
-    }
-    return floor;
-}
-
-int P_FindNextHighestFloor(sector_t* sec, int secnum, int currentheight)
-{
-    short other;
-    line_t* check;
-    int i;
-
-    i = 0;
-    do
-    {
-        if (sec->linecount <= i)
-        {
-            return currentheight;
-        }
-        check = &lines[sec->lines[i]];
-        if ((check->flags & ML_TWOSIDED) != 0)
-        {
-            if ((int)sides[check->side[0]].sector == secnum)
-            {
-                other = sides[check->side[1]].sector;
-            }
-            else
-            {
-                other = sides[check->side[0]].sector;
-            }
-            if (currentheight < sectors[other].floorheight)
-            {
-                return sectors[other].floorheight;
-            }
-        }
-        i++;
-    } while (1);
-}
-
-int P_FindLowestCeilingSurrounding(sector_t* sec, int secnum)
-{
-    short other;
-    line_t* check;
-    fixed_t height;
-    int i;
-
-    height = INT_MAX;
+    sector_t* other;
+    fixed_t floor = INT_MAX;
 
     for (i = 0; i < sec->linecount; i++)
     {
         check = &lines[sec->lines[i]];
-        if ((check->flags & ML_TWOSIDED) != 0)
-        {
-            if ((int)sides[check->side[0]].sector == secnum)
-            {
-                other = sides[check->side[1]].sector;
-            }
-            else
-            {
-                other = sides[check->side[0]].sector;
-            }
-            if (sectors[other].ceilingheight < height)
-            {
-                height = sectors[other].ceilingheight;
-            }
-        }
+        if (!(check->flags & ML_TWOSIDED))
+            continue;
+
+        if (sides[check->side[0]].sector == secnum)
+            other = &sectors[sides[check->side[1]].sector];
+        else
+            other = &sectors[sides[check->side[0]].sector];
+
+        if (other->floorheight < floor)
+            floor = other->floorheight;
+    }
+    return floor;
+}
+
+//==================================================================
+//
+//	FIND HIGHEST FLOOR HEIGHT IN SURROUNDING SECTORS
+//
+//==================================================================
+fixed_t P_FindHighestFloorSurrounding(sector_t* sec, int secnum)
+{
+    int i;
+    line_t* check;
+    sector_t* other;
+    fixed_t floor = -500 * FRACUNIT;
+
+    for (i = 0; i < sec->linecount; i++)
+    {
+        check = &lines[sec->lines[i]];
+        if (!(check->flags & ML_TWOSIDED))
+            continue;
+
+        if (sides[check->side[0]].sector == secnum)
+            other = &sectors[sides[check->side[1]].sector];
+        else
+            other = &sectors[sides[check->side[0]].sector];
+
+        if (other->floorheight > floor)
+            floor = other->floorheight;
+    }
+    return floor;
+}
+
+//==================================================================
+//
+//	FIND NEXT HIGHEST FLOOR IN SURROUNDING SECTORS
+//
+//==================================================================
+fixed_t P_FindNextHighestFloor(sector_t* sec, int secnum, int currentheight)
+{
+    int i;
+    line_t* check;
+    sector_t* other;
+    fixed_t height = currentheight;
+
+    for (i = 0; i < sec->linecount; i++)
+    {
+        check = &lines[sec->lines[i]];
+        if (!(check->flags & ML_TWOSIDED))
+            continue;
+
+        if (sides[check->side[0]].sector == secnum)
+            other = &sectors[sides[check->side[1]].sector];
+        else
+            other = &sectors[sides[check->side[0]].sector];
+
+        if (other->floorheight > height)
+            return other->floorheight;
+    }
+
+    return height;
+}
+
+//==================================================================
+//
+//	FIND LOWEST CEILING IN THE SURROUNDING SECTORS
+//
+//==================================================================
+fixed_t P_FindLowestCeilingSurrounding(sector_t* sec, int secnum)
+{
+    int i;
+    line_t* check;
+    sector_t* other;
+    fixed_t height = INT_MAX;
+
+    for (i = 0; i < sec->linecount; i++)
+    {
+        check = &lines[sec->lines[i]];
+        if (!(check->flags & ML_TWOSIDED))
+            continue;
+
+        if (sides[check->side[0]].sector == secnum)
+            other = &sectors[sides[check->side[1]].sector];
+        else
+            other = &sectors[sides[check->side[0]].sector];
+
+        if (other->ceilingheight < height)
+            height = other->ceilingheight;
     }
     return height;
 }
 
 void P_MoveThings(int sector, int ymove)
 {
-    thing_t* t;
+    thing_t* t = sectors[sector].things;
 
-    t = sectors[sector].things;
-    while (t != NULL)
+    while (t)
     {
         t->z += ymove;
         t = t->next;
     }
-    return;
 }
 
+//==================================================================
+//
+//	RETURN NEXT SECTOR # THAT LINE TAG REFERS TO
+//
+//==================================================================
 int P_FindSectorFromLineTag(line_t* line, int start)
 {
-    int secnum;
+    int i;
+    int secnum = -1;
 
-    secnum = start;
-    do
-    {
-        secnum = secnum + 1;
-        if (numsectors <= secnum)
-        {
-            return -1;
-        }
-    } while (sectors[secnum].tag != line->tag);
-    return secnum;
+    for (i=start+1;i<numsectors;i++)
+        if (sectors[i].tag == line->tag)
+            return i;
+    
+    return -1;
 }
 
-int P_FindMinSurroundingLight(sector_t* sector, int check)
+//==================================================================
+//
+//	Find minimum light from an adjacent sector
+//
+//==================================================================
+int P_FindMinSurroundingLight(sector_t* sector, int max)
 {
-    int i;
-    int side;
+    int i, min, side;
+    fixed_t height;
+    sector_t* check;
 
-    i = 0;
-    while (1)
+    min = max;
+    for (i = 0; i < sector->linecount; i++)
     {
-        if (sector->linecount <= i)
+        if (lines[sector->lines[i]].flags & ML_TWOSIDED)
         {
-            return check;
+            if (sides[lines[sector->lines[i]].side[0]].sector == (sector - sectors))
+                side = 1;
+            else
+                side = 0;
+
+            check = &sectors[sides[lines[sector->lines[i]].side[side]].sector];
+            if (check->lightlevel < min)
+                min = check->lightlevel;
+
+            break; //No wonder ghidra was getting so confused by this function. Why the early return?
         }
-        if ((lines[sector->lines[i]].flags & ML_TWOSIDED) != 0) break;
-        i++;
     }
 
-    side = lines[sector->lines[i]].side[0];
-
-    if (sides[side].sector == (sector - sectors))
-    {
-        side = lines[sector->lines[i]].side[1];
-    }
-
-    if (check <= sectors[sides[side].sector].lightlevel)
-    {
-        return check;
-    }
-    return sectors[sides[side].sector].lightlevel;
+    return min;
 }
 
 extern int flatstartlump;
