@@ -26,6 +26,9 @@
 #define NUMPLAYERFRAMES 32
 #define PLAYERFRAMEMASK (NUMPLAYERFRAMES-1)
 
+// player radius for movement checking
+#define	PLAYERRADIUS	16*FRACUNIT
+
 typedef struct
 {
 	signed char xmove;

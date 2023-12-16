@@ -34,6 +34,8 @@ char* alphSwitchList[16] =
     "TH_192GS", "TH_192GT"
 };
 
+#define MAXSWITCHES     100              // max # of wall switches in a level
+
 flatanim_t flatAnims[4] =
 {
     {"NUKAGE3", "NUKAGE1", 3, 16},
@@ -41,10 +43,12 @@ flatanim_t flatAnims[4] =
     {"CONVNA3", "CONVNA1", 3, 16}
 };
 
-int numswitches;
-int switchlist[100];
+#define MAXANIMS                32
 
-anim_t anims[32];
+int numswitches;
+int switchlist[MAXSWITCHES];
+
+anim_t anims[MAXANIMS];
 anim_t* lastAnim;
 
 int P_CheckSingleSectorHeights(int sector, int force, int recurse)
@@ -690,8 +694,6 @@ void T_PlatRaise(plat_t* plat)
             }
         }
     }
-
-    return;
 }
 
 void P_SpawnPlatRaise(sector_t* sector, int secnum)
@@ -711,7 +713,6 @@ void P_SpawnPlatRaise(sector_t* sector, int secnum)
     plat->type = raise;
     plat->sector->specialdata = (void*)plat;
     sector->special = 0;
-    return;
 }
 
 int EV_RaisePlatUpToNearestFloorAndChange(line_t* line, int side)
@@ -838,7 +839,6 @@ void EV_TurnTagLIghtsOff(line_t* line)
             sectors[i].lightlevel = min;
         }
     }
-    return;
 }
 
 void EV_LightTurnOn(line_t* line, int bright)
@@ -875,7 +875,6 @@ void EV_LightTurnOn(line_t* line, int bright)
             sectors[i].lightlevel = (short)bright;
         }
     }
-    return;
 }
 
 void EV_StartLightStrobing(line_t* line);
@@ -947,43 +946,36 @@ void P_PlayerCrossSpecialLine(line_t* line)
         gameaction = ga_completed;
         break;
     }
-    return;
 }
 
 int P_FindTexture(char* string)
 {
     int i;
 
-    i = 0;
-    while (1)
+    for (i = 0; i < numtextures; i++)
     {
-        if (numtextures <= i)
-            IO_Error("P_InitSwitchList: Couldn't find %s!", string);
-
-        if (!strcmp(texturelookup[i]->name, string)) break;
-        i++;
+        if (!strcmp(texturelookup[i]->name, string))
+            return i;
     }
-    return i;
+
+    IO_Error("P_InitSwitchList: Couldn't find %s!", string);
 }
 
 void P_InitSwitchList(void)
 {
     int i;
 
-    i = 0;
-    while (1)
+    for (i = 0; i < MAXSWITCHES; i++)
     {
-        if (i >= 100)
+        if (alphSwitchList[i] == NULL) 
         {
+            numswitches = i;
+            switchlist[i] = -1;
             return;
         }
-        if (alphSwitchList[i] == NULL) break;
+
         switchlist[i] = P_FindTexture(alphSwitchList[i]);
-        i++;
     }
-    numswitches = i;
-    switchlist[i] = -1;
-    return;
 }
 
 void P_ChangeSwitchTexture(line_t* line, int useAgain)
@@ -1134,7 +1126,6 @@ void P_PlayerUseSpecialLine(line_t* line, int side)
 void P_PlayerShootSpecialLine(line_t* line)
 {
     //it is once again, but a dream
-    return;
 }
 
 //----------------------------------------------------------------------------
@@ -1158,7 +1149,6 @@ void P_PlayerInSpecialSector(void)
     default:
         IO_Error("P_PlayerInSpecialSector: unknown special %i", (int)sectors[player->r->sector].special);
     }
-    return;
 }
 
 void P_AnimatePlanePics()
@@ -1173,7 +1163,6 @@ void P_AnimatePlanePics()
         flatlookup[anim->picnum] = lumpinfo[flatstartlump + anim->basepic + ((ticcount / anim->speed) % anim->numpics)].position;
         anim++;
     }
-    return;
 }
 
 void P_StartupPicAnims(void)

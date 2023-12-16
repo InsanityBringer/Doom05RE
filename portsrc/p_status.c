@@ -421,7 +421,7 @@ void P_DrawPlayerMarker(player_t* player)
     x = player->r->x - amaporgx >> MAPBLOCKSHIFT;
     y = amaporgy - player->r->y >> MAPBLOCKSHIFT;
     P_AMapPlot(x, y, 0xb4);
-    switch ((int)(player->r->angle + 0x200U & 0x1fff) >> 10)
+    switch ((player->r->angle + (NUMANGLES/16) & ANGLEMASK) >> 10)
     {
     case 0:
         P_AMapPlot(x + 1, y, 0xb0);

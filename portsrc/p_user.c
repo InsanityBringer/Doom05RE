@@ -718,15 +718,15 @@ void P_ClipPlayerMove(void)
     tryx = player->r->x + player->momx;
     tryy = player->r->y + player->momy;
 
-    if (P_CheckPosition(tryx, tryy, 16 << FRACBITS, player->r->sector) == 0)
+    if (P_CheckPosition(tryx, tryy, PLAYERRADIUS, player->r->sector) == 0)
     {
         tryx = player->r->x + player->momx;
         tryy = player->r->y;
-        if (P_CheckPosition(tryx, tryy, 16 << FRACBITS, player->r->sector) == 0)
+        if (P_CheckPosition(tryx, tryy, PLAYERRADIUS, player->r->sector) == 0)
         {
             tryx = player->r->x;
             tryy = player->r->y + player->momy;
-            if (P_CheckPosition(tryx, tryy, 16 << FRACBITS, player->r->sector) == 0)
+            if (P_CheckPosition(tryx, tryy, PLAYERRADIUS, player->r->sector) == 0)
             {
                 player->momx = player->momy = 0;
                 return;

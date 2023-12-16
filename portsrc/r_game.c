@@ -401,7 +401,7 @@ void R_InitBlockMap(void)
 
 	for (i = 0; i < 255; i++)
 	{
-		if ((i & BMF_MAPPED) == 0)
+		if (!(i & BMF_MAPPED))
 			amapcolor[i] = 205;
 		else
 			amapcolor[i] = 200;
