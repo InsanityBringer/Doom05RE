@@ -73,16 +73,16 @@ typedef struct
 
 typedef enum
 {
-    down = 1,
-    up = 0,
-    waiting = 2
+    up,
+    down,
+    waiting
 } plat_e;
 
 typedef enum
 {
-    downWaitUpStay = 1,
-    raise = 0,
-    raiseAndChange = 2
+    raise,
+    downWaitUpStay,
+    raiseAndChange
 } plattype_e;
 
 typedef struct

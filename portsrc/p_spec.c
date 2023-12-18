@@ -143,7 +143,7 @@ fixed_t P_FindNextHighestFloor(sector_t* sec, int secnum, int currentheight)
             other = &sectors[sides[check->side[0]].sector];
 
         if (other->floorheight > height)
-            return other->floorheight;
+            return other->floorheight; //BUG: Doesn't actually try to find the closest-while-still-greater adjacent floor height, like release.
     }
 
     return height;
@@ -231,7 +231,7 @@ int P_FindMinSurroundingLight(sector_t* sector, int max)
             if (check->lightlevel < min)
                 min = check->lightlevel;
 
-            break; //No wonder ghidra was getting so confused by this function. Why the early return?
+            break; //BUG: No wonder ghidra was getting so confused by this function. Why the early return?
         }
     }
 
@@ -242,17 +242,14 @@ extern int flatstartlump;
 void EV_GoopChange(line_t* line, int side)
 {
     int i;
-    short floor;
+    int floor;
 
     if (side == 0)
-    {
-        floor = (short)W_GetNumForName("SEWAGE1");
-    }
+        floor = W_GetNumForName("SEWAGE1");
     else
-    {
-        floor = (short)W_GetNumForName("NUKAGE1");
-    }
-    floor = floor - (short)flatstartlump;
+        floor = W_GetNumForName("NUKAGE1");
+
+    floor -= flatstartlump;
 
     for (i = 0; i < numsectors; i++)
     {
@@ -261,9 +258,13 @@ void EV_GoopChange(line_t* line, int side)
             sectors[i].floortexture = floor;
         }
     }
-    return;
 }
 
+//==================================================================
+//
+//	MOVE A FLOOR TO IT'S DESTINATION (UP OR DOWN)
+//
+//==================================================================
 void T_MoveFloor(floormove_t* floor)
 {
     if (floor->direction == 1)
@@ -290,73 +291,90 @@ void T_MoveFloor(floormove_t* floor)
             P_RemoveThinker((thinker_t*)floor);
         }
     }
-    return;
 }
 
+//==================================================================
+//
+//	BUILD A STAIRCASE!
+//
+//==================================================================
 int EV_BuildStairs(line_t* line)
 {
-    short texture;
-    short newsecnum;
-    int ok;
-    floormove_t* floor;
-    sector_t* sec;
-    int i;
-    int height;
     int secnum;
+    int height;
+    int i;
+    int newsecnum;
+    int texture;
+    int ok;
     int rtn;
+    sector_t* sec;
+    floormove_t* floor;
 
-    rtn = 0;
     line->special = 0;
     secnum = -1;
+    rtn = 0;
+
     while ((secnum = P_FindSectorFromLineTag(line, secnum)) >= 0)
     {
         sec = &sectors[secnum];
-        if (sec->specialdata != NULL)
+
+        // ALREADY MOVING?  IF SO, KEEP GOING...
+        if (sec->specialdata)
             continue;
 
         rtn = 1;
-        height = (sec->floorheight + (8 << FRACBITS));
-        floor = (floormove_t*)Z_Malloc(playzone, sizeof(floormove_t));
-        P_AddThinker((thinker_t*)floor);
-        sec->specialdata = (void*)floor;
-        floor->thinker.function = &T_MoveFloor;
+        height = sec->floorheight + 8*FRACUNIT;
+        floor = Z_Malloc(playzone, sizeof(floormove_t));
+        P_AddThinker(&floor->thinker);
+        sec->specialdata = floor;
+        floor->thinker.function = (think_t) T_MoveFloor;
         floor->direction = 1;
         floor->sector = sec;
-        floor->speed = FLOORSPEED >> 2;
+        floor->speed = FLOORSPEED/4;
         floor->floordestheight = height;
+
         texture = sec->floortexture;
 
-        do
+        //
+        // Find next sector to raise
+        // 1.	Find 2-sided line with same sector side[0]
+        // 2.	Other side is the next sector to raise
+        //
+        ok = 1;
+        while (ok) 
         {
             ok = 0;
-            i = 0;
-
-            while (i < sec->linecount)
+            for (i = 0; i < sec->linecount; i++)
             {
-                if (((lines[sec->lines[i]].flags & ML_TWOSIDED) != 0) && (secnum == (int)sides[lines[sec->lines[i]].side[0]].sector))
+                if (lines[sec->lines[i]].flags & ML_TWOSIDED) //[ISB] I'd normally make these continues but the fail condition jumps to the end of the loop, rather than directly to the increment
                 {
-                    newsecnum = sides[lines[sec->lines[i]].side[1]].sector;
-                    sec = &sectors[newsecnum];
-                    if (sec->floortexture != texture) break;
-                    height += (8 << FRACBITS);
-
-                    if (sec->specialdata == NULL)
+                    newsecnum = sides[lines[sec->lines[i]].side[0]].sector;
+                    if (secnum == newsecnum)
                     {
-                        floor = (floormove_t*)Z_Malloc(playzone, sizeof(floormove_t));
-                        P_AddThinker((thinker_t*)floor);
-                        sec->specialdata = (void*)floor;
-                        floor->thinker.function = &T_MoveFloor;
+                        newsecnum = sides[lines[sec->lines[i]].side[1]].sector;
+                        sec = &sectors[newsecnum];
+                        if (sec->floortexture != texture)
+                            break;  //BUG: Will stop searching the first wrong floor texture it finds. But if it found an ok one before, it will then keep going from this sector anyways.
+                                    //though due to the bug below, this will be in a different sector than the first.
+
+                        height += 8 * FRACUNIT;
+                        if (sec->specialdata) 
+                            continue; //This one does jump straight to the increment though.
+
+                        floor = Z_Malloc(playzone, sizeof(floormove_t));
+                        P_AddThinker(&floor->thinker);
+                        sec->specialdata = floor;
+                        floor->thinker.function = (think_t)T_MoveFloor;
                         floor->direction = 1;
                         floor->sector = sec;
-                        floor->speed = FLOORSPEED >> 2;
+                        floor->speed = FLOORSPEED / 4;
                         floor->floordestheight = height;
-                        ok = 1;
-                        secnum = (int)newsecnum;
+                        secnum = newsecnum;
+                        ok = 1; //BUG: Unlike the release source, this doesn't break here. This means that the for loop will continue with a different sec. 
                     }
                 }
-                i++;
             }
-        } while (ok);
+        }
     }
 
     return rtn;
@@ -364,18 +382,20 @@ int EV_BuildStairs(line_t* line)
 
 int EV_RaiseFloorUpToNearest(line_t* line)
 {
-    floormove_t* floor;
-    int height;
-    sector_t* sec;
     int secnum;
-    int ret = 0;
+    int rtn;
+    sector_t* sec;
+    floormove_t* floor;
 
     line->special = 0;
     secnum = -1;
-    while (secnum = P_FindSectorFromLineTag(line, secnum), -1 < secnum)
+    rtn = 0;
+
+    while ((secnum = P_FindSectorFromLineTag(line, secnum)) >= 0)
     {
         sec = &sectors[secnum];
-        if (sec->specialdata == NULL)
+
+        if (!sec->specialdata)
         {
             floor = (floormove_t*)Z_Malloc(playzone, sizeof(floormove_t));
             P_AddThinker((thinker_t*)floor);
@@ -384,28 +404,30 @@ int EV_RaiseFloorUpToNearest(line_t* line)
             floor->direction = 1;
             floor->sector = sec;
             floor->speed = FLOORSPEED;
-            height = P_FindNextHighestFloor(sec, secnum, sec->floorheight);
-            floor->floordestheight = height;
-            ret = 1;
+            floor->floordestheight = P_FindNextHighestFloor(sec, secnum, sec->floorheight);
+            rtn = 1;
         }
     }
-    return ret;
+
+    return rtn;
 }
 
 int EV_RaiseFloor(line_t* line)
 {
-    floormove_t* floor;
-    int height;
-    sector_t* sec;
     int secnum;
-    int ret = 0;
+    int rtn;
+    sector_t* sec;
+    floormove_t* floor;
 
     line->special = 0;
     secnum = -1;
-    while (secnum = P_FindSectorFromLineTag(line, secnum), -1 < secnum)
+    rtn = 0;
+
+    while ((secnum = P_FindSectorFromLineTag(line, secnum)) >= 0)
     {
         sec = &sectors[secnum];
-        if (sec->specialdata == NULL)
+
+        if (!sec->specialdata)
         {
             floor = (floormove_t*)Z_Malloc(playzone, sizeof(floormove_t));
             P_AddThinker((thinker_t*)floor);
@@ -414,29 +436,28 @@ int EV_RaiseFloor(line_t* line)
             floor->direction = 1;
             floor->sector = sec;
             floor->speed = FLOORSPEED;
-            height = P_FindLowestCeilingSurrounding(sec, secnum);
-            floor->floordestheight = height;
+            floor->floordestheight = P_FindLowestCeilingSurrounding(sec, secnum);
             if (sec->ceilingheight < floor->floordestheight)
-            {
                 floor->floordestheight = sec->ceilingheight;
-            }
-            ret = 1;
+            rtn = 1;
         }
     }
-    return ret;
+
+    return rtn;
 }
 
 int EV_LowerFloor(line_t* line)
 {
-    int height;
-    sector_t* sector;
-    floormove_t* floor;
     int secnum;
-    int ret = 0;
+    int rtn;
+    sector_t* sec;
+    floormove_t* floor;
 
     line->special = 0;
     secnum = -1;
-    while (secnum = P_FindSectorFromLineTag(line, secnum), -1 < secnum)
+    rtn = 0;
+
+    while ((secnum = P_FindSectorFromLineTag(line, secnum)) >= 0)
     {
         sector = &sectors[secnum];
         if (sector->specialdata == 0)
@@ -448,191 +469,198 @@ int EV_LowerFloor(line_t* line)
             floor->direction = -1;
             floor->sector = sector;
             floor->speed = FLOORSPEED;
-            height = P_FindHighestFloorSurrounding(sector, secnum);
-            floor->floordestheight = height;
-            ret = 1;
+            floor->floordestheight = P_FindHighestFloorSurrounding(sector, secnum);
+            rtn = 1;
         }
     }
-    return ret;
+
+    return rtn;
 }
 
+//==================================================================
+//==================================================================
+//
+//							VERTICAL DOORS
+//
+//==================================================================
+//==================================================================
+
+//==================================================================
+//
+//	T_VerticalDoor
+//
+//==================================================================
 void T_VerticalDoor(vldoor_t* door)
 {
-    if (door->direction == -1)
+    switch (door->direction)
     {
+    case 0:
+        if (!door->topcountdown--)
+        {
+            switch (door->type)
+            {
+            case normal:
+                door->direction = -1;
+                break;
+            case close30ThenOpen:
+                door->direction = 1;
+                break;
+            default:
+                break;
+            }
+        }
+        break;
+    case -1:
         if ((door->sector - sectors) == player->r->sector)
         {
             door->direction = 0;
             door->topcountdown = 10;
+            return;
         }
-        else
+        door->sector->ceilingheight -= door->speed;
+        switch (door->type)
         {
-            door->sector->ceilingheight -= door->speed;
-            if (door->type == normal)
+        case normal:
+            if (door->sector->ceilingheight <= door->sector->floorheight)
             {
-                if (door->sector->ceilingheight <= door->sector->floorheight)
-                {
-                    door->sector->ceilingheight = door->sector->floorheight;
-                    door->sector->specialdata = 0;
-                    P_RemoveThinker((thinker_t*)door);
-                }
+                door->sector->ceilingheight = door->sector->floorheight;
+                door->sector->specialdata = NULL;
+                P_RemoveThinker((thinker_t*)door);
             }
-            else if (door->type == close30ThenOpen)
+            break;
+        case close30ThenOpen:
+            if (door->sector->ceilingheight <= door->sector->floorheight)
             {
-                if (door->sector->ceilingheight <= door->sector->floorheight)
-                {
-                    door->sector->ceilingheight = door->sector->floorheight;
-                    door->direction = 0;
-                    door->topcountdown = 2100;
-                }
+                door->sector->ceilingheight = door->sector->floorheight;
+                door->direction = 0;
+                door->topcountdown = 2100;
             }
-            else if (door->type == close)
+            break;
+        case close:
+            if ((door->sector->ceilingheight <= door->sector->floorheight))
             {
-                if ((door->sector->ceilingheight <= door->sector->floorheight))
-                {
-                    door->sector->ceilingheight = door->sector->floorheight;
-                    door->sector->specialdata = 0;
-                    P_RemoveThinker((thinker_t*)door);
-                }
+                door->sector->ceilingheight = door->sector->floorheight;
+                door->sector->specialdata = NULL;
+                P_RemoveThinker((thinker_t*)door);
             }
+            break;
+        default:
+            break;
         }
-    }
-    else if (door->direction == 0)
-    {
-        door->topcountdown--;
-        if (door->topcountdown == 0)
-        {
-            if (door->type == 0)
-            {
-                door->direction = -1;
-            }
-            else
-            {
-                if (door->type == close30ThenOpen)
-                {
-                    door->direction = 1;
-                }
-            }
-        }
-    }
-    else if (door->direction == 1)
-    {
+        break;
+    case 1:
         door->sector->ceilingheight += door->speed;
-        if (door->type == 0)
+        switch (door->type)
         {
+        case normal:
             if (door->topheight <= door->sector->ceilingheight)
             {
                 door->sector->ceilingheight = door->topheight;
                 door->direction = 0;
                 door->topcountdown = door->topwait;
             }
-        }
-        else if (door->type < 2)
-        {
+            break;
+        case close30ThenOpen:
             if (door->topheight <= door->sector->ceilingheight)
             {
                 door->sector->ceilingheight = door->topheight;
-                door->sector->specialdata = 0;
+                door->sector->specialdata = NULL;
                 P_RemoveThinker((thinker_t*)door);
             }
-        }
-        else if ((door->type == 3))
-        {
+            break;
+        case open:
             if ((door->topheight <= door->sector->ceilingheight))
             {
                 door->sector->ceilingheight = door->topheight;
-                door->sector->specialdata = 0;
+                door->sector->specialdata = NULL;
                 P_RemoveThinker((thinker_t*)door);
             }
+            break;
+        default:
+            break;
         }
+        break;
     }
-    return;
 }
 
 int EV_DoDoor(line_t* line, vldoor_e type)
 {
-    vldoor_t* door;
-    int height;
-    sector_t* sec;
     int secnum;
-    int ret = 0;
+    int rtn;
+    sector_t* sec;
+    vldoor_t* door;
 
     secnum = -1;
-    do
+    rtn = 0;
+
+    while ((secnum = P_FindSectorFromLineTag(line, secnum)) >= 0)
     {
-        do
-        {
-            secnum = P_FindSectorFromLineTag(line, secnum);
-            if (secnum < 0)
-            {
-                return ret;
-            }
-            sec = &sectors[secnum];
-        } while (sec->specialdata != 0);
-        door = (vldoor_t*)Z_Malloc(playzone, sizeof(vldoor_t));
-        P_AddThinker((thinker_t*)door);
-        sec->specialdata = (void*)door;
-        door->thinker.function = &T_VerticalDoor;
+        sec = &sectors[secnum];
+        if (sec->specialdata)
+            continue;
+
+        door = Z_Malloc(playzone, sizeof(vldoor_t));
+        P_AddThinker(&door->thinker);
+        sec->specialdata = door;
+        door->thinker.function = (think_t)&T_VerticalDoor;
         door->sector = sec;
-        if (type == normal || type == open)
+        switch (type)
         {
+        case normal:
+        case open:
             door->direction = 1;
-        }
-        else
-        {
+            break;
+        case close30ThenOpen:
+        case close:
             door->direction = -1;
+            break;
+        default:
+            break;
         }
 
         door->type = type;
         door->speed = VDOORSPEED;
         door->topwait = VDOORWAIT;
-        height = P_FindLowestCeilingSurrounding(sec, secnum);
-        door->topheight = height;
-        door->topheight = door->topheight + -(4 << FRACBITS);
-        ret = 1;
-    } while (1);
-    return ret;
-}
-
-void EV_VerticalDoor(line_t* line, int side)
-{
-    short secnum;
-    vldoor_t* door;
-    sector_t* sec;
-
-    if (line->special == 26)
-    {
-        if (!player->items[it_bluecard])
-            return;
-    }
-    else if (line->special == 27)
-    {
-        if (!player->items[it_yellowcard])
-            return;
-    }
-    else if (line->special == 28)
-    {
-        if (!player->items[it_redcard])
-            return;
-    }
-
-    secnum = sides[line->side[side ^ 1]].sector;
-    sec = sectors + (int)secnum;
-    if (sec->specialdata == NULL)
-    {
-        door = (vldoor_t*)Z_Malloc(playzone, sizeof(vldoor_t));
-        P_AddThinker((thinker_t*)door);
-        sec->specialdata = door;
-        door->thinker.function = &T_VerticalDoor;
-        door->sector = sec;
-        door->direction = 1;
-        door->type = 0;
-        door->speed = VDOORSPEED;
-        door->topwait = VDOORWAIT;
         door->topheight = P_FindLowestCeilingSurrounding(sec, secnum);
         door->topheight = door->topheight + -(4 << FRACBITS);
+        rtn = 1;
     }
-    else
+
+    return rtn;
+}
+
+//==================================================================
+//
+//	EV_VerticalDoor : open a door manually, no tag value
+//
+//==================================================================
+void EV_VerticalDoor(line_t* line, int side)
+{
+    int secnum;
+    sector_t* sec;
+    vldoor_t* door;
+
+    switch (line->special)
+    {
+    case 26:		// Blue Lock
+        if (!player->items[it_bluecard])
+            return;
+        break;
+    case 27:		// Yellow Lock
+        if (!player->items[it_yellowcard])
+            return;
+        break;
+    case 28:		// Red Lock
+        if (!player->items[it_redcard])
+            return;
+        break;
+    }
+
+    // if the sector has an active thinker, use it
+    secnum = sides[line->side[side ^ 1]].sector;
+    sec = &sectors[secnum];
+
+    if (sec->specialdata)
     {
         door = (vldoor_t*)sec->specialdata;
 
@@ -640,38 +668,74 @@ void EV_VerticalDoor(line_t* line, int side)
             door->direction = 1;
         else
             door->direction = -1;
+
+        return;
     }
-    return;
+
+    //
+    // new door thinker
+    //
+    door = (vldoor_t*)Z_Malloc(playzone, sizeof(vldoor_t));
+    P_AddThinker(&door->thinker);
+    sec->specialdata = door;
+    door->thinker.function = (think_t) T_VerticalDoor;
+    door->sector = sec;
+    door->direction = 1;
+    door->type = 0;
+    door->speed = VDOORSPEED;
+    door->topwait = VDOORWAIT;
+
+    //
+    // find the top and bottom of the movement range
+    //
+    door->topheight = P_FindLowestCeilingSurrounding(sec, secnum);
+    door->topheight -= (4 << FRACBITS);
 }
 
+//==================================================================
+//==================================================================
+//
+//							PLATFORM RAISING
+//
+//==================================================================
+//==================================================================
+
+//==================================================================
+//
+//	Move a plat up and down
+//
+//==================================================================
 void T_PlatRaise(plat_t* plat)
 {
-    if (plat->status == up)
+    switch (plat->status)
     {
-        plat->sector->floorheight = plat->sector->floorheight + plat->speed;
+    case up:
+        plat->sector->floorheight += plat->speed;
         P_MoveThings(plat->sector - sectors, plat->speed);
-        if (plat->high < plat->sector->floorheight)
+        if (plat->sector->floorheight > plat->high)
         {
             P_MoveThings(plat->sector - sectors, plat->high - plat->sector->floorheight);
             plat->sector->floorheight = plat->high;
             plat->count = plat->wait;
             plat->status = waiting;
 
-            if (plat->type == downWaitUpStay)
+            switch (plat->type)
             {
+            case downWaitUpStay:
                 plat->sector->specialdata = 0;
                 P_RemoveThinker((thinker_t*)plat);
-            }
-            else if (plat->type == raiseAndChange)
-            {
+                break;
+            case raiseAndChange:
                 plat->sector->specialdata = 0;
                 P_RemoveThinker((thinker_t*)plat);
+                break;
+            default:
+                break;
             }
         }
-    }
-    else if (plat->status == down)
-    {
-        plat->sector->floorheight = plat->sector->floorheight - plat->speed;
+        break;
+    case down:
+        plat->sector->floorheight -= plat->speed;
         P_MoveThings(plat->sector - sectors, -plat->speed);
         if (plat->sector->floorheight < plat->low)
         {
@@ -680,29 +744,22 @@ void T_PlatRaise(plat_t* plat)
             plat->count = plat->wait;
             plat->status = waiting;
         }
-    }
-    else if ((plat->status == waiting))
-    {
-        plat->count--;
-        if (plat->count == 0)
+        break;
+    case waiting:
+        if (!--plat->count)
         {
             if (plat->sector->floorheight == plat->low)
-            {
                 plat->status = up;
-            }
             else
-            {
                 plat->status = down;
-            }
         }
+        break;
     }
 }
 
 void P_SpawnPlatRaise(sector_t* sector, int secnum)
 {
-    plat_t* plat;
-
-    plat = (plat_t*)Z_Malloc(playzone, sizeof(plat_t));
+    plat_t* plat = (plat_t*)Z_Malloc(playzone, sizeof(plat_t));
     P_AddThinker((thinker_t*)plat);
     plat->speed = PLATSPEED;
     plat->low = P_FindLowestFloorSurrounding(sector, secnum);
@@ -711,170 +768,180 @@ void P_SpawnPlatRaise(sector_t* sector, int secnum)
     plat->sector = sector;
 
     plat->status = D_Rnd() & 1;
-    plat->thinker.function = &T_PlatRaise;
+    plat->thinker.function = (think_t) T_PlatRaise;
     plat->type = raise;
-    plat->sector->specialdata = (void*)plat;
+    plat->sector->specialdata = plat;
     sector->special = 0;
 }
 
 int EV_RaisePlatUpToNearestFloorAndChange(line_t* line, int side)
 {
     plat_t* plat;
-    sector_t* sec;
     int secnum;
-    int rtn = 0;
+    int rtn;
+    sector_t* sec;
 
     secnum = -1;
+    rtn = 0;
+
     while ((secnum = P_FindSectorFromLineTag(line, secnum)) >= 0)
     {
         sec = &sectors[secnum];
-        if (sec->specialdata == 0)
-        {
-            plat = (plat_t*)Z_Malloc(playzone, sizeof(plat_t));
-            P_AddThinker((thinker_t*)plat);
-            plat->speed = PLATSPEED / 2;
-            sec->floortexture = sectors[sides[line->side[side]].sector].floortexture;
-            plat->high = P_FindNextHighestFloor(sec, secnum, sec->floorheight);
-            plat->wait = 0;
-            plat->sector = sec;
-            plat->status = up;
-            plat->thinker.function = &T_PlatRaise;
-            plat->type = raiseAndChange;
-            plat->sector->specialdata = (void*)plat;
-            rtn = 1;
-        }
+        if (sec->specialdata)
+            continue;
+
+        plat = (plat_t*)Z_Malloc(playzone, sizeof(plat_t));
+        P_AddThinker(&plat->thinker);
+        plat->speed = PLATSPEED / 2;
+        sec->floortexture = sectors[sides[line->side[side]].sector].floortexture;
+        plat->high = P_FindNextHighestFloor(sec, secnum, sec->floorheight);
+        plat->wait = 0;
+        plat->sector = sec;
+        plat->status = up;
+        plat->thinker.function = (think_t) T_PlatRaise;
+        plat->type = raiseAndChange;
+        plat->sector->specialdata = plat;
+        rtn = 1;
     }
+
     return rtn;
 }
 
 int EV_PlatRaiseAndChange(line_t* line, int amount)
 {
     plat_t* plat;
-    sector_t* sec;
-    int rtn;
     int secnum;
+    int rtn;
+    sector_t* sec;
 
     secnum = -1;
     rtn = 0;
     while ((secnum = P_FindSectorFromLineTag(line, secnum)) >= 0)
     {
         sec = &sectors[secnum];
-        if (sec->specialdata == 0)
-        {
-            rtn = 1;
-            plat = (plat_t*)Z_Malloc(playzone, sizeof(plat_t));
-            P_AddThinker((thinker_t*)plat);
-            plat->speed = PLATSPEED / 2;
-            sec->floortexture = sectors[sides[line->side[0]].sector].floortexture;
-            plat->high = sec->floorheight + amount * FRACUNIT;
-            plat->wait = 0;
-            plat->sector = sec;
-            plat->status = up;
-            plat->thinker.function = &T_PlatRaise;
-            plat->type = raiseAndChange;
-            plat->sector->specialdata = (void*)plat;
-        }
+        if (sec->specialdata)
+            continue;
+
+        rtn = 1;
+        plat = (plat_t*)Z_Malloc(playzone, sizeof(plat_t));
+        P_AddThinker(&plat->thinker);
+        plat->speed = PLATSPEED / 2;
+        sec->floortexture = sectors[sides[line->side[0]].sector].floortexture;
+        plat->high = sec->floorheight + amount * FRACUNIT;
+        plat->wait = 0;
+        plat->sector = sec;
+        plat->status = up;
+        plat->thinker.function = (think_t) T_PlatRaise;
+        plat->type = raiseAndChange;
+        plat->sector->specialdata = plat;
     }
+
     return rtn;
 }
 
 int EV_PlatLowerWaitRaiseStay(line_t* line)
 {
     plat_t* plat;
-    sector_t* sector;
     int secnum;
-    int ret = 0;
+    int rtn;
+    sector_t* sec;
 
     secnum = -1;
+    rtn = 0;
+
     while ((secnum = P_FindSectorFromLineTag(line, secnum)) >= 0)
     {
-        sector = &sectors[secnum];
-        if (sector->specialdata == 0)
-        {
-            plat = (plat_t*)Z_Malloc(playzone, sizeof(plat_t));
-            P_AddThinker((thinker_t*)plat);
-            plat->speed = PLATSPEED;
-            plat->low = P_FindLowestFloorSurrounding(sector, secnum);
-            plat->high = sector->floorheight;
-            plat->wait = PLATWAIT;
-            plat->sector = sector;
-            plat->status = down;
-            plat->thinker.function = &T_PlatRaise;
-            plat->type = downWaitUpStay;
-            plat->sector->specialdata = (void*)plat;
-            ret = 1;
-        }
+        sec = &sectors[secnum];
+        if (sec->specialdata)
+            continue;
+
+        plat = (plat_t*)Z_Malloc(playzone, sizeof(plat_t));
+        P_AddThinker(&plat->thinker);
+        plat->speed = PLATSPEED;
+        plat->low = P_FindLowestFloorSurrounding(sec, secnum);
+        plat->high = sec->floorheight;
+        plat->wait = PLATWAIT;
+        plat->sector = sec;
+        plat->status = down;
+        plat->thinker.function = (think_t) T_PlatRaise;
+        plat->type = downWaitUpStay;
+        plat->sector->specialdata = plat;
+        rtn = 1;
     }
-    return ret;
+    return rtn;
 }
 
+//==================================================================
+//
+//	TURN LINE'S TAG LIGHTS OFF
+//
+//==================================================================
 void EV_TurnTagLIghtsOff(line_t* line)
 {
-    short val;
-    short min;
-    int i, j;
+    int i;
+    int j;
+    int val;
+    int min;
 
-    for (i = 0; i < numsectors; i++)
-    {
-        if (sectors[i].tag == line->tag)
+    for (j = 0; j < numsectors; j++)
+        if (sectors[j].tag == line->tag)
         {
-            min = sectors[i].lightlevel;
+            min = sectors[j].lightlevel;
 
-            for (j = 0; j < sector->linecount; j++)
+            for (i = 0; i < sector->linecount; i++)
             {
-                if ((lines[sector->lines[j]].flags & ML_TWOSIDED) != 0)
-                {
-                    if ((int)sides[lines[sector->lines[j]].side[1]].sector == i)
-                    {
-                        val = sectors[sides[lines[sector->lines[j]].side[0]].sector].lightlevel;
-                    }
-                    else
-                    {
-                        val = sectors[sides[lines[sector->lines[j]].side[1]].sector].lightlevel;
-                    }
-                    if (val < min)
-                    {
-                        min = val;
-                    }
-                }
+                if (!(lines[sector->lines[i]].flags & ML_TWOSIDED))
+                    continue;
+
+                if (sides[lines[sector->lines[i]].side[1]].sector == j)
+                    val = sectors[sides[lines[sector->lines[i]].side[0]].sector].lightlevel;
+                else
+                    val = sectors[sides[lines[sector->lines[i]].side[1]].sector].lightlevel;
+                    
+                if (val < min)
+                    min = val;
             }
-            sectors[i].lightlevel = min;
+            sectors[j].lightlevel = min;
         }
-    }
 }
 
+//==================================================================
+//
+//	TURN LINE'S TAG LIGHTS ON
+//
+//==================================================================
 void EV_LightTurnOn(line_t* line, int bright)
 {
-    short val;
-    int j;
     int i;
+    int val;
+    int j;
 
     for (i = 0; i < numsectors; i++)
     {
         if (sectors[i].tag == line->tag)
         {
-            if (bright == 0)
+            //
+            // bright = 0 means to search for highest
+            // light level surrounding sector
+            //
+            if (!bright)
             {
                 for (j = 0; j < sectors[i].linecount; j++)
                 {
-                    if ((lines[sectors[i].lines[j]].flags & 4) == 0)
-                    {
-                        if (sides[lines[sectors[i].lines[j]].side[0]].sector == i)
-                        {
-                            val = sectors[sides[lines[sectors[i].lines[j]].side[1]].sector].lightlevel;
-                        }
-                        else
-                        {
-                            val = sectors[sides[lines[sectors[i].lines[j]].side[0]].sector].lightlevel;
-                        }
-                        if (bright < val)
-                        {
-                            bright = val;
-                        }
-                    }
+                    if (!(lines[sectors[i].lines[j]].flags & ML_TWOSIDED))
+                        continue;
+
+                    if (sides[lines[sectors[i].lines[j]].side[0]].sector == i)
+                        val = sectors[sides[lines[sectors[i].lines[j]].side[1]].sector].lightlevel;
+                    else
+                        val = sectors[sides[lines[sectors[i].lines[j]].side[0]].sector].lightlevel;
+
+                    if (val > bright)
+                        bright = val;
                 }
             }
-            sectors[i].lightlevel = (short)bright;
+
+            sectors[i].lightlevel = bright;
         }
     }
 }
@@ -980,37 +1047,40 @@ void P_InitSwitchList(void)
     }
 }
 
-void P_ChangeSwitchTexture(line_t* line, int useAgain)
+void P_ChangeSwitchTexture(line_t* line, boolean useAgain)
 {
+    int texTop;
+    int texMid;
+    int texBot;
     int i;
 
-    if (useAgain == 0)
-    {
+    if (!useAgain)
         line->special = 0;
-    }
-    i = 0;
-    while (1)
+
+    texTop = sides[line->side[0]].toptexture;
+    texMid = sides[line->side[0]].midtexture;
+    texBot = sides[line->side[0]].bottomtexture;
+
+    for (i = 0; i < numswitches; i++)
     {
-        if (i >= numswitches)
-        {
-            IO_Error("P_ChangeSwitchTexture: Couldn't find a matching switch!");
-            return;
-        }
-        if (switchlist[i] == (int)sides[line->side[0]].toptexture)
+        if (switchlist[i] == texTop)
         {
             sides[line->side[0]].toptexture = switchlist[i ^ 1];
             return;
         }
-        if (switchlist[i] == (int)sides[line->side[0]].midtexture)
+        else if (switchlist[i] == texMid)
         {
             sides[line->side[0]].midtexture = switchlist[i ^ 1];
             return;
         }
-        if (switchlist[i] == (int)sides[line->side[0]].bottomtexture) break;
-        i++;
+        else if (switchlist[i] == texBot)
+        {
+            sides[line->side[0]].bottomtexture = switchlist[i ^ 1];
+            return;
+        }
     }
-    sides[line->side[0]].bottomtexture = switchlist[i ^ 1];
-    return;
+
+    IO_Error("P_ChangeSwitchTexture: Couldn't find a matching switch!");
 }
 
 /*
@@ -1025,9 +1095,6 @@ void P_ChangeSwitchTexture(line_t* line, int useAgain)
 
 void P_PlayerUseSpecialLine(line_t* line, int side)
 {
-    short uVar1;
-    int iVar2;
-
     if (side != 0)
     {
         return;
@@ -1140,30 +1207,28 @@ void P_PlayerShootSpecialLine(line_t* line)
 
 void P_PlayerInSpecialSector(void)
 {
-    switch (sectors[player->r->sector].special)
+    sector_t* sector = &sectors[player->r->sector];
+    switch (sector->special)
     {
     case 7: // Damage_Sludge
         if (D_Rnd() < 8)
-        {
             P_DamagePlayer(playernum, 1);
-        }
         break;
     default:
-        IO_Error("P_PlayerInSpecialSector: unknown special %i", (int)sectors[player->r->sector].special);
+        IO_Error("P_PlayerInSpecialSector: unknown special %i", sector->special);
+        break;
     }
 }
 
 void P_AnimatePlanePics()
 {
     anim_t* anim;
-    int ticcount;
-
-    ticcount = IO_GetTime();
-    anim = anims;
-    while (anim < lastAnim)
+    int pic;
+    int ticcount = IO_GetTime();
+    for (anim = anims; anim < lastAnim; anim++)
     {
-        flatlookup[anim->picnum] = lumpinfo[flatstartlump + anim->basepic + ((ticcount / anim->speed) % anim->numpics)].position;
-        anim++;
+        pic = (ticcount / anim->speed) % anim->numpics;
+        flatlookup[anim->picnum] = lumpinfo[flatstartlump + anim->basepic + pic].position;
     }
 }
 
@@ -1179,100 +1244,144 @@ void P_StartupPicAnims(void)
         lastAnim->numpics = flatAnims[i].numflats;
         lastAnim->speed = flatAnims[i].speed;
         lastAnim++;
-
     }
-    return;
 }
 
+//==================================================================
+//==================================================================
+//
+//							BROKEN LIGHT FLASHING
+//
+//==================================================================
+//==================================================================
+
+//==================================================================
+//
+//	T_LightFlash
+//
+//	After the map has been loaded, scan each sector for specials
+//	that spawn thinkers
+//
+//==================================================================
 void T_LightFlash(lightflash_t* flash)
 {
-    flash->count--;
-    if (flash->count == 0)
+    if (--flash->count)
+        return;
+
+    if (flash->sector->lightlevel == flash->maxlight)
     {
-        if ((int)flash->sector->lightlevel == flash->maxlight)
-        {
-            flash->sector->lightlevel = flash->minlight;
-            flash->count = (flash->mintime & D_Rnd()) + 1;
-        }
-        else
-        {
-            flash->sector->lightlevel = flash->maxlight;
-            flash->count = (flash->maxtime & D_Rnd()) + 1;
-        }
+        flash->sector->lightlevel = flash->minlight;
+        flash->count = (flash->mintime & D_Rnd()) + 1;
     }
-    return;
+    else
+    {
+        flash->sector->lightlevel = flash->maxlight;
+        flash->count = (flash->maxtime & D_Rnd()) + 1;
+    }
 }
 
+//==================================================================
+//
+//	P_SpawnLightFlash
+//
+//	After the map has been loaded, scan each sector for specials that spawn thinkers
+//
+//==================================================================
 void P_SpawnLightFlash(sector_t* sector)
 {
     lightflash_t* flash;
 
     sector->special = 0;
-    flash = (lightflash_t*)Z_Malloc(playzone, sizeof(lightflash_t));
-    P_AddThinker((thinker_t*)flash);
-    flash->thinker.function = &T_LightFlash;
+
+    flash = Z_Malloc(playzone, sizeof(lightflash_t));		// nothing special about it during gameplay
+    P_AddThinker(&flash->thinker);
+    flash->thinker.function = (think_t) T_LightFlash;
     flash->sector = sector;
     flash->maxlight = sector->lightlevel;
+
     flash->minlight = P_FindMinSurroundingLight(sector, (int)sector->lightlevel);
     flash->maxtime = 64;
     flash->mintime = 7;
     flash->count = (flash->maxtime & D_Rnd()) + 1;
-    return;
 }
 
+//==================================================================
+//
+//							STROBE LIGHT FLASHING
+//
+//==================================================================
+
+//==================================================================
+//
+//	T_StrobeFlash
+//
+//	After the map has been loaded, scan each sector for specials that spawn thinkers
+//
+//==================================================================
 void T_StrobeFlash(lightstrobe_t* flash)
 {
-    flash->count--;
-    if (flash->count == 0)
+    if (--flash->count)
+        return;
+
+    if (flash->sector->lightlevel == flash->maxlight)
     {
-        if ((int)flash->sector->lightlevel == flash->maxlight)
-        {
-            flash->sector->lightlevel = flash->minlight;
-            flash->count = flash->brighttime;
-        }
-        else
-        {
-            flash->sector->lightlevel = flash->maxlight;
-            flash->count = flash->darktime;
-        }
+        flash->sector->lightlevel = flash->minlight;
+        flash->count = flash->brighttime;
     }
-    return;
+    else
+    {
+        flash->sector->lightlevel = flash->maxlight;
+        flash->count = flash->darktime;
+    }
 }
 
-void P_SpawnStrobeFlash(sector_t* sector, int seccnum, int fastOrSlow)
+//==================================================================
+//
+//	P_SpawnLightFlash
+//
+//	After the map has been loaded, scan each sector for specials that spawn thinkers
+//
+//==================================================================
+void P_SpawnStrobeFlash(sector_t* sector, int secnum, int fastOrSlow)
 {
-    lightstrobe_t* strobe;
+    lightstrobe_t* flash;
 
-    strobe = (lightstrobe_t*)Z_Malloc(playzone, sizeof(lightstrobe_t));
-    P_AddThinker((thinker_t*)strobe);
-    strobe->sector = sector;
-    strobe->darktime = fastOrSlow;
-    strobe->brighttime = STROBEBRIGHT;
-    strobe->thinker.function = &T_StrobeFlash;
-    strobe->minlight = (int)sector->lightlevel;
-    strobe->maxlight = P_FindMinSurroundingLight(sector, (int)sector->lightlevel);
-    if (strobe->maxlight == strobe->minlight)
-    {
-        strobe->maxlight = 0;
-    }
-    sector->special = 0;
-    strobe->count = (D_Rnd() & 7) + 1;
-    return;
+    flash = Z_Malloc(playzone, sizeof(lightstrobe_t));
+
+    P_AddThinker(&flash->thinker);
+    flash->sector = sector;
+    flash->darktime = fastOrSlow;
+    flash->brighttime = STROBEBRIGHT;
+    flash->thinker.function = (think_t) T_StrobeFlash;
+    flash->minlight = sector->lightlevel;
+
+    flash->maxlight = P_FindMinSurroundingLight(sector, sector->lightlevel);
+    if (flash->maxlight == flash->minlight)
+        flash->maxlight = 0;
+    
+    sector->special = 0;		// nothing special about it during gameplay
+    flash->count = (D_Rnd() & 7) + 1;
 }
 
+//==================================================================
+//
+//	Start strobing lights (usually from a trigger)
+//
+//==================================================================
 void EV_StartLightStrobing(line_t* line)
 {
     int secnum;
+    sector_t* sec;
 
     secnum = -1;
     while ((secnum = P_FindSectorFromLineTag(line, secnum)) >= 0)
     {
-        if (sectors[secnum].specialdata == 0)
-        {
-            P_SpawnStrobeFlash(&sectors[secnum], secnum, SLOWDARK);
-        }
+        sec = &sectors[secnum];
+        if (sec->specialdata)
+            continue;
+
+        P_SpawnStrobeFlash(sec, secnum, SLOWDARK);
     }
-    return;
 }
 
 /*
@@ -1301,7 +1410,7 @@ void P_SpawnSpecialSectors(void)
     //	Init special SECTORs
     //
     sector = sectors;
-    for (i = 0; i < numsectors; i++)
+    for (i = 0; i < numsectors; i++, sector++)
     {
         if (sector->special != 0)
         {
@@ -1318,9 +1427,8 @@ void P_SpawnSpecialSectors(void)
                 break;
             case 4:     // PLAT RAISE AND LOWER
                 P_SpawnPlatRaise(sector, i);
+                break;
             }
         }
-        sector++;
     }
-    return;
 }

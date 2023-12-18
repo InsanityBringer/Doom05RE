@@ -231,11 +231,14 @@ typedef struct
 extern char* sprnames[];
 extern state_t states[];
 
+// think_t is a function pointer to a routine to handle an actor
+typedef void (*think_t) ();
+
 typedef struct thinker_s
 {
 	struct thinker_s* prev;
 	struct thinker_s* next;
-	void* function;
+	think_t function;
 	int tag;
 } thinker_t;
 
