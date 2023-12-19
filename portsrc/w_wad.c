@@ -51,13 +51,6 @@ typedef struct
 lumpinfo_t* lumpinfo;		// location of each lump on disk
 int			numlumps;
 
-//=============
-// GLOBALS
-//=============
-
-lumpinfo_t* lumpinfo;		// location of each lump on disk
-int			numlumps;
-
 void ExtractFileBase(char* path, char* dest)
 {
 	char* src;

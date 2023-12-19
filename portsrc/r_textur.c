@@ -24,7 +24,7 @@ memzone_t* texturezone;
 
 void R_InitTextureCache()
 {
-	texturezone = Z_AllocateZone(0x80000);
+	texturezone = Z_AllocateZone(512 * 1024);
 }
 
 //[ISB] these are interesting, were they considering dynamic patches at this time?

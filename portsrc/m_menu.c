@@ -652,11 +652,11 @@ void M_DrawSelf(void)
 
 void M_CheckInput(framecmd_t* cmd)
 {
-	if (controlmenumap != 0)
+	if (controlmenumap)
 	{
 		cmd->xmove = 10;
 		cmd->ymove = 0;
-		cmd->buttons = 0x3c;
+		cmd->buttons = wp_nochange << BT_WEAPONSHIFT;
 	}
 	if (cmd->keyscan != 0)
 	{
@@ -703,9 +703,8 @@ void M_CheckInput(framecmd_t* cmd)
 		else
 		{
 			if (keycallback == NULL)
-			{
 				IO_Error("M_CheckInput: no keycallback\n");
-			}
+			
 			keycallback(cmd->keyscan);
 		}
 	}

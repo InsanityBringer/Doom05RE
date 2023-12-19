@@ -395,18 +395,18 @@ int EV_RaiseFloorUpToNearest(line_t* line)
     {
         sec = &sectors[secnum];
 
-        if (!sec->specialdata)
-        {
-            floor = (floormove_t*)Z_Malloc(playzone, sizeof(floormove_t));
-            P_AddThinker((thinker_t*)floor);
-            sec->specialdata = (void*)floor;
-            floor->thinker.function = &T_MoveFloor;
-            floor->direction = 1;
-            floor->sector = sec;
-            floor->speed = FLOORSPEED;
-            floor->floordestheight = P_FindNextHighestFloor(sec, secnum, sec->floorheight);
-            rtn = 1;
-        }
+        if (sec->specialdata)
+            return;
+
+        floor = (floormove_t*)Z_Malloc(playzone, sizeof(floormove_t));
+        P_AddThinker(&floor->thinker);
+        sec->specialdata = floor;
+        floor->thinker.function = &T_MoveFloor;
+        floor->direction = 1;
+        floor->sector = sec;
+        floor->speed = FLOORSPEED;
+        floor->floordestheight = P_FindNextHighestFloor(sec, secnum, sec->floorheight);
+        rtn = 1;
     }
 
     return rtn;
@@ -427,20 +427,20 @@ int EV_RaiseFloor(line_t* line)
     {
         sec = &sectors[secnum];
 
-        if (!sec->specialdata)
-        {
-            floor = (floormove_t*)Z_Malloc(playzone, sizeof(floormove_t));
-            P_AddThinker((thinker_t*)floor);
-            sec->specialdata = (void*)floor;
-            floor->thinker.function = &T_MoveFloor;
-            floor->direction = 1;
-            floor->sector = sec;
-            floor->speed = FLOORSPEED;
-            floor->floordestheight = P_FindLowestCeilingSurrounding(sec, secnum);
-            if (sec->ceilingheight < floor->floordestheight)
-                floor->floordestheight = sec->ceilingheight;
-            rtn = 1;
-        }
+        if (sec->specialdata)
+            return;
+
+        floor = (floormove_t*)Z_Malloc(playzone, sizeof(floormove_t));
+        P_AddThinker(&floor->thinker);
+        sec->specialdata = floor;
+        floor->thinker.function = &T_MoveFloor;
+        floor->direction = 1;
+        floor->sector = sec;
+        floor->speed = FLOORSPEED;
+        floor->floordestheight = P_FindLowestCeilingSurrounding(sec, secnum);
+        if (sec->ceilingheight < floor->floordestheight)
+            floor->floordestheight = sec->ceilingheight;
+        rtn = 1;
     }
 
     return rtn;
@@ -460,18 +460,18 @@ int EV_LowerFloor(line_t* line)
     while ((secnum = P_FindSectorFromLineTag(line, secnum)) >= 0)
     {
         sector = &sectors[secnum];
-        if (sector->specialdata == 0)
-        {
-            floor = (floormove_t*)Z_Malloc(playzone, sizeof(floormove_t));
-            P_AddThinker((thinker_t*)floor);
-            sector->specialdata = (void*)floor;
-            floor->thinker.function = &T_MoveFloor;
-            floor->direction = -1;
-            floor->sector = sector;
-            floor->speed = FLOORSPEED;
-            floor->floordestheight = P_FindHighestFloorSurrounding(sector, secnum);
-            rtn = 1;
-        }
+        if (sector->specialdata)
+            continue;
+
+        floor = (floormove_t*)Z_Malloc(playzone, sizeof(floormove_t));
+        P_AddThinker(&floor->thinker);
+        sector->specialdata = floor;
+        floor->thinker.function = &T_MoveFloor;
+        floor->direction = -1;
+        floor->sector = sector;
+        floor->speed = FLOORSPEED;
+        floor->floordestheight = P_FindHighestFloorSurrounding(sector, secnum);
+        rtn = 1;
     }
 
     return rtn;
@@ -760,7 +760,7 @@ void T_PlatRaise(plat_t* plat)
 void P_SpawnPlatRaise(sector_t* sector, int secnum)
 {
     plat_t* plat = (plat_t*)Z_Malloc(playzone, sizeof(plat_t));
-    P_AddThinker((thinker_t*)plat);
+    P_AddThinker(&plat->thinker);
     plat->speed = PLATSPEED;
     plat->low = P_FindLowestFloorSurrounding(sector, secnum);
     plat->high = P_FindHighestFloorSurrounding(sector, secnum);

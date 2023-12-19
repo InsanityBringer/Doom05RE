@@ -44,6 +44,7 @@ set(GAME_SOURCES
 	portsrc/sdl_gl.h
 	portsrc/sdl_key.h
 	portsrc/states.c
+	portsrc/states.h
 	portsrc/v_munged.c
 	portsrc/v_video.h
 	portsrc/vmaphc_c.c

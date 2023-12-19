@@ -52,10 +52,6 @@ typedef struct
 #define WEAPONBOTTOM	144*FRACUNIT
 #define WEAPONTOP		68*FRACUNIT
 
-int playerobjfound[4];
-player_t* player;
-player_t playerobjs[4];
-
 int debugmove;
 
 fixed_t swingx, swingy;

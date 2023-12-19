@@ -229,16 +229,18 @@ void P_GiveCard(item_t item)
 
 void P_GetThingAt(byte* spot)
 {
-    actor_t* check;
     byte* spot2 = spot - 1;
     byte* spot3 = spot - mapwidth;
     byte* spot4 = spot - mapwidth - 1;
+    actor_t* check = actorcap.next;
 
-    check = actor.next;
-    while (check != &actor && check->maporigin != spot && check->maporigin != spot2 && check->maporigin != spot3 && check->maporigin != spot4)
-        check = check->next;
+    for (; check != &actorcap; check = check->next)
+    {
+        if (check->maporigin == spot || check->maporigin == spot2 || check->maporigin == spot3 || check->maporigin == spot4)
+            break;
+    }
 
-    if (check == &actor)
+    if (check == &actorcap)
         IO_Error("P_GetThingAt: actor not located\n");
 
     switch (check->r->sprite)
@@ -385,41 +387,38 @@ void P_GetThingAt(byte* spot)
 
 void P_PlayerDied(int playernum)
 {
-    player_t* player;
-
-    player = &playerobjs[playernum];
+    player_t* player = &playerobjs[playernum];
     P_RemoveBlockMarks(player->r);
     player->health = 0;
 }
 
-void P_DamagePlayer(int player, int damage)
+void P_DamagePlayer(int playernum, int damage)
 {
-    if (player == sd->consoleplayer)
+    player_t* player;
+    if (playernum == sd->consoleplayer)
         redshift += damage * 4;
 
-    playerobjs[player].health -= damage;
+    player = &playerobjs[playernum];
+    player->health -= damage;
 
     //[ISB] eh? No wonder you die when you get shot with 10 hp left. Heh. 
-    if (playerobjs[player].health <= damage)
-        P_PlayerDied(player);
+    if (player->health <= damage)
+        P_PlayerDied(playernum);
 
-    if (player == sd->consoleplayer)
+    if (playernum == sd->consoleplayer)
         P_DrawHealth();
 }
 
 void P_AMapPlot(int x, int y, int color)
 {
-    if ((((-1 < x) && (x < 320)) && (-1 < y)) && (y < 200))
-        *(collumnpointer[x] + planewidthlookup[y]) = (byte)color;
+    if (x >= 0 && x < SCREENWIDTH && y >= 0 && y < SCREENHEIGHT - SBARHEIGHT)
+        collumnpointer[x][planewidthlookup[y]] = color;
 }
 
 void P_DrawPlayerMarker(player_t* player)
 {
-    int x;
-    int y;
-
-    x = player->r->x - amaporgx >> MAPBLOCKSHIFT;
-    y = amaporgy - player->r->y >> MAPBLOCKSHIFT;
+    int x = player->r->x - amaporgx >> MAPBLOCKSHIFT;
+    int y = amaporgy - player->r->y >> MAPBLOCKSHIFT;
     P_AMapPlot(x, y, 0xb4);
     switch ((player->r->angle + (NUMANGLES/16) & ANGLEMASK) >> 10)
     {
@@ -459,13 +458,13 @@ void P_DrawPlayerMarker(player_t* player)
 
 void P_DrawAMap(int x1, int y1, int x2, int y2, int mapx, int mapy)
 {
-    int my;
-    int mx;
-    int y;
-    int x;
-    int mx1;
-    int source;
     byte pixel;
+    int source;
+    int x;
+    int y;
+    int mx;
+    int my;
+    int mx1;
 
     my = mapy - maporiginy >> MAPBLOCKSHIFT;
     mx1 = mapx - maporiginx >> MAPBLOCKSHIFT;
@@ -485,7 +484,7 @@ void P_DrawAMap(int x1, int y1, int x2, int y2, int mapx, int mapy)
             else
                 pixel = 0xcd;
 
-            *(collumnpointer[x] + planewidthlookup[y]) = pixel;
+            collumnpointer[x][planewidthlookup[y]] = pixel;
         }
     }
     V_MarkUpdateBlock(x1, y1, x2, y2);
@@ -494,16 +493,14 @@ void P_DrawAMap(int x1, int y1, int x2, int y2, int mapx, int mapy)
 
 void P_EnterAutoMap()
 {
-    player_t* player;
-
-    if (automapup == 0)
+    if (!automapup)
     {
-        player = &playerobjs[sd->consoleplayer];
+        player_t* player = &playerobjs[sd->consoleplayer];
         amaporgx = (playerobjs[sd->consoleplayer].r)->x + -0xa000000;
         amaporgy = (playerobjs[sd->consoleplayer].r)->y + 0x5400000;
-        P_DrawAMap(0, 0, 319, 167, amaporgx, amaporgy);
+        P_DrawAMap(0, 0, SCREENWIDTH - 1, SCREENHEIGHT - SBARHEIGHT - 1, amaporgx, amaporgy);
         P_DrawPlayerMarker(player);
-        automapup = 1;
+        automapup = true;
         ignorekeyboard++;
         P_DrawPlayScreen();
     }
@@ -511,15 +508,13 @@ void P_EnterAutoMap()
 
 void P_ExitAutoMap(void)
 {
-    automapup = 0;
+    automapup = false;
     ignorekeyboard--;
     R_SetViewSize(config.viewsize, config.hdetail, 1);
 }
 
-void P_RunAutoMap(char ch)
+void P_RunAutoMap(byte ch)
 {
-    if (('\0' < ch) && (ch < '\x7f'))
-    {
+    if (ch > 0 && ch < 127)
         P_ExitAutoMap();
-    }
 }

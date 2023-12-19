@@ -47,7 +47,7 @@ typedef struct
 extern gamestart_t gamestart;
 extern gameaction_t gameaction;
 extern gamestate_t gamestate;
-extern int controlmenumap;
+extern boolean controlmenumap;
 extern byte* demobuffer;
 
 void G_PlayDemo(char* demoname);

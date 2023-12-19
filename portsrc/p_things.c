@@ -63,34 +63,32 @@ spawninfo_t spawninfo[33] =
 	{-1,S_NULL,0},
 };
 
-actor_t actor;
-actor_t* actorcap;
+actor_t actorcap;
+actor_t* actor;
 
 byte* P_BlockOrg(int x, int y)
 {
-	int tx = (x - maporiginx) + -MAPBLOCKSIZE >> MAPBLOCKSHIFT;
-	int ty = (y - maporiginy) + -MAPBLOCKSIZE >> MAPBLOCKSHIFT;
+	int tx = (x - maporiginx) - MAPBLOCKSIZE >> MAPBLOCKSHIFT;
+	int ty = (y - maporiginy) - MAPBLOCKSIZE >> MAPBLOCKSHIFT;
 
 	return &blockmap[tx + mapwidth * ty];
 }
 
-int P_PlaceGetMarks(thing_t* rthing)
+boolean P_PlaceGetMarks(thing_t* rthing)
 {
 	byte* map = P_BlockOrg(rthing->x, rthing->y);
 
-	if (((((map[0] & BMF_GETTABLE) == 0) && ((map[1] & BMF_GETTABLE) == 0)) && ((map[mapwidth] & BMF_GETTABLE) == 0)) && ((map[mapwidth + 1] & BMF_GETTABLE) == 0))
+	if (!(map[0] & BMF_GETTABLE) && !(map[1] & BMF_GETTABLE) && !(map[mapwidth] & BMF_GETTABLE) && !(map[mapwidth + 1] & BMF_GETTABLE))
 	{
 		map[0] |= BMF_GETTABLE;
 		map[1] |= BMF_GETTABLE;
 		map[mapwidth] |= BMF_GETTABLE;
 		map[mapwidth + 1] |= BMF_GETTABLE;
 		rthing->flags |= TF_GETTABLE;
-		return 1;
+		return true;
 	}
-	else
-	{
-		return 0;
-	}
+
+	return false;
 }
 
 void P_PlaceBlockMarks(thing_t* rthing)
@@ -127,55 +125,55 @@ void P_RemoveBlockMarks(thing_t* rthing)
 
 void P_InitActors(void)
 {
-	actor.prev = &actor;
-	actor.next = &actor;
+	actorcap.prev = &actorcap;
+	actorcap.next = &actorcap;
 }
 
-void P_AddActor(actor_t* newactor)
+void P_AddActor(actor_t* actor)
 {
-	//[ISB] TODO: No check in the decompiled source, need to double check if this is an actual hazard in the original.
-	if (actor.prev != NULL)
-		(actor.prev)->next = newactor;
+	//BUG: This doesn't check that actor.prev is valid in the original
+#ifndef __WATCOMC__
+	if (actorcap.prev != NULL)
+		(actorcap.prev)->next = actor;
+#endif
 
-	newactor->next = &actor;
-	newactor->prev = actor.prev;
-	actor.prev = newactor;
-	P_AddThinker((thinker_t*)newactor);
+	actor->next = &actorcap;
+	actor->prev = actorcap.prev;
+	actorcap.prev = actor;
+	P_AddThinker(&actor->thinker);
 }
 
-void P_RemoveActor(actor_t* newactor)
+void P_RemoveActor(actor_t* actor)
 {
-	if ((newactor->r->flags & TF_SOLID) != 0)
-	{
-		P_RemoveBlockMarks(newactor->r);
-	}
-	if ((newactor->r->flags & TF_GETTABLE) != 0)
-	{
-		P_RemoveGetMarks(newactor->r);
-	}
-	newactor->next->prev = newactor->prev;
-	newactor->prev->next = newactor->next;
-	R_RemoveThing(newactor->r);
-	P_RemoveThinker((thinker_t*)newactor);
+	if (actor->r->flags & TF_SOLID)
+		P_RemoveBlockMarks(actor->r);
+	
+	if (actor->r->flags & TF_GETTABLE)
+		P_RemoveGetMarks(actor->r);
+	
+	actor->next->prev = actor->prev;
+	actor->prev->next = actor->next;
+	R_RemoveThing(actor->r);
+	P_RemoveThinker(&actor->thinker);
 }
 
 void P_SetState(actor_t* actor, statenum_t state)
 {
+	state_t* st;
+
 	if (state == S_NULL)
 	{
 		P_RemoveActor(actor);
+		return;
 	}
-	else
-	{
-		actor->state = &states[state];
-		actor->tics = states[state].tics;
-		actor->r->sprite = states[state].sprite;
-		actor->r->frame = states[state].frame;
-		if (states[state].action != (void*)NULL)
-		{
-			states[state].action(actor);
-		}
-	}
+
+	st = &states[state];
+	actor->state = st;
+	actor->tics = st->tics;
+	actor->r->sprite = st->sprite;
+	actor->r->frame = st->frame;
+	if (st->action)
+		st->action(actor);
 }
 
 void T_StateCycleMove(actor_t* actor)
@@ -183,26 +181,23 @@ void T_StateCycleMove(actor_t* actor)
 	if (actor->tics != -1)
 	{
 		actor->tics--;
+
+		// you can cycle through multiple states in a tic
 		while (actor->tics == 0)
-		{
 			P_SetState(actor, actor->state->nextstate);
-		}
 	}
 }
 
 thing_t* P_GetNewThing(mapthing_t* mthing)
 {
-	thing_t* refthing;
-
-	refthing = R_GetNewThing(mthing->sector);
+	thing_t* refthing = R_GetNewThing(mthing->sector);
 	refthing->x = (int)mthing->origin.x << FRACBITS;
 	refthing->y = (int)mthing->origin.y << FRACBITS;
 	refthing->z = sectors[mthing->sector].floorheight;
 
 	if (mthing->ang > 359)
-	{
 		IO_Error("P_GetNewThing: bad angle for thing at (%i,%i)", mthing->origin.x, mthing->origin.y);
-	}
+	
 	refthing->angle = ((int)mthing->ang << 13) / 360;
 	refthing->flags = 0;
 
@@ -211,27 +206,25 @@ thing_t* P_GetNewThing(mapthing_t* mthing)
 
 actor_t* P_InitActor(mapthing_t* mthing, statenum_t state, int bblockflags)
 {
-	actorcap = (actor_t*)Z_Malloc(playzone, sizeof(actor_t));
-	actorcap->r = P_GetNewThing(mthing);
-	actorcap->r->specialdata = actorcap;
-	actorcap->thinker.function = &T_StateCycleMove;
-	actorcap->maporigin = P_BlockOrg(actorcap->r->x, actorcap->r->y);
-	P_AddActor(actorcap);
-	P_SetState(actorcap, state);
+	actor = (actor_t*)Z_Malloc(playzone, sizeof(actor_t));
+	actor->r = P_GetNewThing(mthing);
+	actor->r->specialdata = actor;
+	actor->thinker.function = &T_StateCycleMove;
+	actor->maporigin = P_BlockOrg(actor->r->x, actor->r->y);
+	P_AddActor(actor);
+	P_SetState(actor, state);
 
 	if (bblockflags & BMF_GETTABLE)
 	{
-		if (!P_PlaceGetMarks(actorcap->r))
-		{
-			IO_Error("P_InitActor: Overlapping getable objects at %i, %i", actorcap->r->x >> FRACBITS, actorcap->r->y >> FRACBITS);
-		}
+		if (!P_PlaceGetMarks(actor->r))
+			IO_Error("P_InitActor: Overlapping getable objects at %i, %i", actor->r->x >> FRACBITS, actor->r->y >> FRACBITS);
 	}
 	else if (bblockflags & BMF_SOLID)
 	{
-		P_PlaceBlockMarks(actorcap->r);
+		P_PlaceBlockMarks(actor->r);
 	}
 
-	return actorcap;
+	return actor;
 }
 
 void P_SpawnPlayer(mapthing_t* mthing)
@@ -240,7 +233,7 @@ void P_SpawnPlayer(mapthing_t* mthing)
 	player_t* player;
 
 	rthing = P_GetNewThing(mthing);
-	playerthingfound[mthing->type - 1] = 1;
+	playerthingfound[mthing->type - 1] = true;
 	player = &playerobjs[mthing->type - 1];
 
 	player->r = rthing;
@@ -260,44 +253,36 @@ void P_InitThing(mapthing_t* mthing)
 {
 	spawninfo_t* sp;
 
-	if (mthing->type != 0)
+	switch (mthing->type) //[ISB] don't know for sure if it's a switch, need to do testing.
 	{
-		if (mthing->type < 5)
-		{
-			P_SpawnPlayer(mthing);
-			return;
-		}
-		if (mthing->type == 3001)
-		{
-			P_InitActor(mthing, S_TROO_STND, BMF_SOLID);
-			actorcap->health = 20;
-			return;
-		}
-		else if (mthing->type == 3002)
-		{
-			P_InitActor(mthing, S_SARG_STND, BMF_SOLID);
-			actorcap->health = 40;
-			return;
-		}
-		else if (mthing->type == 3003)
-		{
-			P_InitActor(mthing, S_BOSS_STND, BMF_SOLID);
-			actorcap->health = 250;
-			return;
-		}
-		else if (mthing->type == 3004)
-		{
-			P_InitActor(mthing, S_POSS_STND, BMF_SOLID);
-			actorcap->health = 10;
-			return;
-		}
-		else if (mthing->type == 3005)
-		{
-			P_InitActor(mthing, S_HEAD_STND, BMF_SOLID);
-			actorcap->health = 100;
-			return;
-		}
+	case 1:
+	case 2:
+	case 3:
+	case 4:
+		P_SpawnPlayer(mthing);
+		return;
+	case 3001:
+		P_InitActor(mthing, S_TROO_STND, BMF_SOLID);
+		actor->health = 20;
+		return;
+	case 3002:
+		P_InitActor(mthing, S_SARG_STND, BMF_SOLID);
+		actor->health = 40;
+		return;
+	case 3003:
+		P_InitActor(mthing, S_BOSS_STND, BMF_SOLID);
+		actor->health = 250;
+		return;
+	case 3004:
+		P_InitActor(mthing, S_POSS_STND, BMF_SOLID);
+		actor->health = 10;
+		return;
+	case 3005:
+		P_InitActor(mthing, S_HEAD_STND, BMF_SOLID);
+		actor->health = 100;
+		return;
 	}
+
 	sp = &spawninfo[0];
 	for (;;)
 	{
@@ -307,7 +292,7 @@ void P_InitThing(mapthing_t* mthing)
 			//fprintf(stderr, "P_InitThing: unknown spawn number %d\n", mthing->type);
 			return;
 		}
-		if ((int)mthing->type == sp->number) break;
+		if (mthing->type == sp->number) break;
 		sp++;
 	}
 	P_InitActor(mthing, sp->state, sp->bmapflags);

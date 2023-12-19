@@ -152,13 +152,13 @@ extern memzone_t* playzone;
 
 extern player_t* player;
 extern player_t playerobjs[];
-extern int playerthingfound[];
+extern boolean playerthingfound[];
 extern int playernum;
 extern int viewplayer;
 extern int viewplayerangle;
 extern int debugmove;
 
-extern int automapup;
+extern boolean automapup;
 extern int goldshift;
 extern int redshift;
 

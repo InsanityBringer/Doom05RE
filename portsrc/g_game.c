@@ -26,7 +26,7 @@ gamestart_t gamestart;
 gameaction_t gameaction;
 skill_t startskill;
 int startplayer;
-int controlmenumap;
+boolean controlmenumap;
 
 int episode;
 skill_t skilllevel;
@@ -75,10 +75,8 @@ void G_WarpToMap(char* mapname)
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if (playerthingfound[i] == 0)
-		{
+		if (!playerthingfound[i])
 			IO_Error("G_WarpToMap: player %i not spawned on map %s\n", i, mapname);
-		}
 	}
 
 	strncpy(sd->mapname, mapname, 8);
@@ -166,7 +164,7 @@ void G_SetupNetGame(void)
 	viewplayer = sd->consoleplayer;
 	viewplayerangle = 0;
 
-	for (i = 0; i < 4; i++)
+	for (i = 0; i < MAXPLAYERS; i++)
 	{
 		if (sd->playeringame[i])
 		{
@@ -185,9 +183,9 @@ void G_SetupControls(void)
 	G_InitPlayer(0);
 	G_WarpToMap("MENUMAP");
 	M_StartControlPanel();
-	controlmenumap = 1;
+	controlmenumap = true;
 	P_PlayLoop();
-	controlmenumap = 0;
+	controlmenumap = false;
 }
 
 void G_SetupDemo(void)
@@ -226,30 +224,26 @@ void G_GameLoop(void)
 		return;
 	case gs_warp:
 		G_SetupNewGame();
+		break;
 	}
 
-	while (1)
+	while (demoaction == da_gameloop)
 	{
-		if (demoaction != da_gameloop)
+		switch (gameaction)
 		{
-			return;
-		}
-		else if (gameaction == ga_runmap)
-		{
+		case ga_runmap:
 			P_PlayLoop();
-		}
-		else if (gameaction == ga_died)
-		{
+			break;
+		case ga_died:
 			G_InitPlayer(0);
 			G_WorldMap();
-		}
-		else if (gameaction == ga_completed)
-		{
+			break;
+		case ga_completed:
 			G_WorldMap();
-		}
-		else
-		{
+			break;
+		default:
 			IO_Error("G_GameLoop: unknown gameaction");
+			break;
 		}
 		D_FadeOut();
 	}

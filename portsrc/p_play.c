@@ -28,7 +28,7 @@ int processedframe;
 
 memzone_t* playzone;
 
-int automapup;
+boolean automapup;
 int redshift;
 int goldshift;
 shared_t* sd;
@@ -42,7 +42,7 @@ int viewplayer;
 int viewplayerangle;
 
 player_t* player;
-int playerthingfound[MAXPLAYERS];
+boolean playerthingfound[MAXPLAYERS];
 thinker_t thinkercap;
 player_t playerobjs[MAXPLAYERS];
 
@@ -124,18 +124,15 @@ void P_RunThinkers(void)
 	thinker_t* next;
 
 	currentthinker = thinkercap.next;
-	next = currentthinker;
-	while (currentthinker = next, currentthinker != &thinkercap) 
+	while (currentthinker != &thinkercap) 
 	{
 		next = currentthinker->next;
 		if (next->prev != currentthinker) 
-		{
 			IO_Error("P_RunThinkers: bad link in list\n");
-		}
 		if (currentthinker->function != NULL) 
-		{
-			((void(*)())currentthinker->function)(currentthinker);
-		}
+			currentthinker->function(currentthinker);
+
+		currentthinker = next;
 	}
 }
 
@@ -207,11 +204,9 @@ void P_ProcessFrames(void)
 		f = processedframe & PLAYERFRAMEMASK;
 		M_CheckInput(&sd->playercmd[sd->consoleplayer * NUMPLAYERFRAMES + f]);
 		
-		if (automapup != 0) 
-		{
+		if (automapup) 
 			P_RunAutoMap(sd->playercmd[sd->consoleplayer * NUMPLAYERFRAMES + f].keyscan);
-		}
-		
+
 		for (playernum = 0; playernum < MAXPLAYERS; playernum++)
 		{
 			if (sd->playeringame[playernum] != 0) 
@@ -255,25 +250,22 @@ void P_ProcessFrames(void)
 			goldshift--;
 		}
 	}
-	return;
 }
 
 void P_PlayLoop(void)
 {
-	thing_t* viewer;
 	int i;
+	thing_t* viewer;
 
 	screenfaded = 1;
 	P_SetPlayPalette();
-	automapup = 0;
+	automapup = false;
 	R_SetViewSize(config.viewsize, config.hdetail, 1);
 	P_DrawPlayScreen();
 	sd->playercmdframe[sd->consoleplayer] = -1;
 	processedframe = sd->playercmdframe[sd->consoleplayer];
 	for(i = 0; i < MAXPLAYERS; i++) 
-	{
 		sd->playercmdframe[i] = -1;
-	}
 
 	gameaction = ga_playing;
 	do
@@ -283,10 +275,10 @@ void P_PlayLoop(void)
 		P_CheckDebugKeys();
 		P_SetShiftPalette();
 		P_AnimatePlanePics();
-		if (automapup == 0) 
+		if (!automapup) 
 		{
 			viewer = playerobjs[viewplayer].r;
-			R_RenderView(viewer->sector, viewer->x, viewer->y, playerobjs[viewplayer].viewz, viewer->angle + viewplayerangle & 0x1fff);
+			R_RenderView(viewer->sector, viewer->x, viewer->y, playerobjs[viewplayer].viewz, viewer->angle + viewplayerangle & ANGLEMASK);
 			P_DrawPlayerShapes(viewplayer);
 		}
 		M_DrawSelf();
@@ -298,12 +290,11 @@ void P_PlayLoop(void)
 			D_Synchronize();
 		}
 	} while ((gameaction == ga_playing) && (demoaction == da_gameloop));
-	return;
 }
 
 void P_Startup()
 {
-	playzone = Z_AllocateZone(0x60000);
+	playzone = Z_AllocateZone(384 * 1024);
 	R_InitSprites(sprnames);
 	P_StartupPicAnims();
 	P_InitSwitchList();

@@ -62,16 +62,14 @@ void V_FadeOut(int start, int end, int red, int green, int blue, int steps)
 		IO_DoEvents(); //[ISB]
 #endif
 	}
-	return;
 }
 
 void V_FadeIn(int start, int end, int steps, byte* palette)
 {
-	int i, j;
-	int delta;
-
 	byte basep[768];
 	byte work[768];
+	int i, j;
+	int delta;
 
 	IO_GetPalette(&basep[0]);
 	start *= 3;
@@ -89,7 +87,6 @@ void V_FadeIn(int start, int end, int steps, byte* palette)
 #endif
 	}
 	IO_SetPalette(&palette[0]);
-	return;
 }
 
 void V_Bar(int x1, int y1, int width, int height, int color)
@@ -116,14 +113,13 @@ void V_Bar(int x1, int y1, int width, int height, int color)
 		}
 	}
 	V_MarkUpdateBlock(x1, y1, x2 + -1, y2 + -1);
-	return;
 }
 
 void V_DrawPic(int x, int y, pic_t* pic)
 {
 	int yy;
 	byte* screen, * source, * dest;
-	int planey, plane;
+	int plane, planey;
 	int width, height;
 
 	width = pic->width;
@@ -153,7 +149,6 @@ void V_DrawPic(int x, int y, pic_t* pic)
 			x++;
 		}
 	}
-	return;
 }
 
 int V_DrawChar(int sx, int sy, int ch, font_t* font)
@@ -161,7 +156,7 @@ int V_DrawChar(int sx, int sy, int ch, font_t* font)
 	byte pix;
 	int x, y, width, plane;
 	byte* source, * dest;
-	int backup; //there's a dword-size hole between backup and font, but it seems unimportant. Used just for return. 
+	int backup;
 
 	source = ((byte*)&font->height) + font->charofs[ch];
 	width = font->width[ch];
@@ -198,12 +193,10 @@ int V_DrawChar(int sx, int sy, int ch, font_t* font)
 
 int V_DrawString(int sx, int sy, char* string, font_t* font)
 {
-	int tx;
-
-	tx = sx;
+	int tx = sx;
 	while (*string != '\0') 
 	{
-		tx += V_DrawChar(tx, sy, (int)(short)*string, font) + 1;
+		tx += V_DrawChar(tx, sy, *string, font) + 1;
 		string++;
 	}
 	V_MarkUpdateBlock(sx, sy, tx, font->height + sy - 1);
@@ -265,9 +258,7 @@ void V_MarkUpdateBlock(int x1, int y1, int x2, int y2)
 	byte* mark;
 
 	if ((((x1 < 0) || (x2 > 1279)) || (y1 < 0)) || (y2 > 199))
-	{
 		IO_Error("bad V_MarkUpdateBlock(%i,%i,%i,%i)", x1, y1, x2, y2);
-	}
 
 	xt1 = x1 / 16;
 	yt1 = y1 / 20;
@@ -285,7 +276,6 @@ void V_MarkUpdateBlock(int x1, int y1, int x2, int y2)
 	}
 
 	blockupdateneeded = 2;
-	return;
 }
 
 void V_Startup(void)
@@ -311,7 +301,7 @@ void V_Startup(void)
 	{
 		for (x = 0; x < 20; x++)
 		{
-			*usrc++ = y * SCREENBWIDE * 20 + x * 4; //I think this is correct
+			*usrc++ = y * SCREENBWIDE * 20 + x * 4;
 		}
 	}
 	memset(update, 0, 200);
