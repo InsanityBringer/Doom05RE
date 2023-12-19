@@ -28,15 +28,14 @@ char* wadnames[] = { "DOOM.WAD", "CONFIG.LMP", NULL };
 extern void P_DrawPlayerShapes(int pnum);
 void TimeSpin(void)
 {
-	int start, i, tics;
+	int i, start, tics;
 
 	start = IO_GetTime();
 	do
 	{
 		IO_DoEvents(); //[ISB] I should use a timer thread....
-		i = IO_GetTime();
-	} while (i == start);
-	start = start + 1;
+	} while (IO_GetTime() == start);
+	start++;
 
 	for (i = 0; i < 8192; i += 64)
 	{
@@ -45,9 +44,9 @@ void TimeSpin(void)
 		IO_UpdateScreen();
 		IO_DoEvents();
 	}
-	i = IO_GetTime();
-	tics = i - start;
-	IO_Error("Time:%i  (%f ips)", tics, (double)(8960.0f / (float)tics));
+
+	tics = IO_GetTime() - start;
+	IO_Error("Time:%i  (%f ips)\n", tics, 8960.0f / tics);
 }
 
 int main(int argc, char** argv)

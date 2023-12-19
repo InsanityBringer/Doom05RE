@@ -120,6 +120,7 @@ typedef int fixed_t;
 //Angles are different from release Doom, only existing as "fine" angles
 #define NUMANGLES 8192
 #define ANGLEMASK (NUMANGLES-1)
+#define ANG45 (NUMANGLES/4)
 
 #ifdef __WATCOMC__
 fixed_t FixedMul(fixed_t a, fixed_t b);

@@ -399,21 +399,14 @@ void R_RemoveThing(thing_t* rthing)
 {
 	//removing the sector's head
 	if (rthing->prev == NULL)
-	{
 		sectors[rthing->sector].things = rthing->next;
-	}
 	else
-	{
 		rthing->prev->next = rthing->next;
-	}
 
 	if (rthing->next != NULL)
-	{
 		rthing->next->prev = rthing->prev;
-	}
 
 	Z_Free(rthing);
-	return;
 }
 
 void R_ChangeThingSector(thing_t* rthing, int newsector)
@@ -421,27 +414,20 @@ void R_ChangeThingSector(thing_t* rthing, int newsector)
 	thing_t* rnext;
 
 	if (rthing->prev == NULL)
-	{
 		sectors[rthing->sector].things = rthing->next;
-	}
 	else
-	{
 		rthing->prev->next = rthing->next;
-	}
 	if (rthing->next != NULL)
-	{
 		rthing->next->prev = rthing->prev;
-	}
+	
 	rnext = sectors[newsector].things;
 	rthing->prev = NULL;
 	rthing->next = rnext;
 	if (rnext != NULL)
-	{
 		rnext->prev = rthing;
-	}
+
 	sectors[newsector].things = rthing;
 	rthing->sector = newsector;
-	return;
 }
 
 void R_ClearVisSprites()
@@ -474,7 +460,7 @@ void R_ProjectThing(thing_t* thing)
 	fixed_t		trx, try;
 	fixed_t		gxt, gyt;
 	fixed_t		tx, tz;
-	fixed_t		xscale, yscale;
+	fixed_t		xscale, yscale, iscale;
 	patch_t* patch;
 	int			x1, x2;
 	spritedef_t* sprdef;
@@ -549,66 +535,54 @@ void R_ProjectThing(thing_t* thing)
 
 	vis = R_NewVisSprite();
 	thing->vissprite = vis;
+	iscale = FixedDiv(FRACUNIT, yscale);
 	vis->x1 = x1;
 	vis->x2 = x2 - 1;
 	vis->fracstep = FixedDiv(FRACUNIT, xscale);
 	if (flip)
 		vis->fracstep = -vis->fracstep;
 
-	vis->scale = yscale;
+	light = sectors[thing->sector].lightlevel >> LIGHTSEGSHIFT;
 	collumntop = viewz - (thing->z + patch->topoffset * FRACUNIT);
-	vis->iscale = FixedDiv(FRACUNIT, yscale);
+	vis->scale = yscale;
+	vis->iscale = iscale;
 	vis->patch = patch;
 	vis->topscreen = FixedMul(collumntop, yscale) + centeryfrac;
-
-	light = R_LightFromVScale(yscale) + (sectors[thing->sector].lightlevel >> 4) * 48;
-	vis->colormap = scalelight[light];
+	vis->colormap = scalelight[light][R_LightFromVScale(yscale)];
 }
 
 void R_DrawSectorThings(sector_t* sector, int xl, int xh)
 {
-	thing_t* rthing, * rnext, * rprev;
+	thing_t *thing, *next, *prev;
 
 	if (sector->validcheck != validcheck)
 	{
 		sector->validcheck = validcheck;
-		rnext = sector->things;
-		while (rthing = rnext, rthing != NULL)
+		for (thing = sector->things; thing; thing = next)
 		{
-			rnext = rthing->next;
-			R_ProjectThing(rthing);
-			while (((rprev = rthing->prev, rprev != NULL &&
-				(rprev->vissprite != NULL)) &&
-				((rthing->vissprite == NULL ||
-					(rthing->vissprite->scale <= rprev->vissprite->scale)))))
+			next = thing->next;
+			R_ProjectThing(thing);
+			
+			while ((prev = thing->prev) && prev->vissprite && (!thing->vissprite || thing->vissprite->scale <= prev->vissprite->scale))
 			{
-				if (rthing->next != NULL)
-				{
-					rthing->next->prev = rprev;
-				}
-				rprev->next = rthing->next;
-				rthing->next = rprev;
-				rthing->prev = rprev->prev;
-				if (rthing->prev == NULL)
-				{
-					sector->things = rthing;
-				}
+				if (thing->next != NULL)
+					thing->next->prev = prev;
+				
+				prev->next = thing->next;
+				thing->next = prev;
+				thing->prev = prev->prev;
+				if (thing->prev == NULL)
+					sector->things = thing;
 				else
-				{
-					rthing->prev->next = rthing;
-				}
-				rprev->prev = rthing;
+					thing->prev->next = thing;
+
+				prev->prev = thing;
 			}
 		}
 	}
-	rthing = sector->things;
-	while (rthing != NULL)
+	for (thing = sector->things; thing; thing = thing->next)
 	{
-		if (rthing->vissprite != NULL)
-		{
-			R_DrawSprite(xl, xh, rthing->vissprite);
-		}
-		rthing = rthing->next;
+		if (thing->vissprite != NULL)
+			R_DrawSprite(xl, xh, thing->vissprite);
 	}
-	return;
 }

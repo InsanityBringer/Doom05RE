@@ -20,6 +20,17 @@
 //When the map structures are present, v_video structures are present before the map structures always.
 #include "v_video.h"
 
+//
+// lighting constants
+//
+#define	LIGHTLEVELS			16
+#define	LIGHTSEGSHIFT		4
+#define	MAXLIGHTSCALE		48
+#define	LIGHTSCALESHIFT		12
+#define	MAXLIGHTZ			128
+#define	LIGHTZSHIFT			20
+#define	NUMCOLORMAPS		32		// number of diminishing
+
 //On-disk map data structures
 typedef struct
 {
@@ -275,7 +286,7 @@ extern fixed_t* cosines;
 
 extern byte** flatlookup;
 
-extern fixed_t scalelight[];
+extern fixed_t scalelight[LIGHTLEVELS][MAXLIGHTSCALE];
 
 extern int viewangle;
 extern fixed_t viewx, viewy, viewz;

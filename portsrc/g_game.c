@@ -99,7 +99,7 @@ void G_RecordDemo(char* map, char* demoname)
 {
 	G_StartNewGame(1, 4, 0);
 
-	//[ISB] The player isn't initialized when starting a demo record, so the game freezes.
+	//BUG: The player isn't initialized when starting a demo record, so the game freezes.
 	//This is because no players are marked as in-game so no simulation occurs. 
 	//G_InitPlayer(0);
 

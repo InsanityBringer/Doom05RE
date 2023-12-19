@@ -74,8 +74,7 @@ int D_CheckParm(char* check)
 
 		//strange. Finds the first letter in the parameter string, this isn't in the final version at all.
 		//Wolfenstein 3D's US_CheckParm has similar code. 
-		while (*parm != 0 && !isalpha(*parm))
-			parm++;
+		while (!isalpha(*parm) && *parm++);
 
 		if (!_stricmp(check, parm))
 			return i;
@@ -85,40 +84,31 @@ int D_CheckParm(char* check)
 
 int D_WriteFile(char* name, byte* source, int length)
 {
-	int handle;
-	int count;
+	int handle, count;
 
 	handle = _open(name, O_WRONLY | O_CREAT | O_TRUNC | O_BINARY, 438);
 	if (handle == -1)
-	{
 		return 0;
-	}
-	else
-	{
-		count = _write(handle, source, length);
-		_close(handle);
-		if (count < length)
-		{
-			return 0;
-		}
-	}
+	count = _write(handle, source, length);
+	_close(handle);
+
+	if (count < length)
+		return 0;
+		
 	return 1;
 }
 
 int D_AckWait(int tics)
 {
 	int start;
-	int time;
 	int c;
 
 	start = IO_GetTime();
 	do
 	{
-		time = IO_GetTime();
-		if (tics <= time - start)
-		{
+		if (IO_GetTime() - start >= tics)
 			return 0;
-		}
+		
 		c = IO_CheckAck();
 	} while (c == 0);
 	return c;
@@ -419,17 +409,12 @@ void D_ScreenShot(int savepcx)
 	V_CenterString(90, "saving screen", hudfont);
 	IO_UpdateScreen();
 
-	strncpy(lbmname, "DOOM00.", 8);
-	lbmname[7] = 0;
+	strcpy(lbmname, "DOOM00.");
 
-	if (savepcx == 0)
-	{
-		strcat(lbmname, "lbm");
-	}
-	else
-	{
+	if (savepcx)
 		strcat(lbmname, "pcx");
-	}
+	else
+		strcat(lbmname, "lbm");
 
 	for (i = 0; i < 100; i++)
 	{
@@ -439,23 +424,17 @@ void D_ScreenShot(int savepcx)
 	}
 
 	if (i == 100)
-	{
 		IO_Error("IO_ScreenShot: Couldn't create an LBM");
-	}
 
 	IO_GetPalette(palette);
-	if (savepcx == 0)
-	{
-		WriteLBMFile(lbmname, linear, SCREENWIDTH, SCREENHEIGHT, palette);
-	}
-	else
-	{
+	if (savepcx)
 		WritePCXFile(lbmname, linear, SCREENWIDTH, SCREENHEIGHT, palette);
-	}
+	else
+		WriteLBMFile(lbmname, linear, SCREENWIDTH, SCREENHEIGHT, palette);
+
 	free(linear);
 	V_Window(140, 40);
 	V_CenterString(90, "Screen saved", hudfont);
 	IO_UpdateScreen();
 	IO_Ack();
-	return;
 }

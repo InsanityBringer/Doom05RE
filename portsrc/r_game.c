@@ -67,8 +67,8 @@ int mapwidth;
 int numsides;
 side_t* sides;
 
-fixed_t scalelight[768];
-fixed_t sines[10240];
+int scalelight[LIGHTLEVELS][MAXLIGHTSCALE];
+fixed_t sines[NUMANGLES+ANG45];
 fixed_t yslope[832];
 
 byte amapcolor[256];
@@ -155,7 +155,7 @@ void R_InitTables(void)
 	int j;
 	int level, startmap;
 
-	for (i = 0; i < 2048; i++)
+	for (i = 0; i < ANG45; i++)
 	{
 		tang = (((double)i + 0.5) * 3.14159265) / 4096.0;
 		value = sin(tang);
@@ -184,21 +184,19 @@ void R_InitTables(void)
 	memset(forwardsegs, 0, sizeof(forwardsegs));
 	memset(proclines, 0, sizeof(proclines));
 
-	for (i = 0; i < 16; i++)
+	for (i = 0; i < LIGHTLEVELS; i++)
 	{
-		level = (15 - i) * 64;
-		for (j = 0; j < 48; j++)
+		level = (LIGHTLEVELS - 1 - i) * 64;
+		for (j = 0; j < MAXLIGHTSCALE; j++)
 		{
-			startmap = level / 16 - j / 2;
+			startmap = level / LIGHTLEVELS - j / 2;
 			if (startmap < 0)
-			{
 				startmap = 0;
-			}
-			if (startmap > 31)
-			{
-				startmap = 31;
-			}
-			scalelight[i * 48 + j] = startmap;
+			
+			if (startmap >= NUMCOLORMAPS)
+				startmap = NUMCOLORMAPS-1;
+			
+			scalelight[i][j] = startmap;
 		}
 	}
 }

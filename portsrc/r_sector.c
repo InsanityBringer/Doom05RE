@@ -417,30 +417,30 @@ void R_DrawSector(int sectornum, int xl, int xh, int* floorclip, int* ceilingcli
     sector = &sectors[sectornum];
     sectorxl = xl;
     sectorxh = xh;
-    light = extralight + (sector->lightlevel >> 4);
+    light = extralight + (sector->lightlevel >> LIGHTSEGSHIFT);
     light2 = light - 1;
     light3 = light + 1;
-    if (light > 15)
-        light = 15;
+    if (light >= LIGHTLEVELS)
+        light = LIGHTLEVELS-1;
 
     if (light < 0)
         light = 0;
 
-    if (light2 > 15)
-        light2 = 15;
+    if (light2 > LIGHTLEVELS-1)
+        light2 = LIGHTLEVELS-1;
 
     if (light2 < 0)
         light2 = 0;
 
-    if (light3 > 15)
-        light3 = 15;
+    if (light3 > LIGHTLEVELS-1)
+        light3 = LIGHTLEVELS-1;
 
     if (light3 < 0)
         light3 = 0;
 
-    esectorscalelight = &scalelight[light * 48];
-    esectorscalelight2 = &scalelight[light2 * 48];
-    esectorscalelight3 = &scalelight[light3 * 48];
+    esectorscalelight = &scalelight[light];
+    esectorscalelight2 = &scalelight[light2];
+    esectorscalelight3 = &scalelight[light3];
     width = (xh - xl) + 1;
     cliptables = alloca(width * 5 * sizeof(int));
 

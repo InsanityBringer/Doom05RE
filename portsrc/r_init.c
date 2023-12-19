@@ -129,9 +129,9 @@ int R_LightFromVScale(fixed_t scale)
 {
 	int index;
 
-	index = FixedMul(scale, vscalelight) >> 12;
-	if (index > 47) 
-		index = 47;
+	index = FixedMul(scale, vscalelight) >> LIGHTSCALESHIFT;
+	if (index >= MAXLIGHTSCALE) 
+		index = MAXLIGHTSCALE-1;
 
 	return index;
 }
@@ -140,10 +140,10 @@ int R_LightFromZ(fixed_t z)
 {
 	//This occasionally (if your head pokes in the ceiling) produces an insane value from a negative input.
 	//This seems to be accurate behavior. 
-	int index = FixedMul(FixedDiv(yproject, z), vscalelight) >> 12;
+	int index = FixedMul(FixedDiv(yproject, z), vscalelight) >> LIGHTSCALESHIFT;
 
-	if (index > 47) 
-		index = 47;
+	if (index >= MAXLIGHTSCALE)
+		index = MAXLIGHTSCALE-1;
 #ifdef _MSC_VER
 	if (index < 0)
 		index = 0;
@@ -218,5 +218,5 @@ void R_RenderView(int sectornum, fixed_t x, fixed_t y, fixed_t z, int angle)
 	playscreenupdateneeded = 2;
 	inscale = &viewfrontscale[0];
 	outscale = &viewbackscale[0];
-	pshape8.colormap = scalelight[((int)sectors[sectornum].lightlevel >> 4) * 48 + 47];
+	pshape8.colormap = scalelight[sectors[sectornum].lightlevel >> LIGHTSEGSHIFT][MAXLIGHTSCALE-1];
 }
