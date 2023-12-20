@@ -232,7 +232,7 @@ typedef struct
 
 //global variables
 extern int commpresent;
-extern int novideo;
+extern boolean novideo;
 
 //keyboard access
 #ifndef _MSC_VER

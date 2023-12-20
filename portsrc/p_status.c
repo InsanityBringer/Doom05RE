@@ -144,11 +144,11 @@ void P_GiveWeapon(weapontype_t weapon)
 
 void P_GiveAmmo(ammotype_t ammo, int num)
 {
-    player->ammo[ammo] = player->ammo[ammo] + num;
+    player->ammo[ammo] += num;
     switch (ammo)
     {
     case am_clip:
-        if (MAXCLIP < player->ammo[ammo])
+        if (player->ammo[ammo] > MAXCLIP)
             player->ammo[ammo] = MAXCLIP;
 
         if (((player->readyweapon == wp_rifle) || (player->readyweapon == wp_auto)) && (&playerobjs[sd->consoleplayer] == player))
@@ -156,7 +156,7 @@ void P_GiveAmmo(ammotype_t ammo, int num)
 
         break;
     case am_shell:
-        if (MAXSHELL < player->ammo[ammo])
+        if (player->ammo[ammo] > MAXSHELL)
             player->ammo[ammo] = MAXSHELL;
 
         if ((player->readyweapon == wp_shotgun) && (&playerobjs[sd->consoleplayer] == player))
@@ -164,7 +164,7 @@ void P_GiveAmmo(ammotype_t ammo, int num)
 
         break;
     case am_cell:
-        if (MAXCELL < player->ammo[ammo])
+        if (player->ammo[ammo] > MAXCELL)
             player->ammo[ammo] = MAXCELL;
 
         if ((player->readyweapon == wp_bfg) && (&playerobjs[sd->consoleplayer] == player))
@@ -172,7 +172,7 @@ void P_GiveAmmo(ammotype_t ammo, int num)
 
         break;
     case am_soul:
-        if (MAXSOUL < player->ammo[ammo])
+        if (player->ammo[ammo] > MAXSOUL)
             player->ammo[ammo] = MAXSOUL;
 
         if ((player->readyweapon == wp_claw) && (&playerobjs[sd->consoleplayer] == player))
@@ -180,7 +180,7 @@ void P_GiveAmmo(ammotype_t ammo, int num)
 
         break;
     case am_misl:
-        if (MAXMISL < player->ammo[ammo])
+        if (player->ammo[ammo] > MAXMISL)
             player->ammo[ammo] = MAXMISL;
 
         if ((player->readyweapon == wp_missile) && (&playerobjs[sd->consoleplayer] == player))
@@ -221,7 +221,7 @@ void P_GiveCard(item_t item)
         {
             P_DrawCards();
             if (commpresent != 0)
-                goldshift = goldshift + 6;
+                goldshift += 6;
 
         }
     }
@@ -342,7 +342,7 @@ void P_GetThingAt(byte* spot)
             return;
         break;
     case SPR_ARM1:
-        if (6 < player->armor)
+        if (player->armor > 6)
             return;
 
         P_GiveArmor(7);
@@ -496,8 +496,8 @@ void P_EnterAutoMap()
     if (!automapup)
     {
         player_t* player = &playerobjs[sd->consoleplayer];
-        amaporgx = (playerobjs[sd->consoleplayer].r)->x + -0xa000000;
-        amaporgy = (playerobjs[sd->consoleplayer].r)->y + 0x5400000;
+        amaporgx = player->r->x - ((SCREENWIDTH / 2 * FRACUNIT) << 4);
+        amaporgy = player->r->y + (((SCREENHEIGHT - SBARHEIGHT) / 2 * FRACUNIT) << 4);
         P_DrawAMap(0, 0, SCREENWIDTH - 1, SCREENHEIGHT - SBARHEIGHT - 1, amaporgx, amaporgy);
         P_DrawPlayerMarker(player);
         automapup = true;

@@ -52,6 +52,13 @@ typedef struct
 #define SCREENWIDTH 320
 #define SCREENHEIGHT 200
 #define SCREENBWIDE (SCREENWIDTH>>2)
+#define SCREENSIZE (SCREENBWIDE * SCREENHEIGHT)
+
+#define	PORTTILESWIDE		20      // all drawing takes place inside a
+#define	PORTTILESHIGH		10		// non displayed port of this size
+
+#define UPDATEWIDE			PORTTILESWIDE
+#define UPDATEHIGH			PORTTILESHIGH
 
 extern byte screenbuffer[];
 extern byte* ylookup[];
@@ -60,7 +67,7 @@ extern int planewidthlookup[];
 extern byte* collumnpointer[];
 extern unsigned int ublocksource[];
 
-extern byte update[];
+extern byte update[UPDATEWIDE*UPDATEHIGH];
 
 extern int playscreenupdateneeded;
 extern int blockupdateneeded;

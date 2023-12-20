@@ -24,9 +24,6 @@
 #include "m_menu.h"
 #include "i_local.h"
 
-int my_argc;
-char** my_argv;
-
 unsigned char rndtable[256] =
 {
 	0,   8, 109, 220, 222, 241, 149, 107,  75, 248, 254, 140,  16,  66,
@@ -398,9 +395,9 @@ void D_ScreenShot(int savepcx)
 		for (x = 0; x < SCREENBWIDE; x++)
 		{
 			*dest = *source;
-			dest[1] = source[16000];
-			dest[2] = source[32000];
-			dest[3] = source[48000];
+			dest[1] = source[SCREENSIZE];
+			dest[2] = source[SCREENSIZE*2];
+			dest[3] = source[SCREENSIZE*3];
 			dest += 4;
 			source++;
 		}

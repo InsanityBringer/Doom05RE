@@ -21,24 +21,27 @@
 #include "m_menu.h"
 #include "g_game.h"
 
+// 
+// MENU TYPEDEFS 
+// 
 typedef struct
 {
-	short status;
-	char name[10];
-	void (*routine)(int choice);
+	short	status;					// 0 = no cursor here, 1 = ok,2 = arrows ok 
+	char	name[10];
+	void	(*routine)(int choice);	// choice = menu item #. if status = 2, 
+									// ...choice=0:leftarrow,1:rightarrow 
 } menuitem_t;
 
 typedef struct menu_s
 {
-	short numitems;
-	struct menu_s* prevMenu;
-	menuitem_t* items;
-	void (*routine)(void);
-	short x;
-	short y;
-	short lastOn;
-	short lastScrollIndex;
-	short scrollsize;
+	short			numitems;			// # of menu items 
+	struct menu_s*	prevMenu;			// previous menu 
+	menuitem_t*		items;				// menu items 
+	void			(*routine)(void);	// draw routine 
+	short			x, y;				// x,y of menu 
+	short			lastOn;				// last item user was on in menu 
+	short			lastScrollIndex;
+	short			scrollsize;
 } menu_t;
 
 //prototypes
@@ -77,6 +80,10 @@ void M_StartControlPanel(void);
 char inputstring[80];
 int skullAnimCounter;
 int menuDisplayed = 0;
+
+#define         SKULLXOFF       -32 
+#define LINEHEIGHT      16 
+
 int scrollIndex;
 int whichSkull;
 int itemOn;
@@ -88,6 +95,21 @@ char joyTypeNames[2][10] = { "M_DIGIT", "M_ANALOG" };
 
 int mouseSensitivity = 5;
 int soundVolume = 8;
+
+//============================================= 
+// 
+// DOOM MENU 
+// 
+//============================================= 
+typedef enum
+{
+	newgame = 0,
+	options,
+	endgame,
+	readthis,
+	quitdoom,
+	main_end
+} main_e;
 
 menuitem_t MainMenu[5] =
 {
@@ -104,12 +126,26 @@ menu_t MainDef =
 	NULL,
 	&MainMenu,
 	&M_DrawMainMenu,
-	0x61,
-	0x48,
+	97,
+	72,
 	0,
 	0,
 	0
 };
+
+//============================================= 
+// 
+// NEW GAME 
+// 
+//============================================= 
+typedef enum
+{
+	killthings = 0,
+	toorough,
+	hurtme,
+	violence,
+	newg_end
+} newgame_e;
 
 menuitem_t NewGameMenu[4] =
 {
@@ -125,12 +161,27 @@ menu_t NewDef =
 	&MainDef,
 	&NewGameMenu,
 	&M_DrawNewGame,
-	0x30,
-	0x3F,
+	48,
+	63,
 	2,
 	0,
 	0
 };
+
+//============================================= 
+// 
+// OPTIONS MENU 
+// 
+//============================================= 
+typedef enum
+{
+	loadgame = 0,
+	savegame,
+	controls,
+	display,
+	soundvol,
+	opt_end
+} options_e;
 
 menuitem_t OptionsMenu[5] =
 {
@@ -147,12 +198,29 @@ menu_t OptionsDef =
 	&MainDef,
 	&OptionsMenu,
 	&M_DrawOptions,
-	0x50,
-	0x28,
+	80,
+	40,
 	0,
 	0,
 	0
 };
+
+//============================================= 
+// 
+// CONTROLS MENU 
+// 
+//============================================= 
+typedef enum
+{
+	mouse = 0,
+	joy1,
+	joy2,
+	gamepad,
+	customize,
+	joytype,
+	mousesens,
+	control_end
+} controls_e;
 
 menuitem_t ControlsMenu[7] =
 {
@@ -171,13 +239,29 @@ menu_t ControlsDef =
 	&OptionsDef,
 	&ControlsMenu,
 	&M_DrawControls,
-	0x32,
-	0x22,
+	50,
+	34,
 	4,
 	0,
 	0
 };
 
+//============================================= 
+// 
+// DISPLAY MENU 
+// 
+//============================================= 
+typedef enum
+{
+	high = 0,
+	normal,
+	low,
+	hires,
+	hicolor,
+	emptyl,
+	scrnsize,
+	disp_end
+} display_e;
 
 menuitem_t DisplayMenu[8] =
 {
@@ -197,8 +281,8 @@ menu_t DisplayDef =
 	&OptionsDef,
 	&DisplayMenu,
 	&M_DrawDisplay,
-	0x54,
-	0x16,
+	84,
+	22,
 	1,
 	0,
 	0
@@ -208,71 +292,28 @@ char skullName[2][8] = { "M_SKULL1", "M_SKULL2" };
 void* stringcallback;
 void (*keycallback)(int ch);
 
-typedef enum
-{
-	newgame = 0,
-	options,
-	endgame,
-	readthis,
-	quitdoom,
-	main_end
-} main_e;
-
-typedef enum
-{
-	mouse = 0,
-	joy1,
-	joy2,
-	gamepad,
-	customize,
-	joytype,
-	mousesens,
-	control_end
-} controls_e;
-
-typedef enum
-{
-	loadgame = 0,
-	savegame,
-	controls,
-	display,
-	soundvol,
-	opt_end
-} options_e;
-
 int huinput = 0;
 
-typedef enum
-{
-	high = 0,
-	normal,
-	low,
-	hires,
-	hicolor,
-	emptyl,
-	scrnsize,
-	disp_end
-} display_e;
-
 font_t* hudfont;
-
-typedef enum
-{
-	killthings = 0,
-	toorough,
-	hurtme,
-	violence,
-	newg_end
-} newgame_e;
 
 int stringx, stringy;
 menu_t* currentMenu;
 
+//============================================= 
+// 
+// M_DrawMainMenu 
+// 
+//============================================= 
 void M_DrawMainMenu(void)
 {
 	V_DrawPatch(94, 2, (patch_t*)W_GetName("M_DOOM"));
 }
 
+//============================================= 
+// 
+// M_NewGame 
+// 
+//============================================= 
 void M_DrawNewGame(void)
 {
 	V_DrawPatch(96, 14, (patch_t*)W_GetName("M_NEWG"));
@@ -289,27 +330,29 @@ void M_StartGame(int choice)
 	G_StartNewGame(1, choice, 0);
 }
 
+//============================================= 
+// 
+// M_Options 
+// 
+//============================================= 
 void M_DrawOptions(void)
 {
 	V_DrawPatch(108, 5, (patch_t*)W_GetName("M_OPTTTL"));
-	M_DrawThermo((int)OptionsDef.x, (int)OptionsDef.y + 80, 16, soundVolume);
+	M_DrawThermo(OptionsDef.x, OptionsDef.y + 80, 16, soundVolume);
 }
 
 void M_ChangeVolume(int choice)
 {
-	if (choice == 0)
+	switch (choice)
 	{
+	case 0:
 		if (soundVolume != 0)
-		{
 			soundVolume--;
-		}
-	}
-	else
-	{
-		if ((choice == 1) && (soundVolume < 15))
-		{
+		break;
+	case 1:
+		if (soundVolume < 15)
 			soundVolume++;
-		}
+		break;
 	}
 }
 
@@ -318,15 +361,30 @@ void M_Options(int choice)
 	M_SetupNextMenu(&OptionsDef);
 }
 
+//============================================= 
+// 
+// M_EndGame
+// 
+//============================================= 
 void M_EndGame(int choice)
 {
 }
 
+//============================================= 
+// 
+// M_ReadThis 
+// 
+//============================================= 
 void M_ReadThis(int choice)
 {
 	//D_Alert("this");
 }
 
+//============================================= 
+// 
+// M_QuitDOOM 
+// 
+//============================================= 
 void M_QuitDOOM(int choice)
 {
 	IO_Quit();
@@ -339,8 +397,8 @@ void M_DrawControls(void)
 	M_DrawEmptyCell(&ControlsDef, 1);
 	M_DrawEmptyCell(&ControlsDef, 2);
 	M_DrawEmptyCell(&ControlsDef, 3);
-	V_DrawPatch((int)ControlsDef.x + 170, (int)ControlsDef.y + 83, (patch_t*)W_GetName(joyTypeNames[joystickType]));
-	M_DrawThermo((int)ControlsDef.x, (int)ControlsDef.y + 112, 10, mouseSensitivity);
+	V_DrawPatch(ControlsDef.x + 170, ControlsDef.y + 83, (patch_t*)W_GetName(joyTypeNames[joystickType]));
+	M_DrawThermo(ControlsDef.x, ControlsDef.y + 112, 10, mouseSensitivity);
 }
 
 void M_ChangeJoyType(int choice)
@@ -350,19 +408,16 @@ void M_ChangeJoyType(int choice)
 
 void M_ChangeSensitivity(int choice)
 {
-	if (choice == 0)
+	switch (choice)
 	{
+	case 0:
 		if (mouseSensitivity != 0)
-		{
 			mouseSensitivity--;
-		}
-	}
-	else
-	{
-		if ((choice == 1) && (mouseSensitivity < 9))
-		{
+		break;
+	case 1:
+		if (mouseSensitivity < 9)
 			mouseSensitivity++;
-		}
+		break;
 	}
 }
 
@@ -385,24 +440,21 @@ void M_DrawDisplay(void)
 
 void M_ChangeDisplay(int choice)
 {
-	R_SetDetail(choice + -1);
+	R_SetDetail(choice - 1);
 }
 
 void M_SizeDisplay(int choice)
 {
-	if (choice == 0)
+	switch (choice)
 	{
+	case 0:
 		if (screenblocks > 0)
-		{
 			R_SizeDown();
-		}
-	}
-	else
-	{
-		if ((choice == 1) && (screenblocks < 11))
-		{
+		break;
+	case 1:
+		if (screenblocks < 11)
 			R_SizeUp();
-		}
+		break;
 	}
 }
 
@@ -411,6 +463,13 @@ void M_Display(int choice)
 	M_SetupNextMenu(&DisplayDef);
 }
 
+//============================================= 
+//============================================= 
+// 
+//      Menu Functions 
+// 
+//============================================= 
+//============================================= 
 void M_DrawThermo(int x, int y, int thermWidth, int thermDot)
 {
 	int xx, i;
@@ -432,13 +491,13 @@ void M_DrawThermo(int x, int y, int thermWidth, int thermDot)
 void M_DrawEmptyCell(menu_t* menu, int item)
 {
 	patch_t* patch = (patch_t*)W_GetName("M_CELL1");
-	V_DrawPatch(menu->x - 10, item * 0x10 + menu->y + -1, patch);
+	V_DrawPatch(menu->x - 10, item * LINEHEIGHT + menu->y + -1, patch);
 }
 
 void M_DrawSelCell(menu_t* menu, int item)
 {
 	patch_t* patch = (patch_t*)W_GetName("M_CELL2");
-	V_DrawPatch(menu->x - 10, item * 0x10 + menu->y + -1, patch);
+	V_DrawPatch(menu->x - 10, item * LINEHEIGHT + menu->y + -1, patch);
 }
 
 void M_InputKey(void* callback)
@@ -467,134 +526,112 @@ void M_DrawInput(void)
 	}
 }
 
+/*
+===============================================================================
+
+							CONTROL PANEL
+
+===============================================================================
+*/
+
+/*
+=====================
+=
+= M_ControlCallback
+=
+======================
+*/
+
 void M_ControlCallback(int ch)
 {
 	static int mapnum = 1;
 
 	if (ch == KEY_F10)
-	{
 		IO_Quit();
-	}
+	
 	if (menuDisplayed == 0)
 	{
 		if (ch == KEY_ESCAPE)
-		{
 			M_StartControlPanel();
-		}
 	}
-	else
+	else //[ISB] is this a switch in the original like M_Responder in the release source?
 	{
 		if (ch == KEY_DOWNARROW)
 		{
 			do
 			{
-				if ((int)currentMenu->numitems + -1 < (int)itemOn + 1)
-				{
+				if (currentMenu->numitems - 1 < itemOn + 1)
 					itemOn = 0;
-				}
 				else
-				{
-					itemOn = itemOn + 1;
-				}
+					itemOn++;
 			} while (currentMenu->items[itemOn].status == 0);
 		}
-		else
+		else if (ch == KEY_UPARROW)
 		{
-			if (ch == KEY_UPARROW)
+			do
 			{
-				do
-				{
-					if (itemOn == 0)
-					{
-						itemOn = currentMenu->numitems;
-					}
-					itemOn = itemOn + -1;
-				} while (currentMenu->items[itemOn].status == 0);
-			}
-			else
+				if (!itemOn)
+					itemOn = currentMenu->numitems;
+				itemOn--;
+			} while (currentMenu->items[itemOn].status == 0);
+		}
+		else if (ch == KEY_LEFTARROW)
+		{
+			if (currentMenu->items[itemOn].routine && currentMenu->items[itemOn].status == 2)
+				currentMenu->items[itemOn].routine(0);
+		}
+		else if (ch == KEY_RIGHTARROW)
+		{
+			if (currentMenu->items[itemOn].routine && currentMenu->items[itemOn].status == 2)
+				currentMenu->items[itemOn].routine(1);
+		}
+		else if (ch == KEY_ENTER)
+		{
+			if (currentMenu->items[itemOn].routine)
 			{
-				if (ch == KEY_LEFTARROW)
-				{
-					if ((currentMenu->items[itemOn].routine != NULL) && (currentMenu->items[itemOn].status == 2))
-					{
-						currentMenu->items[itemOn].routine(0);
-					}
-				}
+				currentMenu->lastOn = itemOn;
+				currentMenu->lastScrollIndex = scrollIndex;
+				if (currentMenu->items[itemOn].status == 2)
+					currentMenu->items[itemOn].routine(1);
 				else
-				{
-					if (ch == KEY_RIGHTARROW)
-					{
-						if ((currentMenu->items[itemOn].routine != NULL) && (currentMenu->items[itemOn].status == 2))
-						{
-							currentMenu->items[itemOn].routine(1);
-						}
-					}
-					else
-					{
-						if (ch == KEY_ENTER)
-						{
-							if (currentMenu->items[itemOn].routine != NULL)
-							{
-								currentMenu->lastOn = itemOn;
-								currentMenu->lastScrollIndex = scrollIndex;
-								if (currentMenu->items[itemOn].status == 2)
-								{
-									currentMenu->items[itemOn].routine(1);
-								}
-								else
-								{
-									currentMenu->items[itemOn].routine(itemOn);
-								}
-							}
-						}
-						else
-						{
-							if (ch == KEY_ESCAPE)
-							{
-								currentMenu->lastOn = itemOn;
-								currentMenu->lastScrollIndex = scrollIndex;
-								if (currentMenu->prevMenu == NULL)
-								{
-									M_ClearMenus();
-								}
-								else
-								{
-									currentMenu = currentMenu->prevMenu;
-									itemOn = currentMenu->lastOn;
-									scrollIndex = currentMenu->lastScrollIndex;
-								}
-							}
-							else
-							{
-								if ((ch == KEY_S) && (keydown[KEY_DEBUG] != 0))
-								{
-									M_DrawSelf();
-									D_ScreenShot(0);
-								}
-							}
-						}
-					}
-				}
+					currentMenu->items[itemOn].routine(itemOn);
 			}
 		}
+		else if (ch == KEY_ESCAPE)
+		{
+			currentMenu->lastOn = itemOn;
+			currentMenu->lastScrollIndex = scrollIndex;
+			if (currentMenu->prevMenu)
+			{
+				currentMenu = currentMenu->prevMenu;
+				itemOn = currentMenu->lastOn;
+				scrollIndex = currentMenu->lastScrollIndex;
+			}
+			else
+				M_ClearMenus();
+		}
+		else if ((ch == KEY_S) && (keydown[KEY_DEBUG] != 0))
+		{
+			M_DrawSelf();
+			D_ScreenShot(0);
+		}
 	}
+
 	if (ch == KEY_MINUS)
 	{
 		mapnum--;
 		if (mapnum < 1)
-		{
 			mapnum = 1;
-		}
-		G_StartNewGame(mapnum, 3, 0);
+		
+		G_StartNewGame(mapnum, sk_hard, 0);
 	}
 	if (ch == KEY_EQUALS)
 	{
 		mapnum++;
 		if (mapnum >= 13)
-		{
 			mapnum = 13;
-		}
-		G_StartNewGame(mapnum, 3, 0);
+		
+		G_StartNewGame(mapnum, sk_hard, 0);
 	}
 	if ((ch >= KEY_1) && (ch < KEY_0))
 	{
@@ -603,51 +640,73 @@ void M_ControlCallback(int ch)
 	}
 	M_InputKey(&M_ControlCallback);
 }
+/*
+=====================
+=
+= M_StartControlPanel
+=
+======================
+*/
 
 void M_StartControlPanel(void)
 {
 	menuDisplayed = 1;
 	currentMenu = &MainDef;
-	itemOn = MainDef.lastOn;
+	itemOn = currentMenu->lastOn;
 	ignorekeyboard++;
 	M_InputKey(&M_ControlCallback);
 }
 
+/*
+==============================================================================
+=
+= M_DrawSelf
+=
+= Called after the view has been rendered, but before it has been blitted.
+=
+==============================================================================
+*/
+
 void M_DrawSelf(void)
 {
-	short x, y, i, max;
+	static short	x, y;
+	short			i, max;
 
-	if (menuDisplayed != 0)
+	if (!menuDisplayed)
+		return;
+
+	R_StartInstanceDrawing();
+	if (currentMenu->routine)
+		currentMenu->routine();         // call Draw routine 
+	
+	// 
+	// DRAW MENU 
+	// 
+	x = currentMenu->x;
+	y = currentMenu->y;
+	max = currentMenu->numitems;
+	if (currentMenu->scrollsize != 0)
+		max = currentMenu->scrollsize;
+	
+	for (i = 0; i < max; i++)
 	{
-		R_StartInstanceDrawing();
-		if (currentMenu->routine != 0)
-		{
-			currentMenu->routine();
-		}
-		stringx = currentMenu->x;
-		stringy = currentMenu->y;
-		max = currentMenu->numitems;
-		if (currentMenu->scrollsize != 0)
-		{
-			max = currentMenu->scrollsize;
-		}
-		for (i = 0; i < max; i++)
-		{
-			if (currentMenu->items[scrollIndex + i].name[0] != '\0')
-			{
-				V_DrawPatch(stringx, stringy, (patch_t*)W_GetName(currentMenu->items[scrollIndex + i].name));
-			}
-			stringy += 16;
-		}
-
-		skullAnimCounter--;
-		if (skullAnimCounter == 0)
-		{
-			whichSkull = whichSkull ^ 1;
-			skullAnimCounter = 20;
-		}
-		V_DrawPatch(stringx - 32, currentMenu->y - 5 + itemOn * 16, (patch_t*)W_GetName(skullName[whichSkull]));
+		if (currentMenu->items[scrollIndex + i].name[0] != '\0')
+			V_DrawPatch(x, y, 
+				(patch_t*)W_GetName(currentMenu->items[scrollIndex + i].name));
+			
+		y += LINEHEIGHT;
 	}
+
+	// 
+	// DRAW SKULL 
+	// 
+	if (--skullAnimCounter == 0)
+	{
+		whichSkull ^= 1;
+		skullAnimCounter = 20;
+	}
+	V_DrawPatch(x + SKULLXOFF, currentMenu->y - 5 + itemOn * LINEHEIGHT, 
+		(patch_t*)W_GetName(skullName[whichSkull]));
 }
 
 void M_CheckInput(framecmd_t* cmd)
@@ -658,7 +717,8 @@ void M_CheckInput(framecmd_t* cmd)
 		cmd->ymove = 0;
 		cmd->buttons = wp_nochange << BT_WEAPONSHIFT;
 	}
-	if (cmd->keyscan != 0)
+
+	if (cmd->keyscan)
 	{
 		if (menuDisplayed == 0)
 		{
@@ -710,16 +770,32 @@ void M_CheckInput(framecmd_t* cmd)
 	}
 }
 
+/*
+=====================
+=
+= M_Startup
+=
+======================
+*/
+
 void M_Startup(void)
 {
 	hudfont = (font_t*)W_GetName("HUFONT");
 	currentMenu = &MainDef;
-	itemOn = MainDef.lastOn;
+	menuDisplayed = 1;
+	itemOn = currentMenu->lastOn;
 	whichSkull = 0;
 	scrollIndex = 0;
-	menuDisplayed = 1;
 	skullAnimCounter = 10;
 }
+
+/*
+=====================
+=
+= M_ClearMenus
+=
+======================
+*/
 
 void M_ClearMenus(void)
 {
@@ -730,6 +806,11 @@ void M_ClearMenus(void)
 	}
 }
 
+//============================================= 
+// 
+// M_SetupNextMenu 
+// 
+//============================================= 
 void M_SetupNextMenu(menu_t* menudef)
 {
 	currentMenu = menudef;

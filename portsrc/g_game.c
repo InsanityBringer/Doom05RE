@@ -22,44 +22,43 @@
 #include "m_menu.h"
 
 int startepisode;
-gamestart_t gamestart;
+byte* demobuffer;
+int gameactiondata;
+skill_t skilllevel;
 gameaction_t gameaction;
+gamestart_t gamestart;
+boolean controlmenumap;
 skill_t startskill;
 int startplayer;
-boolean controlmenumap;
-
-int episode;
-skill_t skilllevel;
 gamestate_t gamestate;
-byte* demobuffer;
+char startname[9];
+char playmap[9];
+int episode;
 
-char demoname[20];
-
-void G_InitPlayer(int playernum)
+void G_InitPlayer(int player)
 {
-	player_t* player;
+	player_t* p;
 
-	if (playernum >= MAXPLAYERS)
-	{
+	if (player >= MAXPLAYERS)
 		IO_Error("G_InitPlayer: bad player number\n");
-		return;
-	}
-	sd->playeringame[playernum] = 1;
+	
+	sd->playeringame[player] = 1;
 
-	memset(&playerobjs[playernum], 0, sizeof(player_t));
-	playerobjs[playernum].readyweapon = wp_rifle;
-	playerobjs[playernum].pendingweapon = wp_nochange;
-	memset(&playerobjs[playernum].weaponowned, 0, sizeof(playerobjs[playernum].weaponowned)); //no idea why these are done when the entire thing is memset to 0 earlier..
-	memset(&playerobjs[playernum].ammo, 0, sizeof(playerobjs[playernum].ammo));
-	playerobjs[playernum].weaponowned[wp_knife] = 1;
-	playerobjs[playernum].weaponowned[wp_rifle] = 1;
-	playerobjs[playernum].ammo[am_clip] = 14;
-	playerobjs[playernum].lives = 3;
-	playerobjs[playernum].score = 0;
-	playerobjs[playernum].nextextra = 10000;
-	playerobjs[playernum].health = MAXBODY;
-	playerobjs[playernum].armor = 7;
-	memset(&playerobjs[playernum].items, 0, sizeof(playerobjs[playernum].items));
+	p = &playerobjs[player];
+	memset(p, 0, sizeof(player_t));
+	p->readyweapon = wp_rifle;
+	p->pendingweapon = wp_nochange;
+	memset(p->weaponowned, 0, sizeof(p->weaponowned)); //no idea why these are done when the entire thing is memset to 0 earlier..
+	memset(p->ammo, 0, sizeof(p->ammo));
+	p->weaponowned[wp_knife] = 1;
+	p->weaponowned[wp_rifle] = 1;
+	p->ammo[am_clip] = 14;
+	p->lives = 3;
+	p->score = 0;
+	p->nextextra = 10000;
+	p->health = MAXBODY;
+	p->armor = 7;
+	memset(p->items, 0, sizeof(p->items));
 }
 
 void G_WarpToMap(char* mapname)
@@ -70,7 +69,7 @@ void G_WarpToMap(char* mapname)
 	P_InitThinkers();
 	P_InitActors();
 	M_ClearMenus();
-	memset(playerthingfound, 0, sizeof(int) * MAXPLAYERS);
+	memset(playerthingfound, 0, sizeof(playerthingfound));
 	R_LoadMap(mapname);
 
 	for (i = 0; i < MAXPLAYERS; i++)
@@ -89,7 +88,7 @@ void G_PlayerDied(player_t* player)
 
 void G_PlayDemo(char* name)
 {
-	strcpy(&demoname[0], name);
+	strcpy(&startname[0], name);
 	demoaction = da_startgame;
 	gamestart = gs_demo;
 }
@@ -128,9 +127,10 @@ void G_RecordDemo(char* map, char* demoname)
 }
 
 
-void G_StartSavedGame(int savegame)
+int G_StartSavedGame(int savegame)
 {
 	//it is but a dream
+	return 0;
 }
 
 void G_StartNewGame(int episode, int skill, int player)
@@ -196,7 +196,7 @@ void G_SetupDemo(void)
 	startepisode = 1;
 	startplayer = 0;
 	G_SetupNewGame();
-	lump = W_GetNumForName(demoname);
+	lump = W_GetNumForName(startname);
 	demobuffer = (byte*)lumpinfo[lump].position;
 	demo_p = demobuffer;
 	G_WarpToMap((char*)demobuffer);

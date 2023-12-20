@@ -29,7 +29,7 @@ int windowx, windowy;
 int windoworg;
 int buffercrtc;
 
-int novideo;
+boolean novideo;
 
 byte* colormaps;
 unsigned short* wordcolormaps;

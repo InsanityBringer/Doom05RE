@@ -152,7 +152,7 @@ extern memzone_t* playzone;
 
 extern player_t* player;
 extern player_t playerobjs[];
-extern boolean playerthingfound[];
+extern boolean playerthingfound[MAXPLAYERS];
 extern int playernum;
 extern int viewplayer;
 extern int viewplayerangle;

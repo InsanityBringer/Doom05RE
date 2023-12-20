@@ -19,24 +19,38 @@
 #include "doomdef.h"
 #include "v_video.h"
 
-byte screenbuffer[64000*4];
-byte* ylookup[800];
-int planelookup[320];
-int planewidthlookup[200];
-
-byte* collumnpointer[320];
-unsigned int ublocksource[200];
-
-byte update[200];
-
-int playscreenupdateneeded;
 int blockupdateneeded;
-
-int winxl, winxh;
-int winyl, winyh;
-int cursorx, cursory;
+int playscreenupdateneeded;
 
 font_t* printfont; //[ISB] Never initialized, so V_Printf won't work.
+
+int winyl, winyh;
+int winxl, winxh;
+
+int cursorx, cursory;
+
+byte update[UPDATEWIDE*UPDATEHIGH];
+byte screenbuffer[SCREENWIDTH*SCREENHEIGHT];
+unsigned int ublocksource[UPDATEWIDE*UPDATEHIGH];
+byte* ylookup[SCREENHEIGHT*4];
+int planelookup[SCREENWIDTH];
+int planewidthlookup[SCREENHEIGHT];
+byte* collumnpointer[SCREENWIDTH];
+
+void V_FillPalette(int r, int g, int b)
+{
+	int i;
+	byte pal[768];
+
+	for (i = 0; i < 768; i += 3)
+	{
+		pal[i + 0] = r;
+		pal[i + 1] = g;
+		pal[i + 2] = b;
+	}
+
+	IO_SetPalette(pal);
+}
 
 void V_FadeOut(int start, int end, int red, int green, int blue, int steps)
 {
@@ -103,8 +117,8 @@ void V_Bar(int x1, int y1, int width, int height, int color)
 	for (p = 0; p < 4; p++)
 	{
 		px1 = (3 - p) + x1 >> 2;
-		dest = ylookup[p * 200 + y1] + px1;
 		px2 = (3 - p) + x2 >> 2;
+		dest = ylookup[p * SCREENHEIGHT + y1] + px1;
 		count = px2 - px1;
 		for (y = y1; y < y2; y++)
 		{
@@ -128,7 +142,7 @@ void V_DrawPic(int x, int y, pic_t* pic)
 
 	V_MarkUpdateBlock(x, y, width * 4 + x - 1, y + height - 1);
 
-	planey = (x & 3) * 200;
+	planey = (x & 3) * SCREENHEIGHT;
 	x >>= 2;
 	for (plane = 0; plane < 4; plane++)
 	{
@@ -141,9 +155,9 @@ void V_DrawPic(int x, int y, pic_t* pic)
 			source += width;
 		}
 
-		planey += 200;
+		planey += SCREENHEIGHT;
 
-		if (planey == 800) 
+		if (planey == SCREENHEIGHT*4)
 		{
 			planey = 0;
 			x++;
@@ -178,14 +192,14 @@ int V_DrawChar(int sx, int sy, int ch, font_t* font)
 		}
 		dest -= backup;
 
-		if (plane == 48000)
+		if (plane == SCREENSIZE*3)
 		{
 			dest++;
 			plane = 0;
 		}
 		else 
 		{
-			plane += 16000;
+			plane += SCREENSIZE;
 		}
 	}
 	return width;
@@ -217,7 +231,8 @@ void V_CenterString(int y, char* string, font_t* font)
 	int w, x;
 
 	w = V_StringWidth(string, font);
-	V_DrawString(SCREENWIDTH / 2 - w / 2, y, string, font);
+	x = SCREENWIDTH / 2 - w / 2;
+	V_DrawString(x, y, string, font);
 }
 
 void V_Window(int width, int height)
@@ -240,8 +255,8 @@ void V_Window(int width, int height)
 
 void V_Printf(char* fmt, ...)
 {
-	char string[1024];
 	va_list argptr;
+	char string[1024];
 
 	va_start(argptr, fmt);
 	vsprintf(string, fmt, argptr);
@@ -252,27 +267,27 @@ void V_Printf(char* fmt, ...)
 
 void V_MarkUpdateBlock(int x1, int y1, int x2, int y2)
 {
-	int x, y;
-	int xt1, yt1, xt2, yt2;
-	byte* nextline;
+	int	x, y, xt1, yt1, xt2, yt2, nextline;
 	byte* mark;
 
-	if ((((x1 < 0) || (x2 > 1279)) || (y1 < 0)) || (y2 > 199))
+	if (x1 < 0 || x2 >= SCREENWIDTH * 4 || y1 < 0 || y2 >= SCREENHEIGHT)
 		IO_Error("bad V_MarkUpdateBlock(%i,%i,%i,%i)", x1, y1, x2, y2);
 
-	xt1 = x1 / 16;
-	yt1 = y1 / 20;
-	xt2 = x2 / 16;
-	yt2 = y2 / 20;
-	mark = &update[xt1 + yt1 * 20];
-	for (y = yt1; y <= yt2; y++)
+	xt1 = x1 / (SCREENWIDTH/UPDATEWIDE);
+	yt1 = y1 / (SCREENHEIGHT/UPDATEHIGH);
+
+	xt2 = x2 / (SCREENWIDTH/UPDATEWIDE);
+	yt2 = y2 / (SCREENHEIGHT/UPDATEHIGH);
+
+	mark = &update[xt1 + yt1 * UPDATEWIDE];
+	nextline = UPDATEWIDE - (xt2 - xt1) - 1;
+
+	for (y=yt1;y<=yt2;y++)
 	{
-		nextline = mark + 20;
-		for (x = xt1; x <= xt2; x++)
-		{
+		for (x=xt1;x<=xt2;x++)
 			*mark++ = 2;
-		}
-		mark = nextline;
+		
+		mark += nextline;
 	}
 
 	blockupdateneeded = 2;
@@ -283,9 +298,9 @@ void V_Startup(void)
 	int x, y, i;
 	unsigned int* usrc;
 
-	for (i = 0; i < 800; i++)
+	for (y = 0; y < SCREENHEIGHT * 4; y++)
 	{
-		ylookup[i] = screenbuffer + i * SCREENBWIDE;
+		ylookup[y] = screenbuffer + y * SCREENBWIDE;
 	}
 	for (i = 0; i < SCREENHEIGHT; i++)
 	{
@@ -293,22 +308,22 @@ void V_Startup(void)
 	}
 	for (i = 0; i < SCREENWIDTH; i++) 
 	{
-		collumnpointer[i] = &screenbuffer[0] + (i >> 2) + ((i & 3) * 16000);
+		collumnpointer[i] = &screenbuffer[0] + (i >> 2) + ((i & 3) * SCREENSIZE);
 	}
 
 	usrc = ublocksource;
-	for (y = 0; y < 10; y++)
+	for (y = 0; y < UPDATEHIGH; y++)
 	{
-		for (x = 0; x < 20; x++)
+		for (x = 0; x < UPDATEWIDE; x++)
 		{
-			*usrc++ = y * SCREENBWIDE * 20 + x * 4;
+			*usrc++ = y * SCREENBWIDE * UPDATEWIDE + x * 4;
 		}
 	}
-	memset(update, 0, 200);
+	memset(update, 0, sizeof(update));
 	playscreenupdateneeded = 0;
 	blockupdateneeded = 0;
-	for (i = 0; i < 320; i++)
+	for (x = 0; x < SCREENWIDTH; x++)
 	{
-		planelookup[i] = (i & 3) * 16000;
+		planelookup[x] = (x & 3) * SCREENSIZE;
 	}
 }

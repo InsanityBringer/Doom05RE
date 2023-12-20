@@ -21,11 +21,23 @@
 #include "g_game.h"
 #include "m_menu.h"
 
-extern  void R_TestScaleColumn();
+int dm_count;
+
+char** my_argv;
+int my_argc;
 
 demoaction_t demoaction;
+
+byte* dm_dest;
+
 int democycle;
 
+int dm_x1, dm_x2;
+fixed_t dm_xfrac, dm_yfrac;
+byte* dm_picture;
+fixed_t dm_xstep, dm_ystep;
+
+byte* rawplane;
 config_t config;
 
 typedef struct
@@ -42,17 +54,9 @@ modelvertex_t vertex[4] =
 {160 * FRACUNIT, -100 * FRACUNIT, 0, 319 * FRACUNIT, 199 * FRACUNIT, 0, 0, 0, 0, 0},
 {-160 * FRACUNIT, -100 * FRACUNIT, 0, 1 * FRACUNIT, 199 * FRACUNIT, 0, 0, 0, 0, 0} };
 
-byte* dm_dest;
-int dm_x1, dm_x2;
-fixed_t dm_xfrac, dm_yfrac;
-fixed_t dm_xstep, dm_ystep;
-byte* dm_picture;
-
-byte* rawplane;
-
 void D_DrawSpinBackground(void)
 {
-    memset(screenbuffer, 185, 64000);
+    memset(screenbuffer, 185, SCREENWIDTH*SCREENHEIGHT);
 }
 
 void D_RenderPolygon()
@@ -273,9 +277,9 @@ void D_PlaneToBuffer(byte* source)
         for (x = 0; x < SCREENBWIDE; x++)
         {
             *dest = *source;
-            dest[16000] = source[1];
-            dest[32000] = source[2];
-            dest[48000] = source[3];
+            dest[SCREENSIZE] = source[1];
+            dest[SCREENSIZE*2] = source[2];
+            dest[SCREENSIZE*3] = source[3];
             source += 4;
             dest++;
         }
@@ -296,9 +300,9 @@ void D_BufferToPlane(byte* dest)
         for (x = 0; x < SCREENBWIDE; x++)
         {
             *dest = *source;
-            dest[1] = source[16000];
-            dest[2] = source[32000];
-            dest[3] = source[48000];
+            dest[1] = source[SCREENSIZE];
+            dest[2] = source[SCREENSIZE*2];
+            dest[3] = source[SCREENSIZE*3];
             dest += 4;
             source++;
         }

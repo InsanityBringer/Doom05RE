@@ -58,33 +58,26 @@ byte* demo_p;
 void P_SetShiftPalette(void)
 {
 	int palnum;
-
-	if (redshift == 0)
-	{
-		if (goldshift == 0) 
-		{
-			palnum = 0;
-		}
-		else
-		{
-			palnum = goldshift >> 2;
-			if (NUMGOLDPALS < palnum)
-			{
-				palnum = NUMGOLDPALS;
-			}
-			palnum = palnum + STARTGOLDPALS;
-		}
-	}
-	else 
+	if (redshift)
 	{
 		palnum = redshift >> 2;
-		if (NUMREDPALS < palnum) 
-		{
+		if (palnum > NUMREDPALS)
 			palnum = NUMREDPALS;
-		}
-		palnum = palnum + STARTREDPALS;
+
+		palnum += STARTREDPALS;
 	}
-	if ((palnum != currentpalette) && (screenfaded == 0)) 
+	else if (goldshift)
+	{
+		palnum = goldshift >> 2;
+		if (palnum > NUMGOLDPALS)
+			palnum = NUMGOLDPALS;
+
+		palnum += STARTGOLDPALS;
+	}
+	else
+		palnum = 0;
+
+	if (palnum != currentpalette && !screenfaded)
 	{
 		currentpalette = palnum;
 		IO_SetPalette(&playpalette[palnum * 768]);
