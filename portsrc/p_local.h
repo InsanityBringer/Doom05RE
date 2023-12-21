@@ -60,12 +60,12 @@ typedef struct
 	byte playeringame[MAXPLAYERS];
 	int playercmdframe[MAXPLAYERS];
 	framecmd_t playercmd[MAXPLAYERS * NUMPLAYERFRAMES];
-	int mousex;
-	int mousey;
+	unsigned int mousex;
+	unsigned int mousey;
 	int mousebuttons;
 	int mousepresent;
-	int oldmousex;
-	int oldmousey;
+	unsigned int oldmousex;
+	unsigned int oldmousey;
 	int lastframe;
 	framepos_t framepos[2];
 	int viewpos;

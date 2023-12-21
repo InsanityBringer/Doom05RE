@@ -135,37 +135,36 @@ void IO_PlayerInput()
 	frame++;
 	sd->playercmdframe[sd->consoleplayer] = frame;
 
-
 	cmd = &sd->playercmd[sd->consoleplayer * NUMPLAYERFRAMES + (frame & PLAYERFRAMEMASK)];
 	cmd->keyscan = lastpress;
 	lastpress = 0;
-	cmd->buttons = 0x3c;
+	cmd->buttons = wp_nochange << BT_WEAPONSHIFT;
 	xmove = ymove = 0;
 	speed = 40;
 
-	if (ignorekeyboard == 0) 
+	if (!ignorekeyboard) 
 	{
 		if (keydown[key_speed] == autorun) //[ISB] I had to, sorry.
 			speed = 80;
 		
-		if (keydown[key_right] != 0) 
+		if (keydown[key_right]) 
 			xmove = speed;
 		
-		if (keydown[key_left] != 0) 
+		if (keydown[key_left]) 
 			xmove -= speed;
 		
-		if (keydown[key_up] != 0) 
+		if (keydown[key_up]) 
 			ymove = speed;
 		
-		if (keydown[key_down] != 0)
+		if (keydown[key_down])
 			ymove -= speed;
 		
 		cmd->buttons = 0;
-		if (keydown[key_fire] != 0) 
-			cmd->buttons |= 2;
+		if (keydown[key_fire]) 
+			cmd->buttons |= BT_ATTACK;
 		
-		if (keydown[key_strafe] != 0) 
-			cmd->buttons |= 1;
+		if (keydown[key_strafe]) 
+			cmd->buttons |= BT_USE;
 		
 		newweapon = wp_nochange;
 		
@@ -176,50 +175,38 @@ void IO_PlayerInput()
 				newweapon = i;
 			}
 		}
-		cmd->buttons |= newweapon << 2;
+		cmd->buttons |= newweapon << BT_WEAPONSHIFT;
 	}
 
-	if (sd->mousepresent != 0) 
+	if (sd->mousepresent) 
 	{
-		if ((sd->mousebuttons & 1) != 0) 
-			cmd->buttons |= 2;
+		if (sd->mousebuttons & 1) 
+			cmd->buttons |= BT_ATTACK;
 		
-		if ((sd->mousebuttons & 2) != 0) 
-			cmd->buttons |= 1;
+		if (sd->mousebuttons & 2) 
+			cmd->buttons |= BT_USE;
 		
-		if ((sd->mousebuttons & 4) != 0)
+		if (sd->mousebuttons & 4)
 			ymove += speed;
 
 		if (sd->mousex < 0x5555 && sd->oldmousex > 0xAAAA)
-		{
 			deltax = sd->mousex + 0x10000 - sd->oldmousex;
-		}
 		else if (sd->mousex > 0xAAAA && sd->oldmousex < 0x5555)
-		{
 			deltax = -(0x1000 - sd->mousex + sd->oldmousex);
-		}
 		else
-		{
 			deltax = sd->mousex - sd->oldmousex;
-		}
 
 		if (sd->mousey < 0x5555 && sd->oldmousey > 0xAAAA)
-		{
 			deltay = sd->mousey + 0x10000 - sd->oldmousey;
-		}
 		else if (sd->mousey > 0xAAAA && sd->oldmousey < 0x5555)
-		{
 			deltay = -(0x1000 - sd->mousey + sd->oldmousey);
-		}
 		else
-		{
 			deltay = sd->mousey - sd->oldmousey;
-		}
 
 		sd->oldmousex = sd->mousex;
 		sd->oldmousey = sd->mousey;
 
-		if ((cmd->buttons & 1) == 0) 
+		if (!(cmd->buttons & BT_USE)) 
 			xmove += (deltax << 8) / 300;
 		else
 			xmove += (deltax << 8) / 150;
@@ -465,9 +452,16 @@ void IO_MouseHandler()
 {
 	int x, y;
 	sd->mousebuttons = SDL_GetRelativeMouseState(&x, &y);
-	sd->mousex += x;
+	//What behavior here seems to depend on emulator or hardware, and possibly mouse drivers
+	//Dosbox saturates if the signed mouse position would wrap around. This means you stop turning after a while. 
+	//pcem with cutemouse seems to act like its unsigned and wraps. I trust this as a more accurate behavior.
+	unsigned int temp = sd->mousex + x;
+	sd->mousex = temp & 0xFFFF;
 	if (!novert)
-		sd->mousey += y;
+	{
+		temp = sd->mousey + y;
+		sd->mousey = temp & 0xFFFF;
+	}
 }
 
 //holy crap this sucks
