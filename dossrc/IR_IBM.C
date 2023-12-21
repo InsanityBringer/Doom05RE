@@ -223,11 +223,6 @@ void R_RawScaleHighC(void)
 		*dest = colormap[sp_source[sp_frac >> FRACBITS]];
 		dest += SCREENBWIDE;
 		sp_frac += sp_fracstep;
-#ifdef HIRES_FIXES
-		//[ISB] wrap code
-		//todo: optimize
-		sp_frac %= (128 << FRACBITS);
-#endif
 	}
 }
 
@@ -291,22 +286,17 @@ void nullfunction()
 void IO_WaitVBL(int vbls)
 {
 	int i;
-	int old;
-	int stat;
+	int old, stat;
 
 	if(novideo)
-	{
 		return;
-	}
 	
 	//this entire function is fuckin weird, man
 	while(vbls--)
 	{
 		outer:
 		_disable();
-		do
-		{
-		} while(inp(STATUS_REGISTER_1) & 1);
+		while(inp(STATUS_REGISTER_1) & 1) {}
 		
 		start:
 		_enable();
@@ -315,14 +305,10 @@ void IO_WaitVBL(int vbls)
 		for (i = 0; i < 10; i++)
 		{
 			stat = inp(STATUS_REGISTER_1);
-			if((stat&8) != 0)
-			{
-				goto start;
-			}
-			else if ((stat&1) == 0)
-			{
+			if (stat & 8)
 				goto outer;
-			}
+			if (!(stat&1))
+				goto start;
 		}
 		_enable();
 	}
@@ -341,15 +327,12 @@ void IO_SetPalette(byte *pal)
 	int i;
 
 	if(novideo)
-	{
 		return;
-	}
+	
 	IO_WaitVBL(1);
 	outp(PEL_WRITE_ADR, 0);
 	for(i = 0; i < 768; i++)
-	{
 		outp(PEL_DATA, (*pal++)>>2);
-	}
 }
 
 //--------------------------------------------------------------------------
@@ -363,15 +346,12 @@ void IO_GetPalette(byte *pal)
 	int i;
 
 	if(novideo)
-	{
 		return;
-	}
+	
 	IO_WaitVBL(1);
-	outp(PEL_WRITE_ADR, 0);
+	outp(PEL_READ_ADR, 0);
 	for(i = 0; i < 768; i++)
-	{
 		*pal++ = inp(PEL_DATA) << 2;
-	}
 }
 
 void IO_Color (int r, int g, int b)
@@ -385,9 +365,8 @@ void IO_Color (int r, int g, int b)
 void IO_SetHighColor()
 {
   	if(novideo)
-	{
 		return;
-	}
+	
 	_disable();
 	inp(0x3C6); //Enter control mode
 	inp(0x3C6);
@@ -400,9 +379,8 @@ void IO_SetHighColor()
 void IO_ClearHighColor()
 {
   	if(novideo)
-	{
 		return;
-	}
+	
 	_disable();
 	inp(0x3C6); //Enter control mode
 	inp(0x3C6);
@@ -423,9 +401,7 @@ void IO_SetHighRes()
 	}
 	
 	if(novideo)
-	{
 		return;
-	}
 	
 	_disable();
 	outp(CRTC_INDEX, CRTC_MAXSCANLINE);
@@ -436,9 +412,7 @@ void IO_SetHighRes()
 void IO_ClearHighRes()
 {
 	if(novideo)
-	{
 		return;
-	}
 	
 	_disable();
 	outp(CRTC_INDEX, CRTC_MAXSCANLINE);
@@ -511,10 +485,6 @@ void R_SetViewSize(int blocks, detail_t detail, int redrawall)
 		R_MapRow = &R_MapRowHighC;
 		R_RawScale = &R_RawScaleHighC;
 		break;
-#ifdef ISB_LINT
-	default:
-		IO_Error("R_SetViewSize: Bad detail level\n");
-#endif
 	}
 	R_ChangeWindow(width, height, yscale);
 
@@ -725,9 +695,8 @@ void IO_DrawTics(void)
 	int i;
 
 	if (novideo)
-	{
 		return;
-	}
+	
 	tics = ticcount - oldtics;
 	oldtics = ticcount;
 	if (tics > 20)
@@ -798,47 +767,29 @@ void R_FixDetailPlanes(void)
 void IO_UpdateOnly(void)
 {
 	if (novideo)
-	{
 		return;
-	}
 
 	updatedone = 1;
 	if (noplayblit == 2)
-	{
 		IO_WaitVBL(1);
-	}
-	if (noplayblit != 0)
-	{
+	if (noplayblit)
 		R_FixDetailPlanes();
-	}
-	if (blockupdateneeded != 0)
-	{
+	if (blockupdateneeded)
 		IO_BlitBlocks();
-	}
-	if ((playscreenupdateneeded != 0) && (noplayblit == 0))
-	{
+	if ((layscreenupdateneeded && !noplayblit)
 		IO_BlitPlayScreen();
-	}
-	if (blockupdateneeded != 0)
-	{
+	if (blockupdateneeded)
 		blockupdateneeded--;
-	}
-	if (playscreenupdateneeded != 0)
-	{
+	if (playscreenupdateneeded)
 		playscreenupdateneeded--;
-	}
-	if (noplayblit != 0)
-	{
+	if (noplayblit)
 		noplayblit--;
-	}
 }
 
 void IO_UpdateScreen(void)
 {
 	if (novideo)
-	{
 		return;
-	}
 
 	if (updatedone == 0)
 		IO_UpdateOnly();
