@@ -243,3 +243,28 @@ void Z_CacheFree(void** user)
 	*ptr = (void*)NULL;*/
 #endif
 }
+
+/*
+========================
+=
+= Z_SpaceLeft
+=
+========================
+*/
+
+size_t Z_SpaceLeft(memzone_t* zone)
+{
+	size_t size;
+	memblock_t* scan = zone->blocklist.next;
+
+	size = 0;
+	while (scan != &zone->blocklist)
+	{
+		if (!scan->owner)
+			size += scan->size;
+
+		scan = scan->next;
+	}
+
+	return size;
+}
