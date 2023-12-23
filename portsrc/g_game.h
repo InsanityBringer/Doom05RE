@@ -52,7 +52,7 @@ extern byte* demobuffer;
 
 void G_PlayDemo(char* demoname);
 void G_RecordDemo(char* map, char* demo);
-void G_StartNewGame(int episode, int skill, int player);
+void G_StartNewGame(int episode, skill_t skill, int player);
 void G_GameLoop();
 
 void G_WarpToMap(char* mapname);

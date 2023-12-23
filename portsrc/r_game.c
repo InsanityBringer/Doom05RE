@@ -319,8 +319,8 @@ void R_LoadMapLines(int maplump)
 		{
 			li->side[s] = (int)(si - sides);
 			ms = &ml->side[s];
-			si->sector = ms->firstcollumn;
-			si->firstcollumn = ms->texturetop;
+			si->sector = ms->sector;
+			si->firstcollumn = ms->firstcollumn;
 			si->midtexture = ms->midtexture;
 			si->toptexture = ms->toptexture;
 			si->bottomtexture = ms->bottomtexture;

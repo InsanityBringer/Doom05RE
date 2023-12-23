@@ -83,9 +83,9 @@ typedef struct
 
 typedef struct
 {
+	short flags;
 	short sector;
 	short firstcollumn;
-	short texturetop;
 	short midtexture;
 	short toptexture;
 	short bottomtexture;

@@ -96,7 +96,7 @@ void G_PlayDemo(char* name)
 void G_SetupNewGame(void);
 void G_RecordDemo(char* map, char* demoname)
 {
-	G_StartNewGame(1, 4, 0);
+	G_StartNewGame(1, sk_deadly, 0);
 
 	//BUG: The player isn't initialized when starting a demo record, so the game freezes.
 	//This is because no players are marked as in-game so no simulation occurs. 
@@ -133,7 +133,7 @@ int G_StartSavedGame(int savegame)
 	return 0;
 }
 
-void G_StartNewGame(int episode, int skill, int player)
+void G_StartNewGame(int episode, skill_t skill, int player)
 {
 	demoaction = da_startgame;
 	startepisode = episode;

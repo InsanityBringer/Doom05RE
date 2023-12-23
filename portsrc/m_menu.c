@@ -636,7 +636,7 @@ void M_ControlCallback(int ch)
 	if ((ch >= KEY_1) && (ch < KEY_0))
 	{
 		mapnum = ch - KEY_1 + 1;
-		G_StartNewGame(mapnum, 3, 0);
+		G_StartNewGame(mapnum, sk_hard, 0);
 	}
 	M_InputKey(&M_ControlCallback);
 }

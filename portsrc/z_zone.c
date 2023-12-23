@@ -42,11 +42,9 @@ The rover can be left pointing at a non-empty block
 
 memzone_t* Z_AllocateZone(int size)
 {
-	memzone_t* header;
-
-	header = (memzone_t*)malloc(size + sizeof(memzone_t));
+	memzone_t* header = (memzone_t*)malloc(size + sizeof(memzone_t));
 	if (header == NULL)
-		IO_Error("Z_InitZone: Couldn't malloc %i bytes\n", size);
+		IO_Error("Z_InitZone: Couldn't malloc %i bytes\n", size + sizeof(memzone_t));
 
 #ifndef __WATCOMC__
 	//[ISB] make sure zone is completely clean

@@ -18,14 +18,14 @@
 #include "doomdef.h"
 #include "s_sound.h"
 
+int S_LoadSong(char* name)
+{
+	return -1;
+}
+
 void S_Startup()
 {
 	printf("S_Startup: there ain't no sound support\n");
-}
-
-void S_LoadSong(char* name)
-{
-	
 }
 
 void S_Shutdown()

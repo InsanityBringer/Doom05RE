@@ -18,7 +18,7 @@
 #define __S_SOUND_H__
 
 void S_Startup();
-void S_LoadSong(char* name);
+int S_LoadSong(char* name);
 void S_Shutdown();
 
 #endif
