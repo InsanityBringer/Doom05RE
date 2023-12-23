@@ -185,8 +185,6 @@ void W_AddFile(char* filename)
 
 void W_InitMultipleFiles(char** filenames)
 {
-	int		size;
-
 	//
 	// open all the files, load headers, and count lumps
 	//
