@@ -23,10 +23,10 @@ fixed_t* inscale, *outscale;
 
 fixed_t zerocosine, zerosine;
 
-int* spans[MAXSPANS];
-int* startspans[MAXSPANS];
+int* spans[MAXHEIGHT];
+int* startspans[MAXHEIGHT];
 
-int spanlists[MAXSPANS * NUMSPANSPERY];
+int spanlists[MAXHEIGHT * NUMSPANSPERY];
 
 void R_PostSpans(int oldtop, int oldbottom, int newtop, int newbottom, int x)
 {
@@ -229,7 +229,7 @@ void R_GenerateSpans(void)
 {
     int x;
 
-    memcpy(spans, startspans, sizeof(int) * MAXSPANS);
+    memcpy(spans, startspans, sizeof(int) * MAXHEIGHT);
     x = sectorxl;
     R_PostSpans(-1, 0, ceilingpixel[x], newceiling[x], x);
     R_PostSpans(-1, 0, newfloor[x], floorpixel[x], x);

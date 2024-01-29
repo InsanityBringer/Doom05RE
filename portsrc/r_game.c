@@ -69,7 +69,7 @@ side_t* sides;
 
 int scalelight[LIGHTLEVELS][MAXLIGHTSCALE];
 fixed_t sines[NUMANGLES+ANG45];
-fixed_t yslope[832];
+fixed_t yslope[MAXHEIGHT];
 
 byte amapcolor[256];
 
@@ -171,7 +171,7 @@ void R_InitTables(void)
 	cosines = &sines[2048];
 	cos45 = sines[3072];
 
-	for (i = 0; i < MAXSPANS; i++)
+	for (i = 0; i < MAXHEIGHT; i++)
 	{
 		startspans[i] = &spanlists[i * NUMSPANSPERY];
 	}

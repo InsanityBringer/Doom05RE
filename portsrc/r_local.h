@@ -20,6 +20,9 @@
 //When the map structures are present, v_video structures are present before the map structures always.
 #include "v_video.h"
 
+#define MAXWIDTH			1120
+#define	MAXHEIGHT			832
+
 //
 // lighting constants
 //
@@ -274,7 +277,6 @@ extern int viewwidth, viewheight;
 extern fixed_t xscale, yscale;
 extern fixed_t* inscale, * outscale;
 
-#define MAXSPANS 832 //Total number of rows with spans. I don't know why it's higher than SCREENHEIGHT, maybe for the hires mode. 
 #define NUMSPANSPERY 16 //Number of spans (individual x values) per row.
 
 extern int* spans[];
