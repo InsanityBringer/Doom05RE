@@ -5,12 +5,12 @@ option stub=doomstub.exe
 name DOOM
 file hmapl.obj
 file hmaph.obj 
-file hmaphc.obj 
+file hmapc.obj 
 file hmapdem.obj 
 file vmaph.obj 
 file vmapl.obj 
-file vmaphc.obj 
-file d_ibm_a.obj 
+file vmapc.obj 
+file i_ibm_a.obj 
 file i_ibm.obj 
 file ir_ibm.obj 
 file d_main.obj 

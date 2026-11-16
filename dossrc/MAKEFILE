@@ -4,12 +4,12 @@ STUB_OPTS = -ms
 DOOM_SOURCES = &
 hmapl.obj &
 hmaph.obj &
-hmaphc.obj &
+hmapc.obj &
 hmapdem.obj &
 vmapl.obj &
 vmaph.obj &
-vmaphc.obj &
-d_ibm_a.obj &
+vmapc.obj &
+i_ibm_a.obj &
 i_ibm.obj &
 ir_ibm.obj &
 d_main.obj &

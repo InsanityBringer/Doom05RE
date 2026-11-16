@@ -8,9 +8,9 @@
 #include "doomdef.h"
 #include "w_wad.h"
 #include "v_video.h"
-#include "r_ref.h"
+#include "r_local.h"
 #include "g_game.h"
-#include "p_play.h"
+#include "p_local.h"
 #include "i_local.h"
 #include "s_sound.h"
 
@@ -109,7 +109,7 @@ volatile int oldisrcounter;
 void (__interrupt __far *oldtimerisr)();
 void (__interrupt __far *oldkeyboardisr)();
 
-void __far *sourceplane; //todo: two padding bytes, is it a far pointer? or is it useless because it isn't actually referenced
+void __far *sourceplane; //todo: two padding bytes, is it a far pointer? or is it useless because it isn't actually called
 
 union REGS regs;
 struct SREGS segregs;
@@ -190,7 +190,7 @@ void dpmi_lockregion(void *addr, size_t size)
 	regs.w.si = (unsigned short)(size >> 16);
 	regs.w.di = (unsigned short)(size & 0xFFFF);
 	
-	int386(0x31, &regs, &regs);
+	int386(31, &regs, &regs);
 }
 
 void dpmi_unlockregion(void *addr, size_t size)
@@ -203,7 +203,7 @@ void dpmi_unlockregion(void *addr, size_t size)
 	regs.w.si = (unsigned short)(size >> 16);
 	regs.w.di = (unsigned short)(size & 0xFFFF);
 	
-	int386(0x31, &regs, &regs);
+	int386(31, &regs, &regs);
 }
 
 void IO_ClearKeys()

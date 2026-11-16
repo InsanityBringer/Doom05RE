@@ -6,14 +6,15 @@
 ;
 ; unwound horizontal texture mapping code
 ;
-; eax   pixel and offset
-; ebx   position 9.23 bits x
-; ecx   position 9.23 bits y
-; edx   step 9.23 bits x
+; eax   lighttable
+; ebx   scratch register
+; ecx   position 6.10 bits x, 6.10 bits y
+; edx   step 6.10 bits x, 6.10 bits y
 ; esi   start of block
 ; edi   dest
-; ebp   step 9.23 bits y
-
+; ebp   fff to mask bx
+;
+; ebp should by preset from ebx / ecx before calling
 ;============================================================================
 
 OP_SHLD	=	0fh
@@ -43,15 +44,15 @@ returnpoint	dd	0
 
 ;================
 ;
-; D_PolygonRow
+; D_MapRow
 ;
 ; Horizontal texture mapping
 ;
 ;================
 
 
-D_PolygonRow_ PROC 
-PUBLIC	D_PolygonRow_
+D_MapRow_ PROC 
+PUBLIC	D_MapRow_
 	PUSHR
 
 	mov	eax,[_dm_x2]
@@ -61,31 +62,25 @@ PUBLIC	D_PolygonRow_
 	mov	eax,[mapcalls+ebx*4]
 	mov	[returnpoint],eax     ; spot to patch a ret at
 	mov	BYTE PTR [eax], OP_RET
+	
 	mov edi,[_dm_dest]
 	mov esi,[_dm_picture]
 
-;
-; build composite position
-;
+
 	mov	ebx,[_dm_xfrac]
 	shl ebx,07h
 	mov	ecx,[_dm_yfrac]
 	shl	ecx,07h
+	or	ecx,eax
 
-;
-; build composite step
-;
 	mov	edx,[_dm_xstep]
-	shl edx,07h
+	shl	edx,07h
 	mov	ebp,[_dm_ystep]
 	shl	ebp,07h
 	
-;
-; feed the pipeline and jump in
-;
-	xor	eax,eax
-	shld eax,ecx,09h ; shift y units in
-	shld eax,ebx,09h ; shift x units in
+	xor eax,eax
+	shld eax,ecx,09h
+	shld eax,ebx,09h
 
 	call    [callpoint]
 
@@ -113,12 +108,12 @@ REPT	4
 LINE    =	LINE + 1
 
 	mov     al,[esi+eax]            ; get source pixel
-	add		ebx,edx					; add x frac
-	add		ecx,ebp					; add y frac
-	mov     [edi+PLANE+PCOL],al     ; write pixel
-	xor		eax,eax					
-	shld	eax,ecx,09h 			; shift y units in
-	shld	eax,ebx,09h 			; shift x units in
+	add		ebx,edx					; add x step
+	add		ecx,ebp					; add y step
+	mov     [edi+PLANE+PCOL],al		; write pixel
+	xor		eax,eax					; clear offset
+	shld	eax,ecx,09h				; shift in y frac
+	shld	eax,ebx,09h				; shift in x frac
 PLANE	=	PLANE + PLANESIZE
 ENDM
 PCOL	=	PCOL + 1
