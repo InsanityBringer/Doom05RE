@@ -113,13 +113,13 @@ void R_MapRowHighC(void)
 		IO_Error("MapRow: NULL picture");
 	
 	x = mr_x1;
-	colormaps = &colormaps[mr_colormap * 256];
+	colormap = &colormaps[mr_colormap * 256];
 	dest = screenbuffer + (int)(planewidthlookup[mr_y + windowy] + (mr_x1 + windowx >> 2));
 	plane = ((mr_x1 + windowx) & 3U) * 16000;
 	do 
 	{
 		spot = ((mr_yfrac >> 0x14) & 0xfc0U) + ((mr_xfrac >> 0x1a) & 0x3fU);
-		dest[plane] = dest[mr_picture[spot]];
+		dest[plane] = colormap[mr_picture[spot]];
 		
 		mr_xfrac += mr_xstep;
 		mr_yfrac += mr_ystep;
@@ -216,18 +216,13 @@ void R_RawScaleHighC(void)
 		IO_Error("R_ScalePost: NULL pointer\n");
 
 	colormap = &colormaps[sp_colormap * 256];
-	dest = planewidthlookup[sp_y1 + windowy] + highcollumntable[sp_x + windowx];
+	dest = highcollumntable[sp_x + windowx] + planewidthlookup[sp_y1 + windowy];
 	count = (sp_y2 - sp_y1) + 1;
 	while (count-- != 0)
 	{
 		*dest = colormap[sp_source[sp_frac >> FRACBITS]];
 		dest += SCREENBWIDE;
 		sp_frac += sp_fracstep;
-#ifdef HIRES_FIXES
-		//[ISB] wrap code
-		//todo: optimize
-		sp_frac %= (128 << FRACBITS);
-#endif
 	}
 }
 

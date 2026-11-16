@@ -108,13 +108,13 @@ void R_MapRowHighC(void)
 		IO_Error("MapRow: NULL picture");
 	
 	x = mr_x1;
-	colormaps = &colormaps[mr_colormap * 256];
+	colormap = &colormaps[mr_colormap * 256];
 	dest = screenbuffer + (int)(planewidthlookup[mr_y + windowy] + (mr_x1 + windowx >> 2));
 	plane = ((mr_x1 + windowx) & 3U) * 16000;
 	do 
 	{
 		spot = ((mr_yfrac >> 0x14) & 0xfc0U) + ((mr_xfrac >> 0x1a) & 0x3fU);
-		dest[plane] = dest[mr_picture[spot]];
+		dest[plane] = colormap[mr_picture[spot]];
 		
 		mr_xfrac += mr_xstep;
 		mr_yfrac += mr_ystep;
