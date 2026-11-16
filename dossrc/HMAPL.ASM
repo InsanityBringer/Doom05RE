@@ -56,7 +56,7 @@ PUBLIC	R_MapRowMed_
 	PUSHR
 
 	mov ecx,[_windowx]
-	shl ecx,1
+	shr ecx,1
 	mov	eax,[_mr_x1]
 	add eax,ecx
 	mov	ebx,[_mr_x2]
@@ -126,7 +126,7 @@ PUBLIC	R_MapRowLow_
 	PUSHR
 
 	mov ecx,[_windowx]
-	shl ecx,1
+	shr ecx,1
 	mov	eax,[_mr_x1]
 	add eax,ecx
 	mov	ebx,[_mr_x2]
