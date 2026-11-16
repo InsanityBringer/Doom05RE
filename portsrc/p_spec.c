@@ -396,7 +396,7 @@ int EV_RaiseFloorUpToNearest(line_t* line)
         sec = &sectors[secnum];
 
         if (sec->specialdata)
-            return;
+            return rtn;
 
         floor = (floormove_t*)Z_Malloc(playzone, sizeof(floormove_t));
         P_AddThinker(&floor->thinker);
@@ -428,7 +428,7 @@ int EV_RaiseFloor(line_t* line)
         sec = &sectors[secnum];
 
         if (sec->specialdata)
-            return;
+            return rtn;
 
         floor = (floormove_t*)Z_Malloc(playzone, sizeof(floormove_t));
         P_AddThinker(&floor->thinker);
@@ -1239,7 +1239,7 @@ void P_StartupPicAnims(void)
     lastAnim = anims;
     for (i = 0; flatAnims[i].numflats != 0; i++)
     {
-        lastAnim->picnum = W_GetNumForName((char*)(flatAnims + i)) - flatstartlump;
+        lastAnim->picnum = W_GetNumForName((flatAnims[i].startname)) - flatstartlump;
         lastAnim->basepic = W_GetNumForName(flatAnims[i].endname) - flatstartlump;
         lastAnim->numpics = flatAnims[i].numflats;
         lastAnim->speed = flatAnims[i].speed;
