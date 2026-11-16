@@ -64,7 +64,7 @@ typedef struct
 	int toptextureskip;
 	int bottomtextureskip;
 	maptexture_t* texture;
-	int bottomtexture;
+	maptexture_t* bottomtexture;
 } forwardseg_t;
 
 extern forwardseg_t forwardsegs[MAXFSEGS];
