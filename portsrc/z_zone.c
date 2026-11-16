@@ -76,9 +76,9 @@ void Z_ClearZone(memzone_t* zone)
 	(zone->blocklist).owner = (void*)0x1;
 
 	zone->rover = block;
-	*(memblock_t**)&zone[1].blocklist.owner = &zone->blocklist;
-	zone[1].blocklist.next = (memblock_t*)zone[1].blocklist.owner;
-	zone[1].blocklist.size = 0;
+	block->next = &zone->blocklist;
+	block->prev = &zone->blocklist.next;
+	block->owner = NULL;
 	block->size = zone->size - sizeof(memzone_t);
 }
 
@@ -205,7 +205,7 @@ void Z_CacheMalloc(memzone_t* zone, int size, void** user)
 	if (extra > MINFRAGMENT)
 	{
 		new = (memblock_t*)((byte*)rover + size);
-		new->size += extra;
+		new->size = extra;
 		new->owner = NULL;
 		new->prev = rover;
 		new->next = rover->next;
