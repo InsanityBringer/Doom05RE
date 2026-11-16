@@ -173,7 +173,7 @@ void P_MovePlayerShapes(void)
         if (sd->playeringame[playernum] != 0)
         {
             player = &playerobjs[playernum];
-            psp = &psprites[playernum * NUMPSPRITES];
+            psp = psprites[playernum];
 
             for (i = 0; i < NUMPSPRITES; i++, psp++)
             {
